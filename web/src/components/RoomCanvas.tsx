@@ -19,6 +19,30 @@ function midpoint(a: Vertex, b: Vertex) {
   return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
 }
 
+function getSvgPoint(event: React.MouseEvent<SVGSVGElement>, svg: SVGSVGElement) {
+  const screenMatrix = svg.getScreenCTM();
+  if (!screenMatrix) {
+    const rect = svg.getBoundingClientRect();
+    const scaleX = svg.viewBox.baseVal.width / rect.width;
+    const scaleY = svg.viewBox.baseVal.height / rect.height;
+
+    return {
+      x: Math.round((event.clientX - rect.left) * scaleX),
+      y: Math.round((event.clientY - rect.top) * scaleY),
+    };
+  }
+
+  const point = svg.createSVGPoint();
+  point.x = event.clientX;
+  point.y = event.clientY;
+  const transformedPoint = point.matrixTransform(screenMatrix.inverse());
+
+  return {
+    x: Math.round(transformedPoint.x),
+    y: Math.round(transformedPoint.y),
+  };
+}
+
 export function RoomCanvas({
   vertices,
   width = 900,
@@ -41,10 +65,9 @@ export function RoomCanvas({
   const center = useMemo(() => centroid(sortedVertices), [sortedVertices]);
 
   const handleSvgDoubleClick = (event: React.MouseEvent<SVGSVGElement>) => {
-    const rect = svgRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const x = Math.round(event.clientX - rect.left);
-    const y = Math.round(event.clientY - rect.top);
+    const svg = svgRef.current;
+    if (!svg) return;
+    const { x, y } = getSvgPoint(event, svg);
 
     const next = [
       ...sortedVertices,
@@ -62,11 +85,9 @@ export function RoomCanvas({
 
   const handleMouseMove = (event: React.MouseEvent<SVGSVGElement>) => {
     if (!dragVertexId) return;
-    const rect = svgRef.current?.getBoundingClientRect();
-    if (!rect) return;
-
-    const x = Math.round(event.clientX - rect.left);
-    const y = Math.round(event.clientY - rect.top);
+    const svg = svgRef.current;
+    if (!svg) return;
+    const { x, y } = getSvgPoint(event, svg);
 
     onVerticesChange(
       sortedVertices.map((vertex) =>
