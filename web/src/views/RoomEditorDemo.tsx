@@ -45,6 +45,9 @@ export function RoomEditorDemo() {
               <p><strong>Départ :</strong> ({selectedWall.start.x}, {selectedWall.start.y})</p>
               <p><strong>Fin :</strong> ({selectedWall.end.x}, {selectedWall.end.y})</p>
               <p><strong>Longueur :</strong> {(selectedWall.lengthCm / 100).toFixed(2)} m</p>
+              <p style={{ color: '#57606a', fontSize: 14, marginBottom: 0 }}>
+                Clique sur le cartouche du mur dans le plan pour modifier sa longueur.
+              </p>
             </>
           ) : (
             <p style={{ color: '#57606a' }}>Clique sur un mur pour voir ses informations.</p>

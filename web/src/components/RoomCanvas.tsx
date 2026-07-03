@@ -1,5 +1,5 @@
-import React, { useMemo, useRef, useState } from 'react';
-import { centroid, formatLengthCm, insertVertexBetween, polygonAreaCm2, polygonPerimeterCm, removeVertex, snapPointToNearbyAxes, updateVertexPosition, wallsFromVertices } from '../../../shared/src/geometry';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { centroid, formatLengthCm, insertVertexBetween, polygonAreaCm2, polygonPerimeterCm, removeVertex, snapPointToNearbyAxes, updateVertexPosition, updateWallLength, wallsFromVertices } from '../../../shared/src/geometry';
 import type { Vertex } from '../../../shared/src/types';
 
 const SNAP_THRESHOLD_CM = 12;
@@ -74,7 +74,11 @@ export function RoomCanvas({
   const [dragVertexId, setDragVertexId] = useState<string | null>(null);
   const [selectedVertexIds, setSelectedVertexIds] = useState<string[]>([]);
   const [snapGuide, setSnapGuide] = useState<{ x: number | null; y: number | null }>({ x: null, y: null });
+  const [editingWallIndex, setEditingWallIndex] = useState<number | null>(null);
+  const [wallLengthDraft, setWallLengthDraft] = useState('');
+  const [wallLengthError, setWallLengthError] = useState<string | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const wallLengthInputRef = useRef<HTMLInputElement | null>(null);
   const didDragRef = useRef(false);
   const lastDragEndedAtRef = useRef(0);
 
@@ -257,6 +261,55 @@ export function RoomCanvas({
 
   const canDeleteSelectedVertex = selectedVertex !== null && sortedVertices.length > 3;
 
+  useEffect(() => {
+    if (editingWallIndex === null) return;
+
+    wallLengthInputRef.current?.focus();
+    wallLengthInputRef.current?.select();
+  }, [editingWallIndex]);
+
+  const closeWallLengthEditor = () => {
+    setEditingWallIndex(null);
+    setWallLengthDraft('');
+    setWallLengthError(null);
+  };
+
+  const handleWallSelect = (wallIndex: number) => {
+    closeWallLengthEditor();
+    onWallSelect?.(wallIndex);
+  };
+
+  const handleWallLabelEditStart = (wallIndex: number) => {
+    const wall = walls[wallIndex];
+    if (!wall) return;
+
+    onWallSelect?.(wallIndex);
+    setEditingWallIndex(wallIndex);
+    setWallLengthDraft((wall.lengthCm / 100).toFixed(2));
+    setWallLengthError(null);
+  };
+
+  const handleWallLengthCommit = () => {
+    if (editingWallIndex === null) return false;
+
+    const parsedMeters = Number(wallLengthDraft.replace(',', '.'));
+    if (!Number.isFinite(parsedMeters) || parsedMeters <= 0) {
+      setWallLengthError('Longueur invalide');
+      return false;
+    }
+
+    const next = updateWallLength(sortedVertices, editingWallIndex, parsedMeters * 100);
+    if (!next) {
+      setWallLengthError('Longueur invalide');
+      return false;
+    }
+
+    onVerticesChange(next);
+    onWallSelect?.(editingWallIndex);
+    closeWallLengthEditor();
+    return true;
+  };
+
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 16 }}>
       <svg
@@ -315,10 +368,13 @@ export function RoomCanvas({
         {walls.map((wall) => {
           const middle = midpoint(wall.start, wall.end);
           const isSelected = selectedWallIndex === wall.index;
+          const isEditing = editingWallIndex === wall.index;
           return (
             <g
               key={`wall_${wall.index}`}
+              onClick={() => handleWallSelect(wall.index)}
               onDoubleClick={(event) => handleWallDoubleClick(event, wall.index)}
+              style={{ cursor: 'pointer' }}
             >
               <line
                 x1={wall.start.x}
@@ -328,28 +384,89 @@ export function RoomCanvas({
                 stroke={isSelected ? '#d83b01' : '#0e54e9'}
                 strokeWidth={isSelected ? 6 : 4}
                 strokeLinecap="round"
-                onClick={() => onWallSelect?.(wall.index)}
-                style={{ cursor: 'pointer' }}
               />
-              <rect
-                x={middle.x - 36}
-                y={middle.y - 14}
-                width={72}
-                height={20}
-                rx={6}
-                fill="white"
-                stroke="#d0d7de"
-              />
-              <text
-                x={middle.x}
-                y={middle.y}
-                textAnchor="middle"
-                dominantBaseline="central"
-                fontSize={11}
-                fill="#24292f"
-              >
-                {formatLengthCm(wall.lengthCm)}
-              </text>
+              {isEditing ? (
+                <foreignObject
+                  x={middle.x - 42}
+                  y={middle.y - 15}
+                  width={84}
+                  height={30}
+                  onClick={(event) => event.stopPropagation()}
+                  onDoubleClick={(event) => event.stopPropagation()}
+                >
+                  <div style={{ width: '100%', height: '100%' }}>
+                    <input
+                      ref={wallLengthInputRef}
+                      type="text"
+                      inputMode="decimal"
+                      value={wallLengthDraft}
+                      aria-label={`Longueur du mur ${wall.index + 1}`}
+                      onChange={(event) => {
+                        setWallLengthDraft(event.target.value);
+                        if (wallLengthError) {
+                          setWallLengthError(null);
+                        }
+                      }}
+                      onBlur={() => {
+                        if (!handleWallLengthCommit()) {
+                          closeWallLengthEditor();
+                        }
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault();
+                          handleWallLengthCommit();
+                        }
+
+                        if (event.key === 'Escape') {
+                          event.preventDefault();
+                          closeWallLengthEditor();
+                        }
+                      }}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        borderRadius: '6px',
+                        border: `1px solid ${wallLengthError ? '#d83b01' : '#0e54e9'}`,
+                        padding: '0 6px',
+                        fontSize: '11px',
+                        textAlign: 'center',
+                        color: '#24292f',
+                        background: '#ffffff',
+                      }}
+                    />
+                  </div>
+                </foreignObject>
+              ) : (
+                <g
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleWallLabelEditStart(wall.index);
+                  }}
+                  onDoubleClick={(event) => event.stopPropagation()}
+                  style={{ cursor: 'text' }}
+                >
+                  <rect
+                    x={middle.x - 36}
+                    y={middle.y - 14}
+                    width={72}
+                    height={20}
+                    rx={6}
+                    fill="white"
+                    stroke={isSelected ? '#d83b01' : '#d0d7de'}
+                  />
+                  <text
+                    x={middle.x}
+                    y={middle.y}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fontSize={11}
+                    fill="#24292f"
+                  >
+                    {formatLengthCm(wall.lengthCm)}
+                  </text>
+                </g>
+              )}
             </g>
           );
         })}
@@ -400,6 +517,9 @@ export function RoomCanvas({
         <p><strong>Périmètre :</strong> {perimeterM.toFixed(2)} m</p>
         <p style={{ color: '#57606a', fontSize: 14 }}>
           Double-clique dans le plan pour ajouter un sommet. Double-clique sur un mur pour insérer un sommet sur ce segment.
+        </p>
+        <p style={{ color: '#57606a', fontSize: 14 }}>
+          Clique sur le cartouche d'un mur pour modifier sa longueur directement dans le plan.
         </p>
         <p style={{ color: '#57606a', fontSize: 14 }}>
           Clique sur un sommet pour le supprimer ou sur deux sommets consécutifs pour insérer un sommet au milieu du mur.

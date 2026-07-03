@@ -148,6 +148,34 @@ export function updateVertexPosition(
   );
 }
 
+export function updateWallLength(
+  vertices: Vertex[],
+  wallIndex: number,
+  nextLengthCm: number,
+): Vertex[] | null {
+  const sorted = sortVertices(vertices);
+  if (sorted.length < 2) return null;
+  if (!Number.isFinite(nextLengthCm) || nextLengthCm <= EPSILON) return null;
+  if (wallIndex < 0 || wallIndex >= sorted.length) return null;
+
+  const start = sorted[wallIndex];
+  const endIndex = (wallIndex + 1) % sorted.length;
+  const end = sorted[endIndex];
+  const currentLength = segmentLengthCm(start, end);
+
+  if (currentLength <= EPSILON) return null;
+
+  const ratio = nextLengthCm / currentLength;
+  const nextEndX = start.x + (end.x - start.x) * ratio;
+  const nextEndY = start.y + (end.y - start.y) * ratio;
+
+  return sorted.map((vertex, index) => (
+    index === endIndex
+      ? { ...vertex, x: nextEndX, y: nextEndY }
+      : vertex
+  ));
+}
+
 export function snapPointToNearbyAxes(
   vertices: Vertex[],
   movingVertexId: string,
