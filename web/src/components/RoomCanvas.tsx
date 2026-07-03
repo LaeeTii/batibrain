@@ -1,6 +1,8 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { centroid, formatLengthCm, insertVertexBetween, polygonAreaCm2, polygonPerimeterCm, removeVertex, wallsFromVertices } from '../../../shared/src/geometry';
+import { centroid, formatLengthCm, insertVertexBetween, polygonAreaCm2, polygonPerimeterCm, removeVertex, snapPointToNearbyAxes, updateVertexPosition, wallsFromVertices } from '../../../shared/src/geometry';
 import type { Vertex } from '../../../shared/src/types';
+
+const SNAP_THRESHOLD_CM = 12;
 
 export interface RoomCanvasProps {
   vertices: Vertex[];
@@ -71,6 +73,7 @@ export function RoomCanvas({
 }: RoomCanvasProps) {
   const [dragVertexId, setDragVertexId] = useState<string | null>(null);
   const [selectedVertexIds, setSelectedVertexIds] = useState<string[]>([]);
+  const [snapGuide, setSnapGuide] = useState<{ x: number | null; y: number | null }>({ x: null, y: null });
   const svgRef = useRef<SVGSVGElement | null>(null);
   const didDragRef = useRef(false);
   const lastDragEndedAtRef = useRef(0);
@@ -184,19 +187,30 @@ export function RoomCanvas({
     if (!dragVertexId) return;
     const svg = svgRef.current;
     if (!svg) return;
-    const { x, y } = getSvgPoint(event, svg);
+    const pointerPoint = getSvgPoint(event, svg);
 
     const draggedVertex = sortedVertices.find((vertex) => vertex.id === dragVertexId);
     if (!draggedVertex) return;
-    if (draggedVertex.x !== x || draggedVertex.y !== y) {
+
+    const snapped = snapPointToNearbyAxes(
+      sortedVertices,
+      dragVertexId,
+      pointerPoint,
+      SNAP_THRESHOLD_CM,
+    );
+
+    setSnapGuide({ x: snapped.snappedX, y: snapped.snappedY });
+
+    if (draggedVertex.x !== snapped.point.x || draggedVertex.y !== snapped.point.y) {
       didDragRef.current = true;
     }
 
-    onVerticesChange(
-      sortedVertices.map((vertex) =>
-        vertex.id === dragVertexId ? { ...vertex, x, y } : vertex,
-      ),
-    );
+    onVerticesChange(updateVertexPosition(
+      sortedVertices,
+      dragVertexId,
+      snapped.point.x,
+      snapped.point.y,
+    ));
   };
 
   const handleMouseUp = () => {
@@ -206,6 +220,7 @@ export function RoomCanvas({
     }
 
     setDragVertexId(null);
+    setSnapGuide({ x: null, y: null });
   };
 
   const handleInsertVertexBetweenSelection = () => {
@@ -261,6 +276,32 @@ export function RoomCanvas({
           </pattern>
         </defs>
         <rect x="0" y="0" width={width} height={height} fill="url(#grid)" />
+
+        {snapGuide.x !== null && (
+          <line
+            x1={snapGuide.x}
+            y1={0}
+            x2={snapGuide.x}
+            y2={height}
+            stroke="#d83b01"
+            strokeWidth={1.5}
+            strokeDasharray="6 6"
+            pointerEvents="none"
+          />
+        )}
+
+        {snapGuide.y !== null && (
+          <line
+            x1={0}
+            y1={snapGuide.y}
+            x2={width}
+            y2={snapGuide.y}
+            stroke="#d83b01"
+            strokeWidth={1.5}
+            strokeDasharray="6 6"
+            pointerEvents="none"
+          />
+        )}
 
         {sortedVertices.length >= 3 && (
           <polygon
@@ -362,6 +403,9 @@ export function RoomCanvas({
         </p>
         <p style={{ color: '#57606a', fontSize: 14 }}>
           Clique sur un sommet pour le supprimer ou sur deux sommets consécutifs pour insérer un sommet au milieu du mur.
+        </p>
+        <p style={{ color: '#57606a', fontSize: 14 }}>
+          Pendant le déplacement, un sommet s'aligne automatiquement sur les axes des autres points s'il passe à moins de {SNAP_THRESHOLD_CM} cm.
         </p>
         <button
           type="button"

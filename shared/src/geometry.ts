@@ -148,6 +148,47 @@ export function updateVertexPosition(
   );
 }
 
+export function snapPointToNearbyAxes(
+  vertices: Vertex[],
+  movingVertexId: string,
+  point: Point2D,
+  thresholdCm = 12,
+): {
+  point: Point2D;
+  snappedX: number | null;
+  snappedY: number | null;
+} {
+  let snappedX: number | null = null;
+  let snappedY: number | null = null;
+  let minDeltaX = thresholdCm + EPSILON;
+  let minDeltaY = thresholdCm + EPSILON;
+
+  for (const vertex of vertices) {
+    if (vertex.id === movingVertexId) continue;
+
+    const deltaX = Math.abs(point.x - vertex.x);
+    if (deltaX <= thresholdCm && deltaX < minDeltaX) {
+      minDeltaX = deltaX;
+      snappedX = vertex.x;
+    }
+
+    const deltaY = Math.abs(point.y - vertex.y);
+    if (deltaY <= thresholdCm && deltaY < minDeltaY) {
+      minDeltaY = deltaY;
+      snappedY = vertex.y;
+    }
+  }
+
+  return {
+    point: {
+      x: snappedX ?? point.x,
+      y: snappedY ?? point.y,
+    },
+    snappedX,
+    snappedY,
+  };
+}
+
 export function formatLengthCm(lengthCm: number): string {
   if (lengthCm >= 100) {
     return `${(lengthCm / 100).toFixed(2)} m`;

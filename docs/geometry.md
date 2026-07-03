@@ -13,6 +13,7 @@
 
 ## Choix MVP
 - édition simple par déplacement, insertion et suppression de sommets tant que le polygone reste valide
+- snapping horizontal / vertical sur les axes portés par les autres sommets lors d'un déplacement proche
 - pas de solveur de contraintes avancé dans un premier temps
 - propagation des vues à partir de la vue du dessus
 
