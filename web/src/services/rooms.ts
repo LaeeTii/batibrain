@@ -22,6 +22,13 @@ export interface RoomSnapshot {
   vertices: Vertex[];
 }
 
+export interface CreateRoomInput {
+  id?: string;
+  levelId: string;
+  name: string;
+  notes?: string | null;
+}
+
 function mapPieceRow(row: PieceRow): Room {
   return {
     id: row.id,
@@ -50,6 +57,15 @@ function toPieceRow(room: Room): PieceRow {
   };
 }
 
+function toPieceInsertRow(room: CreateRoomInput): Partial<PieceRow> {
+  return {
+    ...(room.id ? { id: room.id } : {}),
+    level_id: room.levelId,
+    name: room.name,
+    notes: room.notes ?? null,
+  };
+}
+
 function toPieceVertexRows(roomId: string, vertices: Vertex[]): PieceVertexRow[] {
   return sortVertices(vertices).map((vertex, index) => ({
     id: vertex.id,
@@ -58,6 +74,21 @@ function toPieceVertexRows(roomId: string, vertices: Vertex[]): PieceVertexRow[]
     x_cm: vertex.x,
     y_cm: vertex.y,
   }));
+}
+
+export async function getRoom(roomId: string): Promise<Room> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('pieces')
+    .select('id, level_id, name, notes')
+    .eq('id', roomId)
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return mapPieceRow(data as PieceRow);
 }
 
 export async function listRoomsByLevel(levelId: string): Promise<Room[]> {
@@ -77,16 +108,7 @@ export async function listRoomsByLevel(levelId: string): Promise<Room[]> {
 
 export async function loadRoomSnapshot(roomId: string): Promise<RoomSnapshot> {
   const supabase = getSupabaseClient();
-
-  const { data: piece, error: pieceError } = await supabase
-    .from('pieces')
-    .select('id, level_id, name, notes')
-    .eq('id', roomId)
-    .single();
-
-  if (pieceError) {
-    throw pieceError;
-  }
+  const room = await getRoom(roomId);
 
   const { data: vertices, error: verticesError } = await supabase
     .from('piece_vertices')
@@ -99,9 +121,44 @@ export async function loadRoomSnapshot(roomId: string): Promise<RoomSnapshot> {
   }
 
   return {
-    room: mapPieceRow(piece as PieceRow),
+    room,
     vertices: (vertices ?? []).map((row) => mapPieceVertexRow(row as PieceVertexRow)),
   };
+}
+
+export async function createRoom(room: CreateRoomInput): Promise<Room> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('pieces')
+    .insert(toPieceInsertRow(room))
+    .select('id, level_id, name, notes')
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return mapPieceRow(data as PieceRow);
+}
+
+export async function updateRoom(room: Room): Promise<Room> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('pieces')
+    .update({
+      level_id: room.levelId,
+      name: room.name,
+      notes: room.notes ?? null,
+    })
+    .eq('id', room.id)
+    .select('id, level_id, name, notes')
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return mapPieceRow(data as PieceRow);
 }
 
 export async function saveRoom(room: Room): Promise<Room> {
@@ -117,6 +174,18 @@ export async function saveRoom(room: Room): Promise<Room> {
   }
 
   return mapPieceRow(data as PieceRow);
+}
+
+export async function deleteRoom(roomId: string): Promise<void> {
+  const supabase = getSupabaseClient();
+  const { error } = await supabase
+    .from('pieces')
+    .delete()
+    .eq('id', roomId);
+
+  if (error) {
+    throw error;
+  }
 }
 
 export async function replaceRoomVertices(roomId: string, vertices: Vertex[]): Promise<Vertex[]> {
