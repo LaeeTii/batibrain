@@ -93,6 +93,37 @@ export function wallsFromVertices(vertices: Vertex[]): DerivedWall[] {
   });
 }
 
+export function insertVertexBetween(
+  vertices: Vertex[],
+  firstVertexId: string,
+  secondVertexId: string,
+  newVertex: Omit<Vertex, 'order'>,
+): Vertex[] | null {
+  const sorted = sortVertices(vertices);
+  if (sorted.length < 2) return null;
+
+  const edgeIndex = sorted.findIndex((start, index) => {
+    const end = sorted[(index + 1) % sorted.length];
+    return (
+      (start.id === firstVertexId && end.id === secondVertexId)
+      || (start.id === secondVertexId && end.id === firstVertexId)
+    );
+  });
+
+  if (edgeIndex === -1) return null;
+
+  const withInsertedVertex = [
+    ...sorted.slice(0, edgeIndex + 1),
+    { ...newVertex, order: edgeIndex + 1 },
+    ...sorted.slice(edgeIndex + 1),
+  ];
+
+  return withInsertedVertex.map((vertex, index) => ({
+    ...vertex,
+    order: index,
+  }));
+}
+
 export function updateVertexPosition(
   vertices: Vertex[],
   vertexId: string,

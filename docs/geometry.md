@@ -12,7 +12,7 @@
 - orientation d'un mur
 
 ## Choix MVP
-- édition simple par déplacement de sommets
+- édition simple par déplacement et insertion de sommets consécutifs
 - pas de solveur de contraintes avancé dans un premier temps
 - propagation des vues à partir de la vue du dessus
 
