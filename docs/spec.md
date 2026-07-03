@@ -58,12 +58,12 @@ Snapping horizontal / vertical.
 
 ## 1.5 Edition longueur mur
 ### Tâche
-Modifier la longueur d’un mur en déplaçant un sommet.
+Modifier la longueur d’un mur en éditant la zone de saisie
 
 ### Prompt Copilot
 ```ts
-// Implémenter une fonction pour modifier la longueur d’un mur
-// déplacer dynamiquement le vertex de fin en gardant la direction
+//Implémenter une fonction pour modifier la longueur d’un mur
+// en modifiant la valeur dans un input
 ```
 
 ---
