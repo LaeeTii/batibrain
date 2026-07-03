@@ -29,3 +29,69 @@
 - When a code change modifies documented behavior, update the relevant file in [docs/](../docs/) in the same change.
 - Do not introduce features beyond the current MVP priorities unless the user explicitly asks for them.
 - If the documentation does not fully answer the task, make the smallest assumption consistent with the existing docs and state that assumption clearly.
+
+## Utilisation du conventionnal commit pour git :
+### Types Requiring Ticket Reference
+- `feat` - New features
+- `fix` - Bug fixes  
+- `style` - Code style changes (formatting, missing semi-colons, etc.)
+- `perf` - Performance improvements
+
+### Types NOT Requiring Ticket Reference
+- `tech` - Technical changes
+- `ci` - CI/CD configuration changes
+- `refactor` - Code refactoring (no functional changes)
+- `revert` - Reverting commits
+- `docs` - Documentation changes
+- `chore` - Miscellaneous changes
+- `build` - Build system changes
+- `test` - Test-related changes
+
+### Commit Message Format
+```
+<type>(<scope>): <description en français> <ticket>
+```
+
+- **type**: One of the allowed types above
+- **scope** (optional): Context of the commit in parentheses
+- **description**: Clear summary in French (4-100 characters)
+- **ticket**: Required for `feat`, `fix`, `style`, `perf` types - format `#TICKET-NUMBER` (e.g., `#JIRA-123`)
+
+### Examples
+```
+feat(login): ajouter le support Google OAuth #AUTH-456
+fix(api): gérer les valeurs nulles dans l'endpoint user #API-789
+style(component): mettre à jour le style des boutons #UI-234
+perf(query): optimiser les requêtes de la base de données #DB-567
+
+tech: mettre à jour la version de node
+docs: mettre à jour le README
+chore: nettoyer les fichiers temporaires
+```
+
+### Usage
+
+#### To create a commit message:
+1. Describe your changes briefly
+2. This skill will help format it properly
+3. Confirm the final message before committing
+
+#### To validate existing commit messages:
+1. Provide commit messages to check
+2. This skill will identify which ones follow the rules
+
+### Git Integration
+
+This skill can be used with the git tool to:
+- Prepare commit messages before committing
+- Validate recent commits against the rules
+- Guide users through creating properly formatted commits
+
+### Validation Patterns
+
+The skill uses these regex patterns:
+- With ticket: `^(feat|fix|style|perf)(\(.+\))?( )?: .{4,100} #[A-Z]+-[0-9]+$`
+- Without ticket: `^(tech|ci|refactor|revert|docs|chore|build|test)(\(.+\))?( )?: .{4,100}$`
+- Merge commits: `^Merge .+` (automatically accepted)
+
+Merge commits from pull requests are automatically accepted as valid.
