@@ -12,7 +12,7 @@
 - orientation d'un mur
 
 ## Choix MVP
-- édition simple par déplacement et insertion de sommets consécutifs
+- édition simple par déplacement, insertion et suppression de sommets tant que le polygone reste valide
 - pas de solveur de contraintes avancé dans un premier temps
 - propagation des vues à partir de la vue du dessus
 

@@ -29,7 +29,7 @@ Construire une application web + mobile pour piloter des travaux de maison, avec
 ## Découpage de livraison
 
 ### V1
-- création / édition de pièce polygonale, y compris insertion d'un sommet sur un mur existant
+- création / édition de pièce polygonale, y compris insertion et suppression de sommet tant que la pièce reste valide
 - affichage des longueurs de murs
 - sélection d'un mur
 - ajout d'ouverture simple

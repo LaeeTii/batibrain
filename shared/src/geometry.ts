@@ -124,6 +124,19 @@ export function insertVertexBetween(
   }));
 }
 
+export function removeVertex(vertices: Vertex[], vertexId: string): Vertex[] | null {
+  const sorted = sortVertices(vertices);
+  if (sorted.length <= 3) return null;
+
+  const next = sorted.filter((vertex) => vertex.id !== vertexId);
+  if (next.length === sorted.length || next.length < 3) return null;
+
+  return next.map((vertex, index) => ({
+    ...vertex,
+    order: index,
+  }));
+}
+
 export function updateVertexPosition(
   vertices: Vertex[],
   vertexId: string,

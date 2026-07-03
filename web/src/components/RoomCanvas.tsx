@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { centroid, formatLengthCm, insertVertexBetween, polygonAreaCm2, polygonPerimeterCm, wallsFromVertices } from '../../../shared/src/geometry';
+import { centroid, formatLengthCm, insertVertexBetween, polygonAreaCm2, polygonPerimeterCm, removeVertex, wallsFromVertices } from '../../../shared/src/geometry';
 import type { Vertex } from '../../../shared/src/types';
 
 export interface RoomCanvasProps {
@@ -88,6 +88,7 @@ export function RoomCanvas({
     () => sortedVertices.filter((vertex) => selectedVertexIds.includes(vertex.id)),
     [selectedVertexIds, sortedVertices],
   );
+  const selectedVertex = selectedVertices.length === 1 ? selectedVertices[0] : null;
   const selectedVertexWall = useMemo(() => {
     if (selectedVertexIds.length !== 2) return null;
 
@@ -229,6 +230,18 @@ export function RoomCanvas({
     setSelectedVertexIds([nextVertexId]);
   };
 
+  const handleDeleteSelectedVertex = () => {
+    if (!selectedVertex) return;
+
+    const next = removeVertex(sortedVertices, selectedVertex.id);
+    if (!next) return;
+
+    onVerticesChange(next);
+    setSelectedVertexIds([]);
+  };
+
+  const canDeleteSelectedVertex = selectedVertex !== null && sortedVertices.length > 3;
+
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 16 }}>
       <svg
@@ -348,8 +361,25 @@ export function RoomCanvas({
           Double-clique dans le plan pour ajouter un sommet. Double-clique sur un mur pour insérer un sommet sur ce segment.
         </p>
         <p style={{ color: '#57606a', fontSize: 14 }}>
-          Clique sur deux sommets consécutifs pour activer l'insertion d'un sommet au milieu du mur.
+          Clique sur un sommet pour le supprimer ou sur deux sommets consécutifs pour insérer un sommet au milieu du mur.
         </p>
+        <button
+          type="button"
+          onClick={handleDeleteSelectedVertex}
+          disabled={!canDeleteSelectedVertex}
+          style={{
+            width: '100%',
+            marginBottom: 12,
+            padding: '10px 12px',
+            borderRadius: 6,
+            border: '1px solid #d0d7de',
+            background: canDeleteSelectedVertex ? '#d83b01' : '#f6f8fa',
+            color: canDeleteSelectedVertex ? 'white' : '#8c959f',
+            cursor: canDeleteSelectedVertex ? 'pointer' : 'not-allowed',
+          }}
+        >
+          Supprimer le sommet sélectionné
+        </button>
         <button
           type="button"
           onClick={handleInsertVertexBetweenSelection}
@@ -370,6 +400,11 @@ export function RoomCanvas({
         {selectedVertexIds.length > 0 && (
           <p style={{ color: '#57606a', fontSize: 14 }}>
             Sélection : {selectedVertices.map((vertex) => `v${vertex.order}`).join(', ')}
+          </p>
+        )}
+        {selectedVertex !== null && sortedVertices.length <= 3 && (
+          <p style={{ color: '#d83b01', fontSize: 14 }}>
+            Une pièce doit conserver au moins 3 sommets.
           </p>
         )}
         {selectedVertexIds.length === 2 && !selectedVertexWall && (
