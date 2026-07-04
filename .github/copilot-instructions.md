@@ -55,7 +55,7 @@
 - **type**: One of the allowed types above
 - **scope** (optional): Context of the commit in parentheses
 - **description**: Clear summary in French (4-100 characters)
-- **ticket**: Required for `feat`, `fix`, `style`, `perf` types - format `#TICKET-NUMBER` (e.g., `#JIRA-123`)
+- **ticket**: Required for `feat`, `fix`, `style`, `perf` types - format `#TICKET-NUMBER` or `#TICKET-NUMBER.SUBNUMBER` (e.g., `#JIRA-1.1`)
 
 ### Examples
 ```
@@ -90,7 +90,7 @@ This skill can be used with the git tool to:
 ### Validation Patterns
 
 The skill uses these regex patterns:
-- With ticket: `^(feat|fix|style|perf)(\(.+\))?( )?: .{4,100} #[A-Z]+-[0-9]+$`
+- With ticket: `^(feat|fix|style|perf)(\(.+\))?( )?: .{4,100} #[A-Z]+-[0-9]+(?:\.[0-9]+)?$`
 - Without ticket: `^(tech|ci|refactor|revert|docs|chore|build|test)(\(.+\))?( )?: .{4,100}$`
 - Merge commits: `^Merge .+` (automatically accepted)
 
