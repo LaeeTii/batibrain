@@ -112,7 +112,7 @@ export function RoomCanvas({
     const next = [
       ...sortedVertices,
       {
-        id: `v_${crypto.randomUUID()}`,
+        id: crypto.randomUUID(),
         pieceId: sortedVertices[0]?.pieceId ?? 'piece_demo',
         order: sortedVertices.length,
         x,
@@ -135,7 +135,7 @@ export function RoomCanvas({
 
     const clickPoint = getSvgPoint(event, svg);
     const projectedPoint = projectPointOntoSegment(clickPoint, wall.start, wall.end);
-    const nextVertexId = `v_${crypto.randomUUID()}`;
+    const nextVertexId = crypto.randomUUID();
     const next = insertVertexBetween(
       sortedVertices,
       wall.start.id,
@@ -230,7 +230,7 @@ export function RoomCanvas({
   const handleInsertVertexBetweenSelection = () => {
     if (!selectedVertexWall) return;
 
-    const nextVertexId = `v_${crypto.randomUUID()}`;
+    const nextVertexId = crypto.randomUUID();
     const next = insertVertexBetween(
       sortedVertices,
       selectedVertexWall.start.id,

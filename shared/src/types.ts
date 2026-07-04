@@ -11,6 +11,13 @@ export interface Vertex extends Point2D {
   order: number;
 }
 
+export interface Project {
+  id: Id;
+  name: string;
+  address?: string | null;
+  description?: string | null;
+}
+
 export interface Level {
   id: Id;
   projectId: Id;

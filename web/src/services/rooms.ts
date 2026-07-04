@@ -1,5 +1,5 @@
-import { sortVertices } from '../../../shared/src/geometry';
-import type { Room, Vertex } from '../../../shared/src/types';
+import { remapWallsToVertices, sortVertices, syncWallsWithVertices } from '../../../shared/src/geometry';
+import type { Room, Vertex, Wall } from '../../../shared/src/types';
 import { getSupabaseClient } from '../lib/supabase';
 
 type PieceRow = {
@@ -17,9 +17,23 @@ type PieceVertexRow = {
   y_cm: number | string;
 };
 
+type PieceWallRow = {
+  id: string;
+  piece_id: string;
+  start_vertex_id: string;
+  end_vertex_id: string;
+  thickness_cm: number | string | null;
+  height_left_cm: number | string | null;
+  height_right_cm: number | string | null;
+  material: string | null;
+  insulation: string | null;
+  notes: string | null;
+};
+
 export interface RoomSnapshot {
   room: Room;
   vertices: Vertex[];
+  walls: Wall[];
 }
 
 export interface CreateRoomInput {
@@ -48,6 +62,21 @@ function mapPieceVertexRow(row: PieceVertexRow): Vertex {
   };
 }
 
+function mapPieceWallRow(row: PieceWallRow): Wall {
+  return {
+    id: row.id,
+    pieceId: row.piece_id,
+    startVertexId: row.start_vertex_id,
+    endVertexId: row.end_vertex_id,
+    thicknessCm: row.thickness_cm === null ? null : Number(row.thickness_cm),
+    heightLeftCm: row.height_left_cm === null ? null : Number(row.height_left_cm),
+    heightRightCm: row.height_right_cm === null ? null : Number(row.height_right_cm),
+    material: row.material,
+    insulation: row.insulation,
+    notes: row.notes,
+  };
+}
+
 function toPieceRow(room: Room): PieceRow {
   return {
     id: room.id,
@@ -73,6 +102,21 @@ function toPieceVertexRows(roomId: string, vertices: Vertex[]): PieceVertexRow[]
     vertex_order: index,
     x_cm: vertex.x,
     y_cm: vertex.y,
+  }));
+}
+
+function toPieceWallRows(roomId: string, vertices: Vertex[], walls: Wall[]): PieceWallRow[] {
+  return syncWallsWithVertices(vertices, walls).map((wall) => ({
+    id: wall.id,
+    piece_id: roomId,
+    start_vertex_id: wall.startVertexId,
+    end_vertex_id: wall.endVertexId,
+    thickness_cm: wall.thicknessCm ?? null,
+    height_left_cm: wall.heightLeftCm ?? null,
+    height_right_cm: wall.heightRightCm ?? null,
+    material: wall.material ?? null,
+    insulation: wall.insulation ?? null,
+    notes: wall.notes ?? null,
   }));
 }
 
@@ -120,9 +164,24 @@ export async function loadRoomSnapshot(roomId: string): Promise<RoomSnapshot> {
     throw verticesError;
   }
 
+  const mappedVertices = (vertices ?? []).map((row) => mapPieceVertexRow(row as PieceVertexRow));
+
+  const { data: walls, error: wallsError } = await supabase
+    .from('walls')
+    .select('id, piece_id, start_vertex_id, end_vertex_id, thickness_cm, height_left_cm, height_right_cm, material, insulation, notes')
+    .eq('piece_id', roomId);
+
+  if (wallsError) {
+    throw wallsError;
+  }
+
   return {
     room,
-    vertices: (vertices ?? []).map((row) => mapPieceVertexRow(row as PieceVertexRow)),
+    vertices: mappedVertices,
+    walls: syncWallsWithVertices(
+      mappedVertices,
+      (walls ?? []).map((row) => mapPieceWallRow(row as PieceWallRow)),
+    ),
   };
 }
 
@@ -218,6 +277,42 @@ export async function replaceRoomVertices(roomId: string, vertices: Vertex[]): P
   return (data ?? []).map((row) => mapPieceVertexRow(row as PieceVertexRow));
 }
 
+export async function replaceRoomWalls(
+  roomId: string,
+  vertices: Vertex[],
+  walls: Wall[],
+): Promise<Wall[]> {
+  const supabase = getSupabaseClient();
+  const rows = toPieceWallRows(roomId, vertices, walls);
+
+  const { error: deleteError } = await supabase
+    .from('walls')
+    .delete()
+    .eq('piece_id', roomId);
+
+  if (deleteError) {
+    throw deleteError;
+  }
+
+  if (rows.length === 0) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from('walls')
+    .insert(rows)
+    .select('id, piece_id, start_vertex_id, end_vertex_id, thickness_cm, height_left_cm, height_right_cm, material, insulation, notes');
+
+  if (error) {
+    throw error;
+  }
+
+  return syncWallsWithVertices(
+    vertices,
+    (data ?? []).map((row) => mapPieceWallRow(row as PieceWallRow)),
+  );
+}
+
 export async function saveRoomSnapshot(snapshot: RoomSnapshot): Promise<RoomSnapshot> {
   const room = await saveRoom(snapshot.room);
   const vertices = await replaceRoomVertices(
@@ -227,9 +322,15 @@ export async function saveRoomSnapshot(snapshot: RoomSnapshot): Promise<RoomSnap
       pieceId: room.id,
     })),
   );
+  const walls = await replaceRoomWalls(
+    room.id,
+    vertices,
+    remapWallsToVertices(snapshot.vertices, vertices, snapshot.walls),
+  );
 
   return {
     room,
     vertices,
+    walls,
   };
 }

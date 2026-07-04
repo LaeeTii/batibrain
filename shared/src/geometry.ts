@@ -1,4 +1,4 @@
-import type { DerivedWall, Point2D, Vertex } from './types';
+import type { DerivedWall, Point2D, Vertex, Wall } from './types';
 
 const EPSILON = 1e-9;
 
@@ -76,6 +76,85 @@ export function angleAtVertexDegrees(prev: Point2D, current: Point2D, next: Poin
 
 export function sortVertices(vertices: Vertex[]): Vertex[] {
   return [...vertices].sort((a, b) => a.order - b.order);
+}
+
+function wallSegmentKey(startVertexId: string, endVertexId: string): string {
+  return `${startVertexId}:${endVertexId}`;
+}
+
+function createWall(pieceId: string, startVertexId: string, endVertexId: string): Wall {
+  return {
+    id: globalThis.crypto.randomUUID(),
+    pieceId,
+    startVertexId,
+    endVertexId,
+    thicknessCm: null,
+    heightLeftCm: null,
+    heightRightCm: null,
+    material: null,
+    insulation: null,
+    notes: null,
+  };
+}
+
+export function syncWallsWithVertices(vertices: Vertex[], walls: Wall[]): Wall[] {
+  const sorted = sortVertices(vertices);
+  if (sorted.length < 2) return [];
+
+  const wallsBySegment = new Map(
+    walls.map((wall) => [wallSegmentKey(wall.startVertexId, wall.endVertexId), wall]),
+  );
+
+  return sorted.map((start, index) => {
+    const end = sorted[(index + 1) % sorted.length];
+    const existingWall = wallsBySegment.get(wallSegmentKey(start.id, end.id));
+
+    if (!existingWall) {
+      return createWall(start.pieceId, start.id, end.id);
+    }
+
+    if (
+      existingWall.pieceId === start.pieceId
+      && existingWall.startVertexId === start.id
+      && existingWall.endVertexId === end.id
+    ) {
+      return existingWall;
+    }
+
+    return {
+      ...existingWall,
+      pieceId: start.pieceId,
+      startVertexId: start.id,
+      endVertexId: end.id,
+    };
+  });
+}
+
+export function remapWallsToVertices(
+  sourceVertices: Vertex[],
+  targetVertices: Vertex[],
+  walls: Wall[],
+): Wall[] {
+  const orderedSourceWalls = syncWallsWithVertices(sourceVertices, walls);
+  const orderedTargetWalls = syncWallsWithVertices(targetVertices, []);
+
+  return orderedTargetWalls.map((targetWall, index) => {
+    const sourceWall = orderedSourceWalls[index];
+    if (!sourceWall) {
+      return targetWall;
+    }
+
+    return {
+      ...targetWall,
+      id: sourceWall.id,
+      thicknessCm: sourceWall.thicknessCm ?? null,
+      heightLeftCm: sourceWall.heightLeftCm ?? null,
+      heightRightCm: sourceWall.heightRightCm ?? null,
+      material: sourceWall.material ?? null,
+      insulation: sourceWall.insulation ?? null,
+      notes: sourceWall.notes ?? null,
+    };
+  });
 }
 
 export function wallsFromVertices(vertices: Vertex[]): DerivedWall[] {
