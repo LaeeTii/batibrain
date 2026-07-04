@@ -74,6 +74,8 @@ Modifier la longueur d’un mur en éditant la zone de saisie
 ### Prompt
 ```ts
 // Créer un service pour créer, lire, mettre à jour une pièce dans Supabase
+// Initialiser une nouvelle pièce avec un carré 200x200 cm
+// et des murs 10 cm / 250 cm par défaut
 ```
 
 ---
@@ -134,7 +136,8 @@ Modifier la longueur d’un mur en éditant la zone de saisie
 ## 4.2 Navigation
 ### Prompt
 ```ts
-// Créer une liste de pièces avec sélection et édition
+// Créer une liste déroulante de pièces dont la sélection change la vue du canvas
+// et garder la création de pièce dans un formulaire séparé
 ```
 
 ---

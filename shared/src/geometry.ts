@@ -116,6 +116,52 @@ function createWall(pieceId: string, startVertexId: string, endVertexId: string)
   };
 }
 
+export interface RectangleRoomGeometryOptions {
+  originX?: number;
+  originY?: number;
+  wallThicknessCm?: number | null;
+  wallHeightCm?: number | null;
+}
+
+export function createRectangleRoomGeometry(
+  pieceId: string,
+  widthCm: number,
+  depthCm: number,
+  options: RectangleRoomGeometryOptions = {},
+): { vertices: Vertex[]; walls: Wall[] } {
+  if (!Number.isFinite(widthCm) || widthCm <= EPSILON) {
+    throw new Error('La largeur de la pièce doit être strictement positive.');
+  }
+
+  if (!Number.isFinite(depthCm) || depthCm <= EPSILON) {
+    throw new Error('La profondeur de la pièce doit être strictement positive.');
+  }
+
+  const originX = options.originX ?? 0;
+  const originY = options.originY ?? 0;
+  const wallThicknessCm = options.wallThicknessCm ?? null;
+  const wallHeightCm = options.wallHeightCm ?? null;
+
+  const vertices: Vertex[] = [
+    { id: globalThis.crypto.randomUUID(), pieceId, order: 0, x: originX, y: originY },
+    { id: globalThis.crypto.randomUUID(), pieceId, order: 1, x: originX + widthCm, y: originY },
+    { id: globalThis.crypto.randomUUID(), pieceId, order: 2, x: originX + widthCm, y: originY + depthCm },
+    { id: globalThis.crypto.randomUUID(), pieceId, order: 3, x: originX, y: originY + depthCm },
+  ];
+
+  const walls = syncWallsWithVertices(vertices, []).map((wall) => ({
+    ...wall,
+    thicknessCm: wallThicknessCm,
+    heightLeftCm: wallHeightCm,
+    heightRightCm: wallHeightCm,
+  }));
+
+  return {
+    vertices,
+    walls,
+  };
+}
+
 export function syncWallsWithVertices(vertices: Vertex[], walls: Wall[]): Wall[] {
   const sorted = sortVertices(vertices);
   if (sorted.length < 2) return [];
@@ -439,7 +485,7 @@ export function remapWallsToVertices(
 
     return {
       ...targetWall,
-      id: sourceWall.id,
+      id: sourceWall.pieceId === targetWall.pieceId ? sourceWall.id : targetWall.id,
       thicknessCm: sourceWall.thicknessCm ?? null,
       heightLeftCm: sourceWall.heightLeftCm ?? null,
       heightRightCm: sourceWall.heightRightCm ?? null,

@@ -4,6 +4,7 @@ import type { Level, Opening, Project, Room, Vertex, Wall } from '../../../share
 import {
   angleAtVertexDegrees,
   centroid,
+  createRectangleRoomGeometry,
   formatOpeningValidationIssue,
   remapWallsToVertices,
   syncOpeningsWithWalls,
@@ -13,7 +14,7 @@ import {
   wallsFromVertices,
 } from '../../../shared/src/geometry';
 import { hasSupabaseConfig } from '../lib/supabase';
-import { createLevel, getLevel, listLevelsByProject } from '../services/levels';
+import { createLevel, listLevelsByProject } from '../services/levels';
 import { createProject, listProjects } from '../services/projects';
 import {
   createRoom,
@@ -30,9 +31,12 @@ import type { RoomSnapshot } from '../services/rooms';
 const EMPTY_LEVEL_ID = '';
 const EMPTY_PROJECT_ID = '';
 const DEMO_PIECE_ID = 'piece_demo';
-const DEFAULT_ROOM_NAME = 'Pièce démo';
+const DEFAULT_ROOM_NAME = '';
 const DEFAULT_LEVEL_NAME = '';
 const DEFAULT_PROJECT_NAME = '';
+const DEFAULT_ROOM_SIDE_CM = 200;
+const DEFAULT_ROOM_HEIGHT_CM = 250;
+const DEFAULT_WALL_THICKNESS_CM = 10;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type OpeningDraft = {
@@ -51,23 +55,11 @@ const DEFAULT_OPENING_DRAFT: OpeningDraft = {
   heightCm: '215',
 };
 
-function createDemoVertices(pieceId = DEMO_PIECE_ID): Vertex[] {
-  return [
-    { id: crypto.randomUUID(), pieceId, order: 0, x: 100, y: 100 },
-    { id: crypto.randomUUID(), pieceId, order: 1, x: 520, y: 100 },
-    { id: crypto.randomUUID(), pieceId, order: 2, x: 520, y: 280 },
-    { id: crypto.randomUUID(), pieceId, order: 3, x: 320, y: 280 },
-    { id: crypto.randomUUID(), pieceId, order: 4, x: 320, y: 500 },
-    { id: crypto.randomUUID(), pieceId, order: 5, x: 100, y: 500 },
-  ];
-}
-
-function createDraftRoomGeometry(pieceId = DEMO_PIECE_ID): { vertices: Vertex[]; walls: Wall[] } {
-  const vertices = createDemoVertices(pieceId);
-  return {
-    vertices,
-    walls: syncWallsWithVertices(vertices, []),
-  };
+function createDefaultRoomGeometry(pieceId = DEMO_PIECE_ID): { vertices: Vertex[]; walls: Wall[] } {
+  return createRectangleRoomGeometry(pieceId, DEFAULT_ROOM_SIDE_CM, DEFAULT_ROOM_SIDE_CM, {
+    wallThicknessCm: DEFAULT_WALL_THICKNESS_CM,
+    wallHeightCm: DEFAULT_ROOM_HEIGHT_CM,
+  });
 }
 
 function prepareVerticesForRoom(
@@ -118,7 +110,7 @@ function hasSplitWallHeight(wall: Wall): boolean {
 
 export function RoomEditorDemo() {
   const supabaseConfigured = hasSupabaseConfig();
-  const initialDraft = useMemo(() => createDraftRoomGeometry(), []);
+  const initialDraft = useMemo(() => createDefaultRoomGeometry(), []);
   const [vertices, setVertices] = useState<Vertex[]>(initialDraft.vertices);
   const [wallDefinitions, setWallDefinitions] = useState<Wall[]>(initialDraft.walls);
   const [openings, setOpenings] = useState<Opening[]>([]);
@@ -128,12 +120,14 @@ export function RoomEditorDemo() {
   const [availableProjects, setAvailableProjects] = useState<Project[]>([]);
   const [availableLevels, setAvailableLevels] = useState<Level[]>([]);
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
+  const [levelRoomSnapshots, setLevelRoomSnapshots] = useState<RoomSnapshot[]>([]);
   const [newProjectNameInput, setNewProjectNameInput] = useState(DEFAULT_PROJECT_NAME);
   const [selectedProjectId, setSelectedProjectId] = useState(EMPTY_PROJECT_ID);
   const [newLevelNameInput, setNewLevelNameInput] = useState(DEFAULT_LEVEL_NAME);
   const [selectedLevelId, setSelectedLevelId] = useState(EMPTY_LEVEL_ID);
+  const [newRoomNameInput, setNewRoomNameInput] = useState(DEFAULT_ROOM_NAME);
   const [roomNameInput, setRoomNameInput] = useState(DEFAULT_ROOM_NAME);
-  const [roomIdInput, setRoomIdInput] = useState('');
+  const [selectedRoomId, setSelectedRoomId] = useState('');
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -167,6 +161,18 @@ export function RoomEditorDemo() {
     () => availableLevels.find((level) => level.id === selectedLevelId) ?? null,
     [availableLevels, selectedLevelId],
   );
+  const contextRooms = useMemo(() => {
+    if (!activeRoom) {
+      return [];
+    }
+
+    return levelRoomSnapshots
+      .filter((snapshot) => snapshot.room.id !== activeRoom.id)
+      .map((snapshot) => ({
+        room: snapshot.room,
+        vertices: snapshot.vertices,
+      }));
+  }, [activeRoom, levelRoomSnapshots]);
   const isBusy = busyAction !== null;
 
   async function runRoomAction(actionLabel: string, action: () => Promise<void>) {
@@ -331,13 +337,16 @@ export function RoomEditorDemo() {
       setAvailableLevels([]);
       setSelectedLevelId(EMPTY_LEVEL_ID);
       setAvailableRooms([]);
+      setLevelRoomSnapshots([]);
+      setSelectedRoomId('');
       return [];
     }
 
     const nextLevels = await listLevelsByProject(trimmedProjectId);
     setAvailableLevels(nextLevels);
     setAvailableRooms([]);
-    setRoomIdInput('');
+    setLevelRoomSnapshots([]);
+    setSelectedRoomId('');
     setSelectedLevelId((currentLevelId) => {
       const candidateLevelId = preferredLevelId ?? currentLevelId;
       return nextLevels.some((level) => level.id === candidateLevelId)
@@ -352,6 +361,8 @@ export function RoomEditorDemo() {
 
     if (!trimmedLevelId) {
       setAvailableRooms([]);
+      setLevelRoomSnapshots([]);
+      setSelectedRoomId('');
       return [];
     }
 
@@ -360,22 +371,38 @@ export function RoomEditorDemo() {
     return nextRooms;
   }
 
-  function resetDraftRoom() {
-    const draft = createDraftRoomGeometry();
+  async function refreshRoomSnapshotsForRooms(rooms: Room[]): Promise<RoomSnapshot[]> {
+    if (rooms.length === 0) {
+      setLevelRoomSnapshots([]);
+      return [];
+    }
+
+    const nextSnapshots = await Promise.all(rooms.map((room) => loadRoomSnapshot(room.id)));
+    setLevelRoomSnapshots(nextSnapshots);
+    return nextSnapshots;
+  }
+
+  function resetCanvasToDraft() {
+    const draft = createDefaultRoomGeometry();
     setActiveRoom(null);
-    setRoomIdInput('');
     setRoomNameInput(DEFAULT_ROOM_NAME);
     setOpeningDraft(DEFAULT_OPENING_DRAFT);
+    setOpeningFormMessage(null);
     applyRoomGeometry(draft.vertices, draft.walls, []);
     setSelectedWallIndex(null);
   }
 
-  function applyLoadedRoomSnapshot(snapshot: RoomSnapshot, level: Level) {
+  function clearActiveRoomSelection() {
+    setSelectedRoomId('');
+    resetCanvasToDraft();
+  }
+
+  function applyActiveRoomSnapshot(snapshot: RoomSnapshot) {
     setActiveRoom(snapshot.room);
-    setSelectedProjectId(level.projectId);
-    setSelectedLevelId(level.id);
-    setRoomIdInput(snapshot.room.id);
+    setSelectedRoomId(snapshot.room.id);
     setRoomNameInput(snapshot.room.name);
+    setOpeningDraft(DEFAULT_OPENING_DRAFT);
+    setOpeningFormMessage(null);
     applyRoomGeometry(snapshot.vertices, snapshot.walls, snapshot.openings);
     setSelectedWallIndex(null);
   }
@@ -403,16 +430,17 @@ export function RoomEditorDemo() {
       }
 
       const nextRooms = await refreshRoomsForLevel(firstLevel.id);
-      const firstRoom = nextRooms[0];
+      const nextSnapshots = await refreshRoomSnapshotsForRooms(nextRooms);
+      const firstSnapshot = nextSnapshots[0];
 
-      if (!firstRoom) {
+      if (!firstSnapshot) {
+        clearActiveRoomSelection();
         setStatusMessage('Projet et niveau sélectionnés automatiquement. Aucune pièce trouvée pour ce niveau.');
         return;
       }
 
-      const snapshot = await loadRoomSnapshot(firstRoom.id);
-      applyLoadedRoomSnapshot(snapshot, firstLevel);
-      setStatusMessage(`Pièce chargée : ${snapshot.room.name}.`);
+      applyActiveRoomSnapshot(firstSnapshot);
+      setStatusMessage(`Pièce affichée : ${firstSnapshot.room.name}.`);
     });
   }, [supabaseConfigured]);
 
@@ -421,18 +449,39 @@ export function RoomEditorDemo() {
     setSelectedLevelId(EMPTY_LEVEL_ID);
     setAvailableLevels([]);
     setAvailableRooms([]);
-    resetDraftRoom();
+    setLevelRoomSnapshots([]);
+    clearActiveRoomSelection();
     setStatusMessage(null);
     setErrorMessage(null);
   };
 
   const handleSelectedLevelChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedLevelId(event.target.value);
-    setRoomIdInput('');
+    const nextLevelId = event.target.value;
+
+    setSelectedLevelId(nextLevelId);
     setAvailableRooms([]);
-    resetDraftRoom();
+    setLevelRoomSnapshots([]);
+    clearActiveRoomSelection();
     setStatusMessage(null);
     setErrorMessage(null);
+
+    if (!supabaseConfigured || !nextLevelId) {
+      return;
+    }
+
+    void runRoomAction('select-level', async () => {
+      const nextRooms = await refreshRoomsForLevel(nextLevelId);
+      const nextSnapshots = await refreshRoomSnapshotsForRooms(nextRooms);
+      const firstSnapshot = nextSnapshots[0] ?? null;
+
+      if (!firstSnapshot) {
+        setStatusMessage('Aucune pièce trouvée pour ce niveau.');
+        return;
+      }
+
+      applyActiveRoomSnapshot(firstSnapshot);
+      setStatusMessage(`Pièce affichée : ${firstSnapshot.room.name}.`);
+    });
   };
 
   const handleListProjects = () => {
@@ -465,7 +514,8 @@ export function RoomEditorDemo() {
       setAvailableLevels([]);
       setSelectedLevelId(EMPTY_LEVEL_ID);
       setAvailableRooms([]);
-      resetDraftRoom();
+      setLevelRoomSnapshots([]);
+      clearActiveRoomSelection();
       setStatusMessage(`Projet créé : ${createdProject.name}.`);
     });
   };
@@ -514,37 +564,15 @@ export function RoomEditorDemo() {
       setNewLevelNameInput(DEFAULT_LEVEL_NAME);
       setSelectedLevelId(createdLevel.id);
       setAvailableRooms([]);
-      setRoomIdInput('');
+      setLevelRoomSnapshots([]);
+      clearActiveRoomSelection();
       setStatusMessage(`Niveau créé : ${createdLevel.name}.`);
-    });
-  };
-
-  const handleListRooms = () => {
-    void runRoomAction('list', async () => {
-      if (!selectedLevelId) {
-        throw new Error('Sélectionne un niveau avant de lister les pièces.');
-      }
-
-      if (!isUuid(selectedLevelId)) {
-        throw new Error('Le niveau sélectionné est invalide.');
-      }
-
-      const nextRooms = await refreshRoomsForLevel(selectedLevelId);
-      if (nextRooms.length > 0 && !roomIdInput.trim()) {
-        setRoomIdInput(nextRooms[0].id);
-      }
-
-      setStatusMessage(
-        nextRooms.length === 0
-          ? 'Aucune pièce trouvée pour ce niveau.'
-          : `${nextRooms.length} pièce(s) trouvée(s) pour ce niveau.`,
-      );
     });
   };
 
   const handleCreateRoom = () => {
     void runRoomAction('create', async () => {
-      const roomName = roomNameInput.trim();
+      const roomName = newRoomNameInput.trim();
 
       if (!selectedLevelId) {
         throw new Error('Sélectionne un niveau avant de créer la pièce.');
@@ -563,48 +591,51 @@ export function RoomEditorDemo() {
         name: roomName,
       });
 
+      const defaultGeometry = createDefaultRoomGeometry(createdRoom.id);
       const savedVertices = await replaceRoomVertices(
         createdRoom.id,
-        prepareVerticesForRoom(vertices, createdRoom.id, true),
+        defaultGeometry.vertices,
       );
       const savedWalls = await replaceRoomWalls(
         createdRoom.id,
         savedVertices,
-        remapWallsToVertices(vertices, savedVertices, wallDefinitions),
+        defaultGeometry.walls,
       );
-      const savedOpenings = await replaceRoomOpenings(savedVertices, savedWalls, openings);
 
-      await refreshRoomsForLevel(createdRoom.levelId);
+      if (savedWalls.length !== 4) {
+        throw new Error('La pièce créée doit contenir exactement 4 murs.');
+      }
 
-      setActiveRoom(createdRoom);
-      setRoomIdInput(createdRoom.id);
-      setRoomNameInput(createdRoom.name);
-      applyRoomGeometry(savedVertices, savedWalls, savedOpenings);
-      setSelectedWallIndex(null);
-      setStatusMessage(`Pièce créée : ${createdRoom.name}.`);
+      const nextRooms = await refreshRoomsForLevel(createdRoom.levelId);
+      await refreshRoomSnapshotsForRooms(nextRooms);
+
+      setNewRoomNameInput(DEFAULT_ROOM_NAME);
+      setStatusMessage(`Pièce créée : ${createdRoom.name}. Sélectionne-la dans la liste pour l'afficher dans le canvas.`);
     });
   };
 
-  const handleLoadRoom = () => {
-    void runRoomAction('load', async () => {
-      const roomId = roomIdInput.trim();
-      if (!roomId) {
-        throw new Error('Sélectionne ou saisis une room id à charger.');
-      }
+  const handleSelectedRoomChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const nextRoomId = event.target.value;
 
-      if (!isUuid(roomId)) {
-        throw new Error('La room id doit être un UUID valide.');
-      }
+    setStatusMessage(null);
+    setErrorMessage(null);
 
-      const snapshot = await loadRoomSnapshot(roomId);
-      const level = await getLevel(snapshot.room.levelId);
+    if (!nextRoomId) {
+      clearActiveRoomSelection();
+      return;
+    }
 
-      await refreshProjects(level.projectId);
-      await refreshLevelsForProject(level.projectId, level.id);
-      await refreshRoomsForLevel(snapshot.room.levelId);
+    const cachedSnapshot = levelRoomSnapshots.find((snapshot) => snapshot.room.id === nextRoomId);
+    if (cachedSnapshot) {
+      applyActiveRoomSnapshot(cachedSnapshot);
+      setStatusMessage(`Pièce affichée : ${cachedSnapshot.room.name}.`);
+      return;
+    }
 
-      applyLoadedRoomSnapshot(snapshot, level);
-      setStatusMessage(`Pièce chargée : ${snapshot.room.name}.`);
+    void runRoomAction('select-room', async () => {
+      const snapshot = await loadRoomSnapshot(nextRoomId);
+      applyActiveRoomSnapshot(snapshot);
+      setStatusMessage(`Pièce affichée : ${snapshot.room.name}.`);
     });
   };
 
@@ -645,10 +676,11 @@ export function RoomEditorDemo() {
       );
       const savedOpenings = await replaceRoomOpenings(savedVertices, savedWalls, openings);
 
-      await refreshRoomsForLevel(savedRoom.levelId);
+      const nextRooms = await refreshRoomsForLevel(savedRoom.levelId);
+      await refreshRoomSnapshotsForRooms(nextRooms);
 
       setActiveRoom(savedRoom);
-      setRoomIdInput(savedRoom.id);
+      setSelectedRoomId(savedRoom.id);
       setRoomNameInput(savedRoom.name);
       applyRoomGeometry(savedVertices, savedWalls, savedOpenings);
       setStatusMessage(`Pièce enregistrée : ${savedRoom.name}.`);
@@ -657,26 +689,29 @@ export function RoomEditorDemo() {
 
   const handleDeleteRoom = () => {
     void runRoomAction('delete', async () => {
-      const roomId = roomIdInput.trim() || activeRoom?.id;
-      if (!roomId) {
-        throw new Error('Sélectionne ou saisis une room id à supprimer.');
+      if (!activeRoom) {
+        throw new Error('Sélectionne une pièce avant de la supprimer.');
       }
 
-      if (!isUuid(roomId)) {
-        throw new Error('La room id doit être un UUID valide.');
-      }
+      const deletedRoom = activeRoom;
+      let remainingRooms: Room[] = [];
 
-      const nextLevelId = activeRoom?.levelId ?? selectedLevelId;
-      await deleteRoom(roomId);
+      await deleteRoom(deletedRoom.id);
 
-      if (nextLevelId && isUuid(nextLevelId)) {
-        await refreshRoomsForLevel(nextLevelId);
+      if (deletedRoom.levelId && isUuid(deletedRoom.levelId)) {
+        remainingRooms = await refreshRoomsForLevel(deletedRoom.levelId);
+        await refreshRoomSnapshotsForRooms(remainingRooms);
       } else {
         setAvailableRooms([]);
+        setLevelRoomSnapshots([]);
       }
 
-      resetDraftRoom();
-      setStatusMessage('Pièce supprimée. Le canvas est revenu sur un brouillon local.');
+      clearActiveRoomSelection();
+      setStatusMessage(
+        remainingRooms.length === 0
+          ? `Pièce supprimée : ${deletedRoom.name}. Aucune pièce restante pour ce niveau.`
+          : `Pièce supprimée : ${deletedRoom.name}. Sélectionne une autre pièce dans la liste pour l'afficher.`,
+      );
     });
   };
 
@@ -842,7 +877,7 @@ export function RoomEditorDemo() {
           ) : (
             <>
               <p style={{ marginTop: 0, color: '#57606a' }}>
-                Crée une pièce à partir du dessin courant, recharge-la par son identifiant, puis enregistre ou supprime la version persistée.
+                La création et la sélection sont séparées : crée une pièce avec son niveau et son nom, puis utilise la liste pour choisir celle affichée dans le canvas.
               </p>
 
               <p style={{ marginTop: 0 }}>
@@ -857,7 +892,7 @@ export function RoomEditorDemo() {
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
                 <label style={{ display: 'grid', gap: 6 }}>
-                  Niveau
+                  Niveau de création
                   <select
                     value={selectedLevelId}
                     onChange={handleSelectedLevelChange}
@@ -875,61 +910,71 @@ export function RoomEditorDemo() {
                 </label>
 
                 <label style={{ display: 'grid', gap: 6 }}>
-                  Nom de la pièce
+                  Nom de la nouvelle pièce
                   <input
-                    value={roomNameInput}
-                    onChange={(event) => setRoomNameInput(event.target.value)}
+                    value={newRoomNameInput}
+                    onChange={(event) => setNewRoomNameInput(event.target.value)}
                     placeholder="Cuisine, salon, chambre..."
-                    disabled={isBusy}
-                  />
-                </label>
-
-                <label style={{ display: 'grid', gap: 6, gridColumn: '1 / -1' }}>
-                  Room ID
-                  <input
-                    value={roomIdInput}
-                    onChange={(event) => setRoomIdInput(event.target.value)}
-                    placeholder="uuid de la pièce"
                     disabled={isBusy}
                   />
                 </label>
               </div>
 
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
-                <button type="button" onClick={handleListRooms} disabled={isBusy || !selectedLevelId}>
-                  {busyAction === 'list' ? 'Chargement...' : 'Lister le niveau'}
-                </button>
                 <button type="button" onClick={handleCreateRoom} disabled={isBusy || !selectedLevelId}>
-                  {busyAction === 'create' ? 'Création...' : 'Créer'}
-                </button>
-                <button type="button" onClick={handleLoadRoom} disabled={isBusy}>
-                  {busyAction === 'load' ? 'Chargement...' : 'Charger'}
-                </button>
-                <button type="button" onClick={handleSaveRoom} disabled={isBusy || activeRoom === null || !selectedLevelId}>
-                  {busyAction === 'save' ? 'Enregistrement...' : 'Enregistrer'}
-                </button>
-                <button type="button" onClick={handleDeleteRoom} disabled={isBusy || (!roomIdInput.trim() && activeRoom === null)}>
-                  {busyAction === 'delete' ? 'Suppression...' : 'Supprimer'}
+                  {busyAction === 'create' ? 'Création...' : 'Créer la pièce'}
                 </button>
               </div>
 
               <label style={{ display: 'grid', gap: 6, marginTop: 16 }}>
-                Pièces trouvées pour ce niveau
+                Pièce affichée dans le canvas
                 <select
-                  value={roomIdInput}
-                  onChange={(event) => setRoomIdInput(event.target.value)}
+                  value={selectedRoomId}
+                  onChange={handleSelectedRoomChange}
                   disabled={isBusy || availableRooms.length === 0}
                 >
                   <option value="">
-                    {availableRooms.length === 0 ? 'Aucune pièce chargée pour ce niveau' : 'Sélectionner une pièce'}
+                    {availableRooms.length === 0 ? 'Aucune pièce disponible pour ce niveau' : 'Sélectionner une pièce'}
                   </option>
                   {availableRooms.map((room) => (
                     <option key={room.id} value={room.id}>
-                      {room.name} — {room.id}
+                      {room.name}
                     </option>
                   ))}
                 </select>
               </label>
+
+              {activeRoom ? (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12, marginTop: 16 }}>
+                    <label style={{ display: 'grid', gap: 6 }}>
+                      Nom de la pièce affichée
+                      <input
+                        value={roomNameInput}
+                        onChange={(event) => setRoomNameInput(event.target.value)}
+                        placeholder="Cuisine, salon, chambre..."
+                        disabled={isBusy}
+                      />
+                    </label>
+
+                    <div style={{ display: 'grid', gap: 6 }}>
+                      <span>Identifiant</span>
+                      <div style={{ padding: '8px 12px', border: '1px solid #d0d7de', borderRadius: 6, background: '#f6f8fa', color: '#57606a' }}>
+                        {activeRoom.id}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
+                    <button type="button" onClick={handleSaveRoom} disabled={isBusy || !selectedLevelId}>
+                      {busyAction === 'save' ? 'Enregistrement...' : 'Enregistrer la pièce affichée'}
+                    </button>
+                    <button type="button" onClick={handleDeleteRoom} disabled={isBusy}>
+                      {busyAction === 'delete' ? 'Suppression...' : 'Supprimer la pièce affichée'}
+                    </button>
+                  </div>
+                </>
+              ) : null}
 
               {statusMessage ? (
                 <p style={{ marginBottom: 0, color: '#0a6c3c' }}>{statusMessage}</p>
@@ -947,10 +992,17 @@ export function RoomEditorDemo() {
         vertices={vertices}
         wallDefinitions={wallDefinitions}
         openings={openings}
+        contextRooms={contextRooms}
         selectedWallIndex={selectedWallIndex}
         onVerticesChange={handleVerticesChange}
         onWallSelect={setSelectedWallIndex}
       />
+
+      {contextRooms.length > 0 ? (
+        <p style={{ marginTop: 12, marginBottom: 0, color: '#57606a' }}>
+          Vue étage active : {contextRooms.length} autre(s) pièce(s) du niveau sont affichée(s) en gris avec leurs coordonnées globales.
+        </p>
+      ) : null}
 
       <section style={{ marginTop: 24, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div style={{ border: '1px solid #d0d7de', borderRadius: 8, padding: 16, background: 'white' }}>

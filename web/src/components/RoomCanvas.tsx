@@ -1,13 +1,20 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { centroid, formatLengthCm, insertVertexBetween, polygonAreaCm2, polygonPerimeterCm, removeVertex, snapPointToNearbyAxes, updateVertexPosition, updateWallLength, wallsFromVertices } from '../../../shared/src/geometry';
-import type { Opening, Vertex, Wall } from '../../../shared/src/types';
+import type { Opening, Room, Vertex, Wall } from '../../../shared/src/types';
 
 const SNAP_THRESHOLD_CM = 12;
+const VIEWBOX_PADDING_CM = 80;
+
+type CanvasContextRoom = {
+  room: Room;
+  vertices: Vertex[];
+};
 
 export interface RoomCanvasProps {
   vertices: Vertex[];
   wallDefinitions?: Wall[];
   openings?: Opening[];
+  contextRooms?: CanvasContextRoom[];
   width?: number;
   height?: number;
   selectedWallIndex?: number | null;
@@ -21,6 +28,35 @@ function toPointsAttribute(vertices: Vertex[]): string {
 
 function midpoint(a: { x: number; y: number }, b: { x: number; y: number }) {
   return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+}
+
+function getViewBox(verticesGroups: Vertex[][], fallbackWidth: number, fallbackHeight: number) {
+  const allVertices = verticesGroups.flat();
+
+  if (allVertices.length === 0) {
+    return {
+      minX: 0,
+      minY: 0,
+      width: fallbackWidth,
+      height: fallbackHeight,
+    };
+  }
+
+  const xs = allVertices.map((vertex) => vertex.x);
+  const ys = allVertices.map((vertex) => vertex.y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const computedWidth = Math.max(maxX - minX, 120);
+  const computedHeight = Math.max(maxY - minY, 120);
+
+  return {
+    minX: minX - VIEWBOX_PADDING_CM,
+    minY: minY - VIEWBOX_PADDING_CM,
+    width: computedWidth + VIEWBOX_PADDING_CM * 2,
+    height: computedHeight + VIEWBOX_PADDING_CM * 2,
+  };
 }
 
 function openingSegment(start: Vertex, end: Vertex, offsetCm: number, widthCm: number) {
@@ -100,6 +136,7 @@ export function RoomCanvas({
   vertices,
   wallDefinitions = [],
   openings = [],
+  contextRooms = [],
   width = 900,
   height = 700,
   selectedWallIndex = null,
@@ -121,8 +158,19 @@ export function RoomCanvas({
     () => [...vertices].sort((a, b) => a.order - b.order),
     [vertices],
   );
+  const normalizedContextRooms = useMemo(
+    () => contextRooms.map((room) => ({
+      ...room,
+      vertices: [...room.vertices].sort((a, b) => a.order - b.order),
+    })),
+    [contextRooms],
+  );
 
   const walls = useMemo(() => wallsFromVertices(sortedVertices), [sortedVertices]);
+  const viewBox = useMemo(
+    () => getViewBox([sortedVertices, ...normalizedContextRooms.map((room) => room.vertices)], width, height),
+    [height, normalizedContextRooms, sortedVertices, width],
+  );
   const openingsByWallId = useMemo(() => {
     const groupedOpenings = new Map<string, Opening[]>();
 
@@ -360,7 +408,7 @@ export function RoomCanvas({
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 16 }}>
       <svg
         ref={svgRef}
-        viewBox={`0 0 ${width} ${height}`}
+        viewBox={`${viewBox.minX} ${viewBox.minY} ${viewBox.width} ${viewBox.height}`}
         width="100%"
         height={height}
         onDoubleClick={handleSvgDoubleClick}
@@ -374,14 +422,14 @@ export function RoomCanvas({
             <path d="M 25 0 L 0 0 0 25" fill="none" stroke="#eceff3" strokeWidth="1" />
           </pattern>
         </defs>
-        <rect x="0" y="0" width={width} height={height} fill="url(#grid)" />
+        <rect x={viewBox.minX} y={viewBox.minY} width={viewBox.width} height={viewBox.height} fill="url(#grid)" />
 
         {snapGuide.x !== null && (
           <line
             x1={snapGuide.x}
-            y1={0}
+            y1={viewBox.minY}
             x2={snapGuide.x}
-            y2={height}
+            y2={viewBox.minY + viewBox.height}
             stroke="#d83b01"
             strokeWidth={1.5}
             strokeDasharray="6 6"
@@ -391,9 +439,9 @@ export function RoomCanvas({
 
         {snapGuide.y !== null && (
           <line
-            x1={0}
+            x1={viewBox.minX}
             y1={snapGuide.y}
-            x2={width}
+            x2={viewBox.minX + viewBox.width}
             y2={snapGuide.y}
             stroke="#d83b01"
             strokeWidth={1.5}
@@ -401,6 +449,37 @@ export function RoomCanvas({
             pointerEvents="none"
           />
         )}
+
+        {normalizedContextRooms.map((contextRoom) => {
+          if (contextRoom.vertices.length < 3) {
+            return null;
+          }
+
+          const roomCenter = centroid(contextRoom.vertices);
+
+          return (
+            <g key={contextRoom.room.id} pointerEvents="none">
+              <polygon
+                points={toPointsAttribute(contextRoom.vertices)}
+                fill="rgba(87, 96, 106, 0.08)"
+                stroke="#8c959f"
+                strokeWidth={2}
+                strokeDasharray="8 6"
+              />
+              <text
+                x={roomCenter.x}
+                y={roomCenter.y}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontSize={14}
+                fontWeight={600}
+                fill="#57606a"
+              >
+                {contextRoom.room.name}
+              </text>
+            </g>
+          );
+        })}
 
         {sortedVertices.length >= 3 && (
           <polygon
