@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { RoomCanvas } from '../components/RoomCanvas';
 import type { Level, Project, Room, Vertex, Wall } from '../../../shared/src/types';
 import {
@@ -247,6 +247,48 @@ export function RoomEditorDemo() {
     applyRoomGeometry(draft.vertices, draft.walls);
     setSelectedWallIndex(null);
   }
+
+  useEffect(() => {
+    if (!supabaseConfigured) {
+      return;
+    }
+
+    void runRoomAction('bootstrap', async () => {
+      const nextProjects = await refreshProjects();
+      const firstProject = nextProjects[0];
+
+      if (!firstProject) {
+        setStatusMessage('Aucun projet trouvé.');
+        return;
+      }
+
+      const nextLevels = await refreshLevelsForProject(firstProject.id);
+      const firstLevel = nextLevels[0];
+
+      if (!firstLevel) {
+        setStatusMessage('Projet sélectionné automatiquement. Aucun niveau trouvé pour ce projet.');
+        return;
+      }
+
+      const nextRooms = await refreshRoomsForLevel(firstLevel.id);
+      const firstRoom = nextRooms[0];
+
+      if (!firstRoom) {
+        setStatusMessage('Projet et niveau sélectionnés automatiquement. Aucune pièce trouvée pour ce niveau.');
+        return;
+      }
+
+      const snapshot = await loadRoomSnapshot(firstRoom.id);
+      setActiveRoom(snapshot.room);
+      setSelectedProjectId(firstProject.id);
+      setSelectedLevelId(firstLevel.id);
+      setRoomIdInput(snapshot.room.id);
+      setRoomNameInput(snapshot.room.name);
+      applyRoomGeometry(snapshot.vertices, snapshot.walls);
+      setSelectedWallIndex(null);
+      setStatusMessage(`Pièce chargée : ${snapshot.room.name}.`);
+    });
+  }, [supabaseConfigured]);
 
   const handleSelectedProjectChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedProjectId(event.target.value);
