@@ -116,6 +116,7 @@ Modifier la longueur d’un mur en éditant la zone de saisie
 ### Prompt
 ```ts
 // Vérifier qu’une ouverture ne dépasse pas les limites du mur
+// Que deux ouvertures ne se chevauchent pas
 ```
 
 ---

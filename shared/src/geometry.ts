@@ -2,6 +2,25 @@ import type { DerivedWall, Opening, Point2D, Vertex, Wall } from './types';
 
 const EPSILON = 1e-9;
 
+export type OpeningValidationCode =
+  | 'wall_not_found'
+  | 'invalid_offset'
+  | 'invalid_width'
+  | 'invalid_bottom'
+  | 'invalid_height'
+  | 'outside_wall'
+  | 'outside_wall_height'
+  | 'overlap';
+
+export interface OpeningValidationIssue {
+  code: OpeningValidationCode;
+  opening: Opening;
+  wall: Wall | null;
+  wallLengthCm: number | null;
+  availableWallHeightCm: number | null;
+  conflictingOpening: Opening | null;
+}
+
 export function distance(a: Point2D, b: Point2D): number {
   return Math.hypot(b.x - a.x, b.y - a.y);
 }
@@ -133,6 +152,275 @@ export function syncWallsWithVertices(vertices: Vertex[], walls: Wall[]): Wall[]
 export function syncOpeningsWithWalls(walls: Wall[], openings: Opening[]): Opening[] {
   const wallIds = new Set(walls.map((wall) => wall.id));
   return openings.filter((opening) => wallIds.has(opening.wallId));
+}
+
+function openingRangesOverlap(
+  leftStartCm: number,
+  leftEndCm: number,
+  rightStartCm: number,
+  rightEndCm: number,
+): boolean {
+  return leftStartCm < rightEndCm - EPSILON && rightStartCm < leftEndCm - EPSILON;
+}
+
+function findWallEndpoints(
+  verticesById: Map<string, Vertex>,
+  wall: Wall,
+): { start: Vertex; end: Vertex } | null {
+  const start = verticesById.get(wall.startVertexId);
+  const end = verticesById.get(wall.endVertexId);
+
+  if (!start || !end) {
+    return null;
+  }
+
+  return { start, end };
+}
+
+function normalizeWallHeightCm(heightCm: number | null | undefined): number | null {
+  if (!Number.isFinite(heightCm) || heightCm === null || heightCm === undefined) {
+    return null;
+  }
+
+  return heightCm;
+}
+
+function wallHeightAtOffsetCm(wall: Wall, wallLengthCm: number, offsetCm: number): number | null {
+  const leftHeightCm = normalizeWallHeightCm(wall.heightLeftCm);
+  const rightHeightCm = normalizeWallHeightCm(wall.heightRightCm);
+
+  if (leftHeightCm === null && rightHeightCm === null) {
+    return null;
+  }
+
+  if (leftHeightCm === null) {
+    return rightHeightCm;
+  }
+
+  if (rightHeightCm === null) {
+    return leftHeightCm;
+  }
+
+  if (wallLengthCm <= EPSILON) {
+    return Math.min(leftHeightCm, rightHeightCm);
+  }
+
+  const ratio = Math.max(0, Math.min(1, offsetCm / wallLengthCm));
+  return leftHeightCm + (rightHeightCm - leftHeightCm) * ratio;
+}
+
+export function validateOpeningOnWall(
+  wallLengthCm: number,
+  wall: Wall | null,
+  opening: Opening,
+  siblingOpenings: Opening[],
+): OpeningValidationIssue | null {
+  if (!Number.isFinite(opening.offsetCm) || opening.offsetCm < 0) {
+    return {
+      code: 'invalid_offset',
+      opening,
+      wall,
+      wallLengthCm,
+      availableWallHeightCm: null,
+      conflictingOpening: null,
+    };
+  }
+
+  if (!Number.isFinite(opening.widthCm) || opening.widthCm <= EPSILON) {
+    return {
+      code: 'invalid_width',
+      opening,
+      wall,
+      wallLengthCm,
+      availableWallHeightCm: null,
+      conflictingOpening: null,
+    };
+  }
+
+  if (!Number.isFinite(opening.bottomCm) || opening.bottomCm < 0) {
+    return {
+      code: 'invalid_bottom',
+      opening,
+      wall,
+      wallLengthCm,
+      availableWallHeightCm: null,
+      conflictingOpening: null,
+    };
+  }
+
+  if (!Number.isFinite(opening.heightCm) || opening.heightCm <= EPSILON) {
+    return {
+      code: 'invalid_height',
+      opening,
+      wall,
+      wallLengthCm,
+      availableWallHeightCm: null,
+      conflictingOpening: null,
+    };
+  }
+
+  const openingStartCm = opening.offsetCm;
+  const openingEndCm = opening.offsetCm + opening.widthCm;
+
+  if (openingEndCm > wallLengthCm + EPSILON) {
+    return {
+      code: 'outside_wall',
+      opening,
+      wall,
+      wallLengthCm,
+      availableWallHeightCm: null,
+      conflictingOpening: null,
+    };
+  }
+
+  if (wall) {
+    const wallHeightAtOpeningStartCm = wallHeightAtOffsetCm(wall, wallLengthCm, openingStartCm);
+    const wallHeightAtOpeningEndCm = wallHeightAtOffsetCm(wall, wallLengthCm, openingEndCm);
+
+    if (wallHeightAtOpeningStartCm !== null || wallHeightAtOpeningEndCm !== null) {
+      const availableWallHeightCm = Math.min(
+        wallHeightAtOpeningStartCm ?? Number.POSITIVE_INFINITY,
+        wallHeightAtOpeningEndCm ?? Number.POSITIVE_INFINITY,
+      );
+
+      if (opening.bottomCm + opening.heightCm > availableWallHeightCm + EPSILON) {
+        return {
+          code: 'outside_wall_height',
+          opening,
+          wall,
+          wallLengthCm,
+          availableWallHeightCm,
+          conflictingOpening: null,
+        };
+      }
+    }
+  }
+
+  for (const siblingOpening of siblingOpenings) {
+    if (siblingOpening.id === opening.id) {
+      continue;
+    }
+
+    if (!Number.isFinite(siblingOpening.offsetCm) || siblingOpening.offsetCm < 0) {
+      continue;
+    }
+
+    if (!Number.isFinite(siblingOpening.widthCm) || siblingOpening.widthCm <= EPSILON) {
+      continue;
+    }
+
+    const siblingStartCm = siblingOpening.offsetCm;
+    const siblingEndCm = siblingOpening.offsetCm + siblingOpening.widthCm;
+
+    if (openingRangesOverlap(openingStartCm, openingEndCm, siblingStartCm, siblingEndCm)) {
+      return {
+        code: 'overlap',
+        opening,
+        wall,
+        wallLengthCm,
+        availableWallHeightCm: null,
+        conflictingOpening: siblingOpening,
+      };
+    }
+  }
+
+  return null;
+}
+
+export function validateOpenings(
+  vertices: Vertex[],
+  walls: Wall[],
+  openings: Opening[],
+): OpeningValidationIssue[] {
+  const verticesById = new Map(vertices.map((vertex) => [vertex.id, vertex]));
+  const wallsById = new Map(walls.map((wall) => [wall.id, wall]));
+  const openingsByWallId = new Map<string, Opening[]>();
+
+  for (const opening of openings) {
+    const groupedOpenings = openingsByWallId.get(opening.wallId) ?? [];
+    groupedOpenings.push(opening);
+    openingsByWallId.set(opening.wallId, groupedOpenings);
+  }
+
+  const issues: OpeningValidationIssue[] = [];
+
+  for (const opening of openings) {
+    const wall = wallsById.get(opening.wallId) ?? null;
+    if (!wall) {
+      issues.push({
+        code: 'wall_not_found',
+        opening,
+        wall: null,
+        wallLengthCm: null,
+        availableWallHeightCm: null,
+        conflictingOpening: null,
+      });
+      continue;
+    }
+
+    const endpoints = findWallEndpoints(verticesById, wall);
+    if (!endpoints) {
+      issues.push({
+        code: 'wall_not_found',
+        opening,
+        wall,
+        wallLengthCm: null,
+        availableWallHeightCm: null,
+        conflictingOpening: null,
+      });
+      continue;
+    }
+
+    const wallLengthCm = segmentLengthCm(endpoints.start, endpoints.end);
+    const issue = validateOpeningOnWall(
+      wallLengthCm,
+      wall,
+      opening,
+      openingsByWallId.get(opening.wallId) ?? [],
+    );
+
+    if (issue) {
+      issues.push({
+        ...issue,
+        wall,
+      });
+    }
+  }
+
+  return issues;
+}
+
+export function formatOpeningValidationIssue(issue: OpeningValidationIssue): string {
+  switch (issue.code) {
+    case 'invalid_offset':
+      return 'La position de l’ouverture doit être positive ou nulle.';
+    case 'invalid_width':
+      return 'La largeur de l’ouverture doit être strictement positive.';
+    case 'invalid_bottom':
+      return 'L’allège de l’ouverture doit être positive ou nulle.';
+    case 'invalid_height':
+      return 'La hauteur de l’ouverture doit être strictement positive.';
+    case 'outside_wall': {
+      const wallLengthLabel = issue.wallLengthCm === null
+        ? 'la longueur du mur'
+        : `${Math.round(issue.wallLengthCm)} cm`;
+
+      return `L’ouverture dépasse les limites du mur (${wallLengthLabel}).`;
+    }
+    case 'outside_wall_height': {
+      const wallHeightLabel = issue.availableWallHeightCm === null
+        ? 'la hauteur disponible du mur'
+        : `${Math.round(issue.availableWallHeightCm)} cm`;
+
+      return `Le haut de l’ouverture dépasse la hauteur disponible du mur à cet emplacement (${wallHeightLabel}).`;
+    }
+    case 'overlap':
+      return 'Deux ouvertures d’un même mur ne peuvent pas se chevaucher.';
+    case 'wall_not_found':
+      return 'Le mur associé à l’ouverture est introuvable.';
+    default:
+      return 'L’ouverture est invalide.';
+  }
 }
 
 export function remapWallsToVertices(

@@ -16,6 +16,7 @@
 - snapping horizontal / vertical sur les axes portés par les autres sommets lors d'un déplacement proche
 - pas de solveur de contraintes avancé dans un premier temps
 - propagation des vues à partir de la vue du dessus
+- une ouverture reste valide si elle est entièrement comprise dans son mur, si son haut reste sous la hauteur disponible du mur, et si elle ne chevauche pas une autre ouverture du même mur
 
 ## Fonctions minimales à implémenter
 - distance entre deux points

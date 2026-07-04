@@ -4,9 +4,12 @@ import type { Level, Opening, Project, Room, Vertex, Wall } from '../../../share
 import {
   angleAtVertexDegrees,
   centroid,
+  formatOpeningValidationIssue,
   remapWallsToVertices,
   syncOpeningsWithWalls,
   syncWallsWithVertices,
+  validateOpeningOnWall,
+  validateOpenings,
   wallsFromVertices,
 } from '../../../shared/src/geometry';
 import { hasSupabaseConfig } from '../lib/supabase';
@@ -134,6 +137,7 @@ export function RoomEditorDemo() {
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [openingFormMessage, setOpeningFormMessage] = useState<string | null>(null);
 
   const walls = useMemo(() => wallsFromVertices(vertices), [vertices]);
   const selectedWall = selectedWallIndex === null ? null : walls[selectedWallIndex] ?? null;
@@ -143,6 +147,17 @@ export function RoomEditorDemo() {
 
     return openings.filter((opening) => opening.wallId === selectedWallDefinition.id);
   }, [openings, selectedWallDefinition]);
+  const openingValidationIssues = useMemo(
+    () => validateOpenings(vertices, wallDefinitions, openings),
+    [vertices, wallDefinitions, openings],
+  );
+  const selectedWallOpeningIssues = useMemo(() => {
+    if (!selectedWallDefinition) return [];
+
+    return openingValidationIssues.filter(
+      (issue) => issue.opening.wallId === selectedWallDefinition.id,
+    );
+  }, [openingValidationIssues, selectedWallDefinition]);
   const center = useMemo(() => centroid(vertices), [vertices]);
   const selectedProject = useMemo(
     () => availableProjects.find((project) => project.id === selectedProjectId) ?? null,
@@ -223,6 +238,7 @@ export function RoomEditorDemo() {
   }
 
   function handleOpeningDraftChange(field: keyof OpeningDraft, value: string) {
+    setOpeningFormMessage(null);
     setOpeningDraft((currentDraft) => ({
       ...currentDraft,
       [field]: value,
@@ -238,22 +254,22 @@ export function RoomEditorDemo() {
     const heightCm = parseMetricInput(openingDraft.heightCm);
 
     if (!Number.isFinite(offsetCm) || offsetCm < 0) {
-      setErrorMessage('La position de l’ouverture doit être positive ou nulle.');
+      setOpeningFormMessage('La position de l’ouverture doit être positive ou nulle.');
       return;
     }
 
     if (!Number.isFinite(widthCm) || widthCm <= 0) {
-      setErrorMessage('La largeur de l’ouverture doit être strictement positive.');
+      setOpeningFormMessage('La largeur de l’ouverture doit être strictement positive.');
       return;
     }
 
     if (!Number.isFinite(bottomCm) || bottomCm < 0) {
-      setErrorMessage('L’allège de l’ouverture doit être positive ou nulle.');
+      setOpeningFormMessage('L’allège de l’ouverture doit être positive ou nulle.');
       return;
     }
 
     if (!Number.isFinite(heightCm) || heightCm <= 0) {
-      setErrorMessage('La hauteur de l’ouverture doit être strictement positive.');
+      setOpeningFormMessage('La hauteur de l’ouverture doit être strictement positive.');
       return;
     }
 
@@ -268,13 +284,27 @@ export function RoomEditorDemo() {
       notes: null,
     };
 
+    const validationIssue = validateOpeningOnWall(
+      selectedWall.lengthCm,
+      selectedWallDefinition,
+      nextOpening,
+      selectedWallOpenings,
+    );
+
+    if (validationIssue) {
+      setOpeningFormMessage(formatOpeningValidationIssue(validationIssue));
+      return;
+    }
+
     setOpenings((currentOpenings) => [...currentOpenings, nextOpening]);
+    setOpeningFormMessage(null);
     setErrorMessage(null);
     setStatusMessage(`Ouverture ajoutée localement sur le mur ${selectedWall.index + 1}. Enregistre la pièce pour la persister.`);
   }
 
   function handleRemoveOpening(openingId: string) {
     setOpenings((currentOpenings) => currentOpenings.filter((opening) => opening.id !== openingId));
+    setOpeningFormMessage(null);
     setErrorMessage(null);
     setStatusMessage('Ouverture supprimée localement. Enregistre la pièce pour confirmer la suppression.');
   }
@@ -542,7 +572,7 @@ export function RoomEditorDemo() {
         savedVertices,
         remapWallsToVertices(vertices, savedVertices, wallDefinitions),
       );
-      const savedOpenings = await replaceRoomOpenings(savedWalls, openings);
+      const savedOpenings = await replaceRoomOpenings(savedVertices, savedWalls, openings);
 
       await refreshRoomsForLevel(createdRoom.levelId);
 
@@ -613,7 +643,7 @@ export function RoomEditorDemo() {
         savedVertices,
         remapWallsToVertices(vertices, savedVertices, wallDefinitions),
       );
-      const savedOpenings = await replaceRoomOpenings(savedWalls, openings);
+      const savedOpenings = await replaceRoomOpenings(savedVertices, savedWalls, openings);
 
       await refreshRoomsForLevel(savedRoom.levelId);
 
@@ -975,8 +1005,18 @@ export function RoomEditorDemo() {
               <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #d8dee4' }}>
                 <h4 style={{ marginTop: 0, marginBottom: 8 }}>Ouvertures</h4>
                 <p style={{ color: '#57606a', fontSize: 14, marginTop: 0 }}>
-                  La position est mesurée depuis le sommet de départ du mur. La validation stricte des limites du mur sera renforcée à l’étape 3.3.
+                  La position est mesurée depuis le sommet de départ du mur. Une ouverture doit rester entièrement dans le mur et ne pas chevaucher une autre ouverture du même mur.
                 </p>
+
+                {selectedWallOpeningIssues.length > 0 ? (
+                  <div style={{ marginBottom: 12, padding: 12, borderRadius: 6, background: '#fff8c5', color: '#7a4e00' }}>
+                    {selectedWallOpeningIssues.map((issue) => (
+                      <p key={`${issue.opening.id}:${issue.code}`} style={{ margin: 0 }}>
+                        {formatOpeningValidationIssue(issue)}
+                      </p>
+                    ))}
+                  </div>
+                ) : null}
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
                   <label style={{ display: 'grid', gap: 6 }}>
@@ -1047,6 +1087,12 @@ export function RoomEditorDemo() {
                 >
                   Ajouter l’ouverture
                 </button>
+
+                {openingFormMessage ? (
+                  <p style={{ marginTop: 8, marginBottom: 0, color: '#cf222e', fontSize: 14 }}>
+                    {openingFormMessage}
+                  </p>
+                ) : null}
 
                 {selectedWallOpenings.length > 0 ? (
                   <ul style={{ paddingLeft: 18, marginTop: 16, marginBottom: 0 }}>

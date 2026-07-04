@@ -1,4 +1,11 @@
-import { remapWallsToVertices, sortVertices, syncOpeningsWithWalls, syncWallsWithVertices } from '../../../shared/src/geometry';
+import {
+  formatOpeningValidationIssue,
+  remapWallsToVertices,
+  sortVertices,
+  syncOpeningsWithWalls,
+  syncWallsWithVertices,
+  validateOpenings,
+} from '../../../shared/src/geometry';
 import type { Opening, Room, Vertex, Wall } from '../../../shared/src/types';
 import { getSupabaseClient } from '../lib/supabase';
 
@@ -372,9 +379,15 @@ export async function replaceRoomWalls(
 }
 
 export async function replaceRoomOpenings(
+  vertices: Vertex[],
   walls: Wall[],
   openings: Opening[],
 ): Promise<Opening[]> {
+  const issues = validateOpenings(vertices, walls, openings);
+  if (issues.length > 0) {
+    throw new Error(formatOpeningValidationIssue(issues[0]));
+  }
+
   const supabase = getSupabaseClient();
   const wallIds = walls.map((wall) => wall.id);
 
@@ -426,7 +439,7 @@ export async function saveRoomSnapshot(snapshot: RoomSnapshot): Promise<RoomSnap
     vertices,
     remapWallsToVertices(snapshot.vertices, vertices, snapshot.walls),
   );
-  const openings = await replaceRoomOpenings(walls, snapshot.openings);
+  const openings = await replaceRoomOpenings(vertices, walls, snapshot.openings);
 
   return {
     room,
