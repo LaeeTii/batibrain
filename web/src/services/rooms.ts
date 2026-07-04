@@ -1,5 +1,5 @@
-import { remapWallsToVertices, sortVertices, syncWallsWithVertices } from '../../../shared/src/geometry';
-import type { Room, Vertex, Wall } from '../../../shared/src/types';
+import { remapWallsToVertices, sortVertices, syncOpeningsWithWalls, syncWallsWithVertices } from '../../../shared/src/geometry';
+import type { Opening, Room, Vertex, Wall } from '../../../shared/src/types';
 import { getSupabaseClient } from '../lib/supabase';
 
 type PieceRow = {
@@ -30,10 +30,22 @@ type PieceWallRow = {
   notes: string | null;
 };
 
+type PieceOpeningRow = {
+  id: string;
+  wall_id: string;
+  opening_type: Opening['type'];
+  offset_cm: number | string;
+  width_cm: number | string;
+  bottom_cm: number | string;
+  height_cm: number | string;
+  notes: string | null;
+};
+
 export interface RoomSnapshot {
   room: Room;
   vertices: Vertex[];
   walls: Wall[];
+  openings: Opening[];
 }
 
 export interface CreateRoomInput {
@@ -73,6 +85,19 @@ function mapPieceWallRow(row: PieceWallRow): Wall {
     heightRightCm: row.height_right_cm === null ? null : Number(row.height_right_cm),
     material: row.material,
     insulation: row.insulation,
+    notes: row.notes,
+  };
+}
+
+function mapPieceOpeningRow(row: PieceOpeningRow): Opening {
+  return {
+    id: row.id,
+    wallId: row.wall_id,
+    type: row.opening_type,
+    offsetCm: Number(row.offset_cm),
+    widthCm: Number(row.width_cm),
+    bottomCm: Number(row.bottom_cm),
+    heightCm: Number(row.height_cm),
     notes: row.notes,
   };
 }
@@ -117,6 +142,19 @@ function toPieceWallRows(roomId: string, vertices: Vertex[], walls: Wall[]): Pie
     material: wall.material ?? null,
     insulation: wall.insulation ?? null,
     notes: wall.notes ?? null,
+  }));
+}
+
+function toPieceOpeningRows(walls: Wall[], openings: Opening[]): PieceOpeningRow[] {
+  return syncOpeningsWithWalls(walls, openings).map((opening) => ({
+    id: opening.id,
+    wall_id: opening.wallId,
+    opening_type: opening.type,
+    offset_cm: opening.offsetCm,
+    width_cm: opening.widthCm,
+    bottom_cm: opening.bottomCm,
+    height_cm: opening.heightCm,
+    notes: opening.notes ?? null,
   }));
 }
 
@@ -175,13 +213,33 @@ export async function loadRoomSnapshot(roomId: string): Promise<RoomSnapshot> {
     throw wallsError;
   }
 
+  const syncedWalls = syncWallsWithVertices(
+    mappedVertices,
+    (walls ?? []).map((row) => mapPieceWallRow(row as PieceWallRow)),
+  );
+
+  let syncedOpenings: Opening[] = [];
+  if (syncedWalls.length > 0) {
+    const { data: openings, error: openingsError } = await supabase
+      .from('openings')
+      .select('id, wall_id, opening_type, offset_cm, width_cm, bottom_cm, height_cm, notes')
+      .in('wall_id', syncedWalls.map((wall) => wall.id));
+
+    if (openingsError) {
+      throw openingsError;
+    }
+
+    syncedOpenings = syncOpeningsWithWalls(
+      syncedWalls,
+      (openings ?? []).map((row) => mapPieceOpeningRow(row as PieceOpeningRow)),
+    );
+  }
+
   return {
     room,
     vertices: mappedVertices,
-    walls: syncWallsWithVertices(
-      mappedVertices,
-      (walls ?? []).map((row) => mapPieceWallRow(row as PieceWallRow)),
-    ),
+    walls: syncedWalls,
+    openings: syncedOpenings,
   };
 }
 
@@ -313,6 +371,47 @@ export async function replaceRoomWalls(
   );
 }
 
+export async function replaceRoomOpenings(
+  walls: Wall[],
+  openings: Opening[],
+): Promise<Opening[]> {
+  const supabase = getSupabaseClient();
+  const wallIds = walls.map((wall) => wall.id);
+
+  if (wallIds.length === 0) {
+    return [];
+  }
+
+  const rows = toPieceOpeningRows(walls, openings);
+
+  const { error: deleteError } = await supabase
+    .from('openings')
+    .delete()
+    .in('wall_id', wallIds);
+
+  if (deleteError) {
+    throw deleteError;
+  }
+
+  if (rows.length === 0) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from('openings')
+    .insert(rows)
+    .select('id, wall_id, opening_type, offset_cm, width_cm, bottom_cm, height_cm, notes');
+
+  if (error) {
+    throw error;
+  }
+
+  return syncOpeningsWithWalls(
+    walls,
+    (data ?? []).map((row) => mapPieceOpeningRow(row as PieceOpeningRow)),
+  );
+}
+
 export async function saveRoomSnapshot(snapshot: RoomSnapshot): Promise<RoomSnapshot> {
   const room = await saveRoom(snapshot.room);
   const vertices = await replaceRoomVertices(
@@ -327,10 +426,12 @@ export async function saveRoomSnapshot(snapshot: RoomSnapshot): Promise<RoomSnap
     vertices,
     remapWallsToVertices(snapshot.vertices, vertices, snapshot.walls),
   );
+  const openings = await replaceRoomOpenings(walls, snapshot.openings);
 
   return {
     room,
     vertices,
     walls,
+    openings,
   };
 }

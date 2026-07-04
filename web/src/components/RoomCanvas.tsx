@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { centroid, formatLengthCm, insertVertexBetween, polygonAreaCm2, polygonPerimeterCm, removeVertex, snapPointToNearbyAxes, updateVertexPosition, updateWallLength, wallsFromVertices } from '../../../shared/src/geometry';
-import type { Vertex } from '../../../shared/src/types';
+import type { Opening, Vertex, Wall } from '../../../shared/src/types';
 
 const SNAP_THRESHOLD_CM = 12;
 
 export interface RoomCanvasProps {
   vertices: Vertex[];
+  wallDefinitions?: Wall[];
+  openings?: Opening[];
   width?: number;
   height?: number;
   selectedWallIndex?: number | null;
@@ -17,8 +19,39 @@ function toPointsAttribute(vertices: Vertex[]): string {
   return vertices.map((v) => `${v.x},${v.y}`).join(' ');
 }
 
-function midpoint(a: Vertex, b: Vertex) {
+function midpoint(a: { x: number; y: number }, b: { x: number; y: number }) {
   return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+}
+
+function openingSegment(start: Vertex, end: Vertex, offsetCm: number, widthCm: number) {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const wallLength = Math.hypot(dx, dy);
+
+  if (wallLength === 0) {
+    return null;
+  }
+
+  const clampedStart = Math.max(0, Math.min(wallLength, offsetCm));
+  const clampedEnd = Math.max(clampedStart, Math.min(wallLength, offsetCm + widthCm));
+
+  if (clampedEnd <= clampedStart) {
+    return null;
+  }
+
+  const startRatio = clampedStart / wallLength;
+  const endRatio = clampedEnd / wallLength;
+
+  return {
+    start: {
+      x: start.x + dx * startRatio,
+      y: start.y + dy * startRatio,
+    },
+    end: {
+      x: start.x + dx * endRatio,
+      y: start.y + dy * endRatio,
+    },
+  };
 }
 
 function getSvgPoint(event: { clientX: number; clientY: number }, svg: SVGSVGElement) {
@@ -65,6 +98,8 @@ function projectPointOntoSegment(point: { x: number; y: number }, start: Vertex,
 
 export function RoomCanvas({
   vertices,
+  wallDefinitions = [],
+  openings = [],
   width = 900,
   height = 700,
   selectedWallIndex = null,
@@ -88,6 +123,17 @@ export function RoomCanvas({
   );
 
   const walls = useMemo(() => wallsFromVertices(sortedVertices), [sortedVertices]);
+  const openingsByWallId = useMemo(() => {
+    const groupedOpenings = new Map<string, Opening[]>();
+
+    for (const opening of openings) {
+      const currentOpenings = groupedOpenings.get(opening.wallId) ?? [];
+      currentOpenings.push(opening);
+      groupedOpenings.set(opening.wallId, currentOpenings);
+    }
+
+    return groupedOpenings;
+  }, [openings]);
   const areaM2 = useMemo(() => polygonAreaCm2(sortedVertices) / 10000, [sortedVertices]);
   const perimeterM = useMemo(() => polygonPerimeterCm(sortedVertices) / 100, [sortedVertices]);
   const center = useMemo(() => centroid(sortedVertices), [sortedVertices]);
@@ -367,6 +413,8 @@ export function RoomCanvas({
 
         {walls.map((wall) => {
           const middle = midpoint(wall.start, wall.end);
+          const wallId = wallDefinitions[wall.index]?.id;
+          const wallOpenings = wallId ? openingsByWallId.get(wallId) ?? [] : [];
           const isSelected = selectedWallIndex === wall.index;
           const isEditing = editingWallIndex === wall.index;
           return (
@@ -385,6 +433,30 @@ export function RoomCanvas({
                 strokeWidth={isSelected ? 6 : 4}
                 strokeLinecap="round"
               />
+              {wallOpenings.map((opening) => {
+                const segment = openingSegment(wall.start, wall.end, opening.offsetCm, opening.widthCm);
+                if (!segment) return null;
+
+                const markerColor = opening.type === 'door'
+                  ? '#b45309'
+                  : opening.type === 'window'
+                    ? '#0f766e'
+                    : '#6d28d9';
+
+                return (
+                  <line
+                    key={opening.id}
+                    x1={segment.start.x}
+                    y1={segment.start.y}
+                    x2={segment.end.x}
+                    y2={segment.end.y}
+                    stroke={markerColor}
+                    strokeWidth={isSelected ? 10 : 8}
+                    strokeLinecap="round"
+                    pointerEvents="none"
+                  />
+                );
+              })}
               {isEditing ? (
                 <foreignObject
                   x={middle.x - 42}

@@ -1,4 +1,4 @@
-import type { DerivedWall, Point2D, Vertex, Wall } from './types';
+import type { DerivedWall, Opening, Point2D, Vertex, Wall } from './types';
 
 const EPSILON = 1e-9;
 
@@ -128,6 +128,11 @@ export function syncWallsWithVertices(vertices: Vertex[], walls: Wall[]): Wall[]
       endVertexId: end.id,
     };
   });
+}
+
+export function syncOpeningsWithWalls(walls: Wall[], openings: Opening[]): Opening[] {
+  const wallIds = new Set(walls.map((wall) => wall.id));
+  return openings.filter((opening) => wallIds.has(opening.wallId));
 }
 
 export function remapWallsToVertices(
