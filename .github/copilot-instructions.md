@@ -30,6 +30,14 @@
 - Do not introduce features beyond the current MVP priorities unless the user explicitly asks for them.
 - If the documentation does not fully answer the task, make the smallest assumption consistent with the existing docs and state that assumption clearly.
 
+## UI Guidelines
+
+- When creating new views, always use the defined CSS variables for button styling:
+  - **Create buttons** (`Créer`, `Ajouter`, `Nouveau`): Use `--create-button-color` (green) and `--create-button-text-color` (white) with class `dashboard-createButton`
+  - **View buttons** (`Vue`, `Voir`): Use `--view-button-color` (blue) and `--view-button-text-color` (white) with class `dashboard-viewButton`
+  - **Export buttons** (`Export`, `Exporter`): Use `--export-button-color` (gray) and `--export-button-text-color` (white) with class `dashboard-exportButton`
+  - **Outline buttons**: Keep using `dashboard-outlineButton` for secondary actions
+
 ## Utilisation du conventionnal commit pour git :
 ### Types Requiring Ticket Reference
 - `feat` - New features

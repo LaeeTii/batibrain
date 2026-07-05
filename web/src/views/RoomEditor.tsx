@@ -894,7 +894,7 @@ export function RoomEditorDemo({
                 <button type="button" onClick={handleListProjects} disabled={isBusy}>
                   {busyAction === 'list-projects' ? 'Chargement...' : 'Lister les projets'}
                 </button>
-                <button type="button" onClick={handleCreateProject} disabled={isBusy}>
+                <button type="button" className="dashboard-createButton" onClick={handleCreateProject} disabled={isBusy}>
                   {busyAction === 'create-project' ? 'Création...' : 'Créer le projet'}
                 </button>
               </div>
@@ -977,7 +977,7 @@ export function RoomEditorDemo({
                 <button type="button" onClick={handleListLevels} disabled={isBusy || !selectedProjectId}>
                   {busyAction === 'list-levels' ? 'Chargement...' : 'Lister les niveaux'}
                 </button>
-                <button type="button" onClick={handleCreateLevel} disabled={isBusy || !newLevelProjectId}>
+                <button type="button" className="dashboard-createButton" onClick={handleCreateLevel} disabled={isBusy || !newLevelProjectId}>
                   {busyAction === 'create-level' ? 'Création...' : 'Créer le niveau'}
                 </button>
               </div>
@@ -1044,7 +1044,7 @@ export function RoomEditorDemo({
               </div>
 
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
-                <button type="button" onClick={handleCreateRoom} disabled={isBusy || !selectedLevelId}>
+                <button type="button" className="dashboard-createButton" onClick={handleCreateRoom} disabled={isBusy || !selectedLevelId}>
                   Préparer un brouillon
                 </button>
               </div>

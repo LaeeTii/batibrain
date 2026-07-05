@@ -563,7 +563,7 @@ export function RoomsDashboard({
             <div className="dashboard-projectActions">
               <button
                 type="button"
-                className="dashboard-primaryButton"
+                className="dashboard-createButton"
                 onClick={() => setIsLevelModalOpen(true)}
                 disabled={!supabaseConfigured || isBusy || !selectedProject}
               >
@@ -595,7 +595,7 @@ export function RoomsDashboard({
                 <div className="dashboard-levelButtons">
                   <button
                     type="button"
-                    className="dashboard-outlineButton"
+                    className="dashboard-viewButton"
                     onClick={handleOpenLevelOverview}
                     disabled={!selectedProject || !selectedLevel}
                   >
@@ -604,7 +604,7 @@ export function RoomsDashboard({
 
                   <button
                     type="button"
-                    className="dashboard-primaryButton"
+                    className="dashboard-createButton"
                     onClick={handleCreateRoom}
                     disabled={!supabaseConfigured || isBusy || !selectedLevel}
                   >
@@ -631,7 +631,7 @@ export function RoomsDashboard({
               <p>Crée un premier projet pour afficher son tableau de bord.</p>
               <button
                 type="button"
-                className="dashboard-primaryButton"
+                className="dashboard-createButton"
                 onClick={() => setIsProjectModalOpen(true)}
                 disabled={isBusy}
               >
@@ -644,7 +644,7 @@ export function RoomsDashboard({
               <p>Ajoute un niveau au projet actif pour commencer à y ranger les pièces.</p>
               <button
                 type="button"
-                className="dashboard-outlineButton"
+                className="dashboard-createButton"
                 onClick={() => setIsLevelModalOpen(true)}
                 disabled={isBusy}
               >
@@ -670,7 +670,7 @@ export function RoomsDashboard({
               <p>Ajoute une première pièce pour lancer l’édition géométrique de cet étage.</p>
               <button
                 type="button"
-                className="dashboard-primaryButton"
+                className="dashboard-createButton"
                 onClick={handleCreateRoom}
                 disabled={isBusy}
               >
@@ -750,7 +750,7 @@ export function RoomsDashboard({
 
             <button
               type="button"
-              className="dashboard-outlineButton dashboard-summaryButton"
+              className="dashboard-viewButton dashboard-summaryButton"
               onClick={handleOpenProjectOverview}
               disabled={!selectedProject || !onOpenProjectOverview}
             >
@@ -780,7 +780,7 @@ export function RoomsDashboard({
                 </button>
                 <button
                   type="button"
-                  className="dashboard-primaryButton"
+                  className="dashboard-createButton"
                   onClick={handleCreateProject}
                   disabled={!supabaseConfigured || isBusy}
                 >
@@ -815,7 +815,7 @@ export function RoomsDashboard({
                 </button>
                 <button
                   type="button"
-                  className="dashboard-primaryButton"
+                  className="dashboard-createButton"
                   onClick={handleCreateLevel}
                   disabled={!supabaseConfigured || isBusy || !selectedProject}
                 >

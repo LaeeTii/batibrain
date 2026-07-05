@@ -16,6 +16,11 @@
   --success: #2a8a57;
   --danger: #b9445e;
   --create-button-color: #22c55e;
+  --create-button-text-color: #ffffff;
+  --view-button-color: #3b82f6;
+  --view-button-text-color: #ffffff;
+  --export-button-color: #6b7280;
+  --export-button-text-color: #ffffff;
   --shadow-soft: 0 24px 60px rgba(24, 33, 51, 0.08);
   --shadow-card: 0 12px 32px rgba(24, 33, 51, 0.08);
   line-height: 1.5;
@@ -345,9 +350,8 @@ textarea {
   box-shadow: 0 0 0 6px rgba(57, 178, 107, 0.14);
 }
 
-.dashboard-primaryButton,
-.dashboard-outlineButton,
-.dashboard-textButton {
+button {
+  font-weight: 600;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -373,8 +377,22 @@ textarea {
 
 .dashboard-createButton {
   background: var(--create-button-color);
-  color: #fff;
+  color: var(--create-button-text-color);
   box-shadow: 0 18px 36px rgba(34, 197, 94, 0.26);
+  cursor: pointer;
+}
+
+.dashboard-viewButton {
+  background: var(--view-button-color);
+  color: var(--view-button-text-color);
+  box-shadow: 0 18px 36px rgba(59, 130, 246, 0.26);
+  cursor: pointer;
+}
+
+.dashboard-exportButton {
+  background: var(--export-button-color);
+  color: var(--export-button-text-color);
+  box-shadow: 0 18px 36px rgba(107, 114, 128, 0.26);
   cursor: pointer;
 }
 
@@ -684,11 +702,16 @@ textarea {
 }
 
 .level-overview__headerActions,
-.level-overview__toolbarActions,
 .level-overview__filterActions,
 .level-planCanvas__controls,
 .level-overview__openingActions {
   justify-content: flex-end;
+}
+
+.level-overview__toolbarActions {
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
 }
 
 .level-overview__headerActions,

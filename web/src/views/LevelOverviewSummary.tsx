@@ -379,14 +379,7 @@ export function LevelOverviewSummary({
           <button type="button" className="dashboard-outlineButton" onClick={onBack}>
             Retour au tableau de bord
           </button>
-          <button
-            type="button"
-            className="dashboard-primaryButton"
-            onClick={() => setIsLevelModalOpen(true)}
-            disabled={!selectedProject || isBusy}
-          >
-            Ajouter un niveau
-          </button>
+
         </div>
       </header>
 
@@ -415,7 +408,7 @@ export function LevelOverviewSummary({
           <div className="level-overview__filterActions">
             <button
               type="button"
-              className="dashboard-outlineButton"
+              className="dashboard-viewButton"
               onClick={handleOpenProjectOverview}
               disabled={!selectedProject || !onOpenProjectOverview}
             >
@@ -423,7 +416,7 @@ export function LevelOverviewSummary({
             </button>
             <button
               type="button"
-              className="dashboard-outlineButton"
+              className="dashboard-createButton"
               onClick={() => setIsLevelModalOpen(true)}
               disabled={!selectedProject || isBusy}
             >
@@ -451,28 +444,30 @@ export function LevelOverviewSummary({
             <div className="level-overview__toolbar">
 
               <div className="level-overview__toolbarActions">
-                <label className="level-overview__toggle">
-                  <input
-                    type="checkbox"
-                    checked={showGrid}
-                    onChange={(event) => setShowGrid(event.target.checked)}
-                  />
-                  <span>Grille</span>
-                </label>
+                <div style={{ display: 'flex', gap: 16 }}>
+                  <label className="level-overview__toggle">
+                    <input
+                      type="checkbox"
+                      checked={showGrid}
+                      onChange={(event) => setShowGrid(event.target.checked)}
+                    />
+                    <span>Grille</span>
+                  </label>
 
-                <label className="level-overview__toggle">
-                  <input
-                    type="checkbox"
-                    checked={showMeasurements}
-                    onChange={(event) => setShowMeasurements(event.target.checked)}
-                  />
-                  <span>Mesures</span>
-                </label>
+                  <label className="level-overview__toggle">
+                    <input
+                      type="checkbox"
+                      checked={showMeasurements}
+                      onChange={(event) => setShowMeasurements(event.target.checked)}
+                    />
+                    <span>Mesures</span>
+                  </label>
+                </div>
 
                 <div className="level-overview__exportMenu">
                   <button
                     type="button"
-                    className="dashboard-outlineButton"
+                    className="dashboard-exportButton"
                     onClick={() => setIsExportMenuOpen((current) => !current)}
                   >
                     Export PDF
@@ -481,10 +476,10 @@ export function LevelOverviewSummary({
                   {isExportMenuOpen ? (
                     <div className="level-overview__exportCard">
                       <strong>Exports prévus</strong>
-                      <button type="button" className="dashboard-outlineButton" disabled>
+                      <button type="button" className="dashboard-exportButton" disabled>
                         Plan simple avec grille et échelle
                       </button>
-                      <button type="button" className="dashboard-outlineButton" disabled>
+                      <button type="button" className="dashboard-exportButton" disabled>
                         Plan détaillé avec métriques
                       </button>
                       <p>La génération PDF réelle est réservée à une itération suivante.</p>
