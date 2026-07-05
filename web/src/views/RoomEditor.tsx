@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { RoomCanvas } from '../components/RoomCanvas';
 import type { Level, Opening, Project, Room, Vertex, Wall } from '../../../shared/src/types';
+import type { DashboardRoomTarget } from './RoomsDashboard';
 import {
   angleAtVertexDegrees,
   centroid,
@@ -108,11 +109,14 @@ function hasSplitWallHeight(wall: Wall): boolean {
     && wall.heightLeftCm !== wall.heightRightCm;
 }
 
+type HistoryUpdateMode = 'push' | 'replace';
+
 interface RoomEditorDemoProps {
   initialProjectId?: string;
   initialLevelId?: string;
   initialRoomId?: string;
   onBack?: () => void;
+  onContextChange?: (target: DashboardRoomTarget, historyMode?: HistoryUpdateMode) => void;
 }
 
 export function RoomEditorDemo({
@@ -120,6 +124,7 @@ export function RoomEditorDemo({
   initialLevelId,
   initialRoomId,
   onBack,
+  onContextChange,
 }: RoomEditorDemoProps) {
   const supabaseConfigured = hasSupabaseConfig();
   const initialDraft = useMemo(() => createDefaultRoomGeometry(), []);
@@ -187,6 +192,10 @@ export function RoomEditorDemo({
       }));
   }, [activeRoom, levelRoomSnapshots]);
   const isBusy = busyAction !== null;
+
+  function notifyContextChange(target: DashboardRoomTarget, historyMode: HistoryUpdateMode = 'replace') {
+    onContextChange?.(target, historyMode);
+  }
 
   async function runRoomAction(actionLabel: string, action: () => Promise<void>) {
     setBusyAction(actionLabel);
@@ -436,6 +445,7 @@ export function RoomEditorDemo({
       const preferredProject = nextProjects.find((project) => project.id === initialProjectId) ?? nextProjects[0];
 
       if (!preferredProject) {
+        notifyContextChange({ projectId: EMPTY_PROJECT_ID, levelId: EMPTY_LEVEL_ID, roomId: '' }, 'replace');
         setStatusMessage('Aucun projet trouvé.');
         return;
       }
@@ -445,6 +455,7 @@ export function RoomEditorDemo({
       const preferredLevel = nextLevels.find((level) => level.id === initialLevelId) ?? nextLevels[0];
 
       if (!preferredLevel) {
+        notifyContextChange({ projectId: preferredProject.id, levelId: EMPTY_LEVEL_ID, roomId: '' }, 'replace');
         setStatusMessage('Projet sélectionné automatiquement. Aucun niveau trouvé pour ce projet.');
         return;
       }
@@ -456,17 +467,25 @@ export function RoomEditorDemo({
 
       if (!preferredSnapshot) {
         clearActiveRoomSelection();
+        notifyContextChange({ projectId: preferredProject.id, levelId: preferredLevel.id, roomId: '' }, 'replace');
         setStatusMessage('Projet et niveau sélectionnés automatiquement. Aucune pièce trouvée pour ce niveau.');
         return;
       }
 
       applyActiveRoomSnapshot(preferredSnapshot);
+      notifyContextChange({
+        projectId: preferredProject.id,
+        levelId: preferredLevel.id,
+        roomId: preferredSnapshot.room.id,
+      }, 'replace');
       setStatusMessage(`Pièce affichée : ${preferredSnapshot.room.name}.`);
     });
   }, [supabaseConfigured, initialLevelId, initialProjectId, initialRoomId]);
 
   const handleSelectedProjectChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedProjectId(event.target.value);
+    const nextProjectId = event.target.value;
+
+    setSelectedProjectId(nextProjectId);
     setSelectedLevelId(EMPTY_LEVEL_ID);
     setAvailableLevels([]);
     setAvailableRooms([]);
@@ -474,6 +493,7 @@ export function RoomEditorDemo({
     clearActiveRoomSelection();
     setStatusMessage(null);
     setErrorMessage(null);
+    notifyContextChange({ projectId: nextProjectId, levelId: EMPTY_LEVEL_ID, roomId: '' }, 'push');
   };
 
   const handleSelectedLevelChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -487,6 +507,7 @@ export function RoomEditorDemo({
     setErrorMessage(null);
 
     if (!supabaseConfigured || !nextLevelId) {
+      notifyContextChange({ projectId: selectedProjectId, levelId: nextLevelId, roomId: '' }, 'push');
       return;
     }
 
@@ -496,11 +517,17 @@ export function RoomEditorDemo({
       const firstSnapshot = nextSnapshots[0] ?? null;
 
       if (!firstSnapshot) {
+        notifyContextChange({ projectId: selectedProjectId, levelId: nextLevelId, roomId: '' }, 'push');
         setStatusMessage('Aucune pièce trouvée pour ce niveau.');
         return;
       }
 
       applyActiveRoomSnapshot(firstSnapshot);
+      notifyContextChange({
+        projectId: selectedProjectId,
+        levelId: nextLevelId,
+        roomId: firstSnapshot.room.id,
+      }, 'push');
       setStatusMessage(`Pièce affichée : ${firstSnapshot.room.name}.`);
     });
   };
@@ -656,12 +683,18 @@ export function RoomEditorDemo({
 
     if (!nextRoomId) {
       clearActiveRoomSelection();
+      notifyContextChange({ projectId: selectedProjectId, levelId: selectedLevelId, roomId: '' }, 'push');
       return;
     }
 
     const cachedSnapshot = levelRoomSnapshots.find((snapshot) => snapshot.room.id === nextRoomId);
     if (cachedSnapshot) {
       applyActiveRoomSnapshot(cachedSnapshot);
+      notifyContextChange({
+        projectId: selectedProjectId,
+        levelId: selectedLevelId,
+        roomId: cachedSnapshot.room.id,
+      }, 'push');
       setStatusMessage(`Pièce affichée : ${cachedSnapshot.room.name}.`);
       return;
     }
@@ -669,6 +702,11 @@ export function RoomEditorDemo({
     void runRoomAction('select-room', async () => {
       const snapshot = await loadRoomSnapshot(nextRoomId);
       applyActiveRoomSnapshot(snapshot);
+      notifyContextChange({
+        projectId: selectedProjectId,
+        levelId: selectedLevelId,
+        roomId: snapshot.room.id,
+      }, 'push');
       setStatusMessage(`Pièce affichée : ${snapshot.room.name}.`);
     });
   };
@@ -741,6 +779,7 @@ export function RoomEditorDemo({
       }
 
       clearActiveRoomSelection();
+      notifyContextChange({ projectId: selectedProjectId, levelId: selectedLevelId, roomId: '' }, 'replace');
       setStatusMessage(
         remainingRooms.length === 0
           ? `Pièce supprimée : ${deletedRoom.name}. Aucune pièce restante pour ce niveau.`

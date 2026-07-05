@@ -68,10 +68,13 @@ export interface DashboardLevelTarget {
   focusedRoomId?: string;
 }
 
+type HistoryUpdateMode = 'push' | 'replace';
+
 interface RoomsDashboardProps {
   initialProjectId?: string;
   initialLevelId?: string;
   initialRoomId?: string;
+  onContextChange?: (target: DashboardRoomTarget, historyMode?: HistoryUpdateMode) => void;
   onOpenRoom?: (target: DashboardRoomTarget) => void;
   onOpenLevelOverview?: (target: DashboardLevelTarget) => void;
   onOpenProjectOverview?: (target: DashboardProjectTarget) => void;
@@ -162,6 +165,7 @@ export function RoomsDashboard({
   initialProjectId,
   initialLevelId,
   initialRoomId,
+  onContextChange,
   onOpenRoom,
   onOpenLevelOverview,
   onOpenProjectOverview,
@@ -209,6 +213,10 @@ export function RoomsDashboard({
   );
   const isBusy = busyAction !== null;
   const isLoadingRooms = ['bootstrap', 'refresh', 'select-project', 'select-level'].includes(busyAction ?? '');
+
+  function notifyContextChange(target: DashboardRoomTarget, historyMode: HistoryUpdateMode = 'replace') {
+    onContextChange?.(target, historyMode);
+  }
 
   async function runDashboardAction(actionLabel: string, action: () => Promise<void>) {
     setBusyAction(actionLabel);
@@ -279,6 +287,7 @@ export function RoomsDashboard({
       if (!nextProjectId) {
         setAvailableLevels([]);
         setRoomSnapshots([]);
+        notifyContextChange({ projectId: EMPTY_ID, levelId: EMPTY_ID, roomId: EMPTY_ID }, 'replace');
         setStatusMessage('Aucun projet trouvé. Crée un projet pour commencer à structurer le tableau de bord.');
         return;
       }
@@ -288,11 +297,17 @@ export function RoomsDashboard({
 
       if (!nextLevelId) {
         setRoomSnapshots([]);
+        notifyContextChange({ projectId: nextProjectId, levelId: EMPTY_ID, roomId: EMPTY_ID }, 'replace');
         setStatusMessage('Projet actif prêt. Aucun niveau trouvé pour ce projet.');
         return;
       }
 
       const nextSnapshots = await refreshRoomSnapshotsForLevel(nextLevelId, initialRoomId);
+      notifyContextChange({
+        projectId: nextProjectId,
+        levelId: nextLevelId,
+        roomId: pickExistingRoomId(nextSnapshots, initialRoomId),
+      }, 'replace');
       const nextLevel = nextLevels.find((level) => level.id === nextLevelId);
       setStatusMessage(buildSelectionMessage(nextLevel?.name ?? 'le niveau actif', nextSnapshots.length));
     });
@@ -306,6 +321,7 @@ export function RoomsDashboard({
       if (!nextProjectId) {
         setAvailableLevels([]);
         setRoomSnapshots([]);
+        notifyContextChange({ projectId: EMPTY_ID, levelId: EMPTY_ID, roomId: EMPTY_ID }, 'replace');
         setStatusMessage('Aucun projet trouvé.');
         return;
       }
@@ -315,11 +331,17 @@ export function RoomsDashboard({
 
       if (!nextLevelId) {
         setRoomSnapshots([]);
+        notifyContextChange({ projectId: nextProjectId, levelId: EMPTY_ID, roomId: EMPTY_ID }, 'replace');
         setStatusMessage('Projet actualisé. Aucun niveau trouvé pour ce projet.');
         return;
       }
 
       const nextSnapshots = await refreshRoomSnapshotsForLevel(nextLevelId, highlightedRoomId || initialRoomId);
+      notifyContextChange({
+        projectId: nextProjectId,
+        levelId: nextLevelId,
+        roomId: pickExistingRoomId(nextSnapshots, highlightedRoomId || initialRoomId),
+      }, 'replace');
       const nextLevel = nextLevels.find((level) => level.id === nextLevelId);
       setStatusMessage(buildSelectionMessage(nextLevel?.name ?? 'le niveau actif', nextSnapshots.length));
     });
@@ -333,6 +355,7 @@ export function RoomsDashboard({
     setHighlightedRoomId(EMPTY_ID);
 
     if (!supabaseConfigured) {
+      notifyContextChange({ projectId: nextProjectId, levelId: EMPTY_ID, roomId: EMPTY_ID }, 'push');
       return;
     }
 
@@ -341,11 +364,17 @@ export function RoomsDashboard({
       const nextLevelId = pickExistingId(nextLevels);
 
       if (!nextLevelId) {
+        notifyContextChange({ projectId: nextProjectId, levelId: EMPTY_ID, roomId: EMPTY_ID }, 'push');
         setStatusMessage('Aucun niveau trouvé pour le projet actif.');
         return;
       }
 
       const nextSnapshots = await refreshRoomSnapshotsForLevel(nextLevelId);
+      notifyContextChange({
+        projectId: nextProjectId,
+        levelId: nextLevelId,
+        roomId: pickExistingRoomId(nextSnapshots),
+      }, 'push');
       const nextLevel = nextLevels.find((level) => level.id === nextLevelId);
       setStatusMessage(buildSelectionMessage(nextLevel?.name ?? 'le niveau actif', nextSnapshots.length));
     });
@@ -358,11 +387,17 @@ export function RoomsDashboard({
     setHighlightedRoomId(EMPTY_ID);
 
     if (!supabaseConfigured) {
+      notifyContextChange({ projectId: activeProjectId, levelId: nextLevelId, roomId: EMPTY_ID }, 'push');
       return;
     }
 
     void runDashboardAction('select-level', async () => {
       const nextSnapshots = await refreshRoomSnapshotsForLevel(nextLevelId);
+      notifyContextChange({
+        projectId: activeProjectId,
+        levelId: nextLevelId,
+        roomId: pickExistingRoomId(nextSnapshots),
+      }, 'push');
       const nextLevel = availableLevels.find((level) => level.id === nextLevelId);
       setStatusMessage(buildSelectionMessage(nextLevel?.name ?? 'le niveau actif', nextSnapshots.length));
     });
@@ -377,6 +412,7 @@ export function RoomsDashboard({
       });
       await refreshProjects(createdProject.id);
       await refreshLevelsForProject(createdProject.id);
+      notifyContextChange({ projectId: createdProject.id, levelId: EMPTY_ID, roomId: EMPTY_ID }, 'push');
       setNewProjectNameInput('');
       setIsProjectModalOpen(false);
       setStatusMessage(`Projet créé : ${createdProject.name}. Ajoute maintenant un niveau pour commencer.`);
@@ -400,7 +436,12 @@ export function RoomsDashboard({
         name: levelName,
       });
       await refreshLevelsForProject(projectId, createdLevel.id);
-      await refreshRoomSnapshotsForLevel(createdLevel.id);
+      const nextSnapshots = await refreshRoomSnapshotsForLevel(createdLevel.id);
+      notifyContextChange({
+        projectId,
+        levelId: createdLevel.id,
+        roomId: pickExistingRoomId(nextSnapshots),
+      }, 'push');
       setNewLevelNameInput('');
       setIsLevelModalOpen(false);
       setStatusMessage(`Niveau créé : ${createdLevel.name}. Tu peux maintenant y ajouter une pièce.`);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { LevelOverviewSummary } from './views/LevelOverviewSummary';
 import { ProjectOverviewSummary } from './views/ProjectOverviewSummary';
 import { RoomEditorDemo as RoomEditor } from './views/RoomEditor';
@@ -15,13 +15,327 @@ type AppScreen =
   | { name: 'project-overview'; target: DashboardProjectTarget }
   | { name: 'room-editor'; target: DashboardRoomTarget };
 
-export default function App() {
-  const [screen, setScreen] = useState<AppScreen>({ name: 'dashboard' });
-  const [dashboardContext, setDashboardContext] = useState<DashboardRoomTarget>({
-    projectId: '',
-    levelId: '',
-    roomId: '',
+type AppHistoryState = {
+  app: 'batibrain';
+  screen: AppScreen;
+  dashboardContext: DashboardRoomTarget;
+};
+
+type HistoryUpdateMode = 'push' | 'replace';
+
+const EMPTY_DASHBOARD_CONTEXT: DashboardRoomTarget = {
+  projectId: '',
+  levelId: '',
+  roomId: '',
+};
+
+function normalizeDashboardContext(dashboardContext: DashboardRoomTarget): DashboardRoomTarget {
+  const projectId = dashboardContext.projectId.trim();
+  const levelId = projectId ? dashboardContext.levelId.trim() : '';
+  const roomId = projectId && levelId ? dashboardContext.roomId.trim() : '';
+
+  return {
+    projectId,
+    levelId,
+    roomId,
+  };
+}
+
+function createScreenFromRoute(
+  routeName: string | null,
+  dashboardContext: DashboardRoomTarget,
+): AppScreen {
+  if (routeName === 'room-editor') {
+    return {
+      name: 'room-editor',
+      target: dashboardContext,
+    };
+  }
+
+  if (routeName === 'level-overview') {
+    return {
+      name: 'level-overview',
+      target: {
+        projectId: dashboardContext.projectId,
+        projectName: '',
+        levelId: dashboardContext.levelId,
+        levelName: '',
+        rooms: [],
+        totalAreaM2: 0,
+        focusedRoomId: dashboardContext.roomId || undefined,
+      },
+    };
+  }
+
+  if (routeName === 'project-overview') {
+    return {
+      name: 'project-overview',
+      target: {
+        projectId: dashboardContext.projectId,
+        projectName: '',
+        focusedLevelId: dashboardContext.levelId || undefined,
+      },
+    };
+  }
+
+  return { name: 'dashboard' };
+}
+
+function createAppHistoryState(
+  screen: AppScreen,
+  dashboardContext: DashboardRoomTarget,
+): AppHistoryState {
+  const normalizedDashboardContext = normalizeDashboardContext(dashboardContext);
+
+  return {
+    app: 'batibrain',
+    screen: syncScreenWithContext(screen, normalizedDashboardContext),
+    dashboardContext: normalizedDashboardContext,
+  };
+}
+
+function isDashboardRoomTarget(value: unknown): value is DashboardRoomTarget {
+  return typeof value === 'object'
+    && value !== null
+    && 'projectId' in value
+    && 'levelId' in value
+    && 'roomId' in value
+    && typeof value.projectId === 'string'
+    && typeof value.levelId === 'string'
+    && typeof value.roomId === 'string';
+}
+
+function isAppScreen(value: unknown): value is AppScreen {
+  if (typeof value !== 'object' || value === null || !('name' in value)) {
+    return false;
+  }
+
+  const screenName = value.name;
+
+  if (screenName === 'dashboard') {
+    return true;
+  }
+
+  if (screenName === 'room-editor') {
+    return 'target' in value && isDashboardRoomTarget(value.target);
+  }
+
+  if (screenName === 'level-overview') {
+    return 'target' in value && typeof value.target === 'object' && value.target !== null;
+  }
+
+  if (screenName === 'project-overview') {
+    return 'target' in value && typeof value.target === 'object' && value.target !== null;
+  }
+
+  return false;
+}
+
+function isAppHistoryState(value: unknown): value is AppHistoryState {
+  return typeof value === 'object'
+    && value !== null
+    && 'app' in value
+    && value.app === 'batibrain'
+    && 'screen' in value
+    && isAppScreen(value.screen)
+    && 'dashboardContext' in value
+    && isDashboardRoomTarget(value.dashboardContext);
+}
+
+function getInitialHistoryState(): AppHistoryState {
+  if (typeof window === 'undefined') {
+    return createAppHistoryState({ name: 'dashboard' }, EMPTY_DASHBOARD_CONTEXT);
+  }
+
+  const url = new URL(window.location.href);
+  const dashboardContext = normalizeDashboardContext({
+    projectId: url.searchParams.get('projectId') ?? '',
+    levelId: url.searchParams.get('levelId') ?? '',
+    roomId: url.searchParams.get('roomId') ?? '',
   });
+  const routeFromUrl = createAppHistoryState(
+    createScreenFromRoute(url.searchParams.get('screen'), dashboardContext),
+    dashboardContext,
+  );
+
+  if (isAppHistoryState(window.history.state)) {
+    const currentState = createAppHistoryState(
+      window.history.state.screen,
+      window.history.state.dashboardContext,
+    );
+
+    if (
+      !url.searchParams.has('screen')
+      || haveSameRouteCoordinates(
+        currentState.screen,
+        currentState.dashboardContext,
+        routeFromUrl.screen,
+        routeFromUrl.dashboardContext,
+      )
+    ) {
+      return currentState;
+    }
+  }
+
+  return routeFromUrl;
+}
+
+function haveSameDashboardContext(
+  left: DashboardRoomTarget,
+  right: DashboardRoomTarget,
+): boolean {
+  return left.projectId === right.projectId
+    && left.levelId === right.levelId
+    && left.roomId === right.roomId;
+}
+
+function haveSameRouteCoordinates(
+  leftScreen: AppScreen,
+  leftDashboardContext: DashboardRoomTarget,
+  rightScreen: AppScreen,
+  rightDashboardContext: DashboardRoomTarget,
+): boolean {
+  return leftScreen.name === rightScreen.name
+    && haveSameDashboardContext(
+      normalizeDashboardContext(leftDashboardContext),
+      normalizeDashboardContext(rightDashboardContext),
+    );
+}
+
+function syncScreenWithContext(
+  screen: AppScreen,
+  dashboardContext: DashboardRoomTarget,
+): AppScreen {
+  if (screen.name === 'room-editor') {
+    return {
+      name: 'room-editor',
+      target: dashboardContext,
+    };
+  }
+
+  if (screen.name === 'level-overview') {
+    return {
+      name: 'level-overview',
+      target: {
+        ...screen.target,
+        projectId: dashboardContext.projectId,
+        levelId: dashboardContext.levelId,
+        focusedRoomId: dashboardContext.roomId || undefined,
+      },
+    };
+  }
+
+  if (screen.name === 'project-overview') {
+    return {
+      name: 'project-overview',
+      target: {
+        ...screen.target,
+        projectId: dashboardContext.projectId,
+        focusedLevelId: dashboardContext.levelId || undefined,
+      },
+    };
+  }
+
+  return screen;
+}
+
+function buildAppUrl(screen: AppScreen, dashboardContext: DashboardRoomTarget): string {
+  const normalizedDashboardContext = normalizeDashboardContext(dashboardContext);
+  const url = new URL(window.location.href);
+
+  url.searchParams.set('screen', screen.name);
+
+  if (normalizedDashboardContext.projectId) {
+    url.searchParams.set('projectId', normalizedDashboardContext.projectId);
+  } else {
+    url.searchParams.delete('projectId');
+  }
+
+  if (normalizedDashboardContext.levelId) {
+    url.searchParams.set('levelId', normalizedDashboardContext.levelId);
+  } else {
+    url.searchParams.delete('levelId');
+  }
+
+  if (normalizedDashboardContext.roomId) {
+    url.searchParams.set('roomId', normalizedDashboardContext.roomId);
+  } else {
+    url.searchParams.delete('roomId');
+  }
+
+  return url.toString();
+}
+
+export default function App() {
+  const initialHistoryStateRef = useRef<AppHistoryState>(getInitialHistoryState());
+  const [screen, setScreen] = useState<AppScreen>(initialHistoryStateRef.current.screen);
+  const [dashboardContext, setDashboardContext] = useState<DashboardRoomTarget>(
+    initialHistoryStateRef.current.dashboardContext,
+  );
+
+  useEffect(() => {
+    window.history.replaceState(
+      createAppHistoryState(screen, dashboardContext),
+      '',
+      buildAppUrl(screen, dashboardContext),
+    );
+
+    function handlePopState(event: PopStateEvent) {
+      const nextState = isAppHistoryState(event.state)
+        ? createAppHistoryState(event.state.screen, event.state.dashboardContext)
+        : getInitialHistoryState();
+
+      setScreen(nextState.screen);
+      setDashboardContext(nextState.dashboardContext);
+    }
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  function commitNavigation(
+    nextScreen: AppScreen,
+    nextDashboardContext: DashboardRoomTarget,
+    historyMode: HistoryUpdateMode,
+  ) {
+    const normalizedDashboardContext = normalizeDashboardContext(nextDashboardContext);
+    const normalizedScreen = syncScreenWithContext(nextScreen, normalizedDashboardContext);
+    const routeState = createAppHistoryState(normalizedScreen, normalizedDashboardContext);
+    const historyMethod = historyMode === 'push'
+      && !haveSameRouteCoordinates(screen, dashboardContext, normalizedScreen, normalizedDashboardContext)
+      ? 'pushState'
+      : 'replaceState';
+
+    window.history[historyMethod](
+      routeState,
+      '',
+      buildAppUrl(normalizedScreen, normalizedDashboardContext),
+    );
+
+    setDashboardContext(routeState.dashboardContext);
+    setScreen(routeState.screen);
+  }
+
+  function pushScreen(nextScreen: AppScreen, nextDashboardContext = dashboardContext) {
+    commitNavigation(nextScreen, nextDashboardContext, 'push');
+  }
+
+  function updateDashboardContext(
+    nextDashboardContext: DashboardRoomTarget,
+    historyMode: HistoryUpdateMode = 'replace',
+  ) {
+    commitNavigation(syncScreenWithContext(screen, nextDashboardContext), nextDashboardContext, historyMode);
+  }
+
+  function goBack() {
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
+    const fallbackScreen: AppScreen = { name: 'dashboard' };
+    commitNavigation(fallbackScreen, dashboardContext, 'replace');
+  }
 
   if (screen.name === 'room-editor') {
     return (
@@ -29,7 +343,8 @@ export default function App() {
         initialProjectId={screen.target.projectId}
         initialLevelId={screen.target.levelId}
         initialRoomId={screen.target.roomId}
-        onBack={() => setScreen({ name: 'dashboard' })}
+        onBack={goBack}
+        onContextChange={updateDashboardContext}
       />
     );
   }
@@ -41,7 +356,7 @@ export default function App() {
         levelName={screen.target.levelName}
         rooms={screen.target.rooms}
         totalAreaM2={screen.target.totalAreaM2}
-        onBack={() => setScreen({ name: 'dashboard' })}
+        onBack={goBack}
         onOpenRoom={(roomId) => {
           const nextTarget = {
             projectId: screen.target.projectId,
@@ -49,8 +364,7 @@ export default function App() {
             roomId,
           };
 
-          setDashboardContext(nextTarget);
-          setScreen({ name: 'room-editor', target: nextTarget });
+          pushScreen({ name: 'room-editor', target: nextTarget }, nextTarget);
         }}
       />
     );
@@ -60,14 +374,15 @@ export default function App() {
     return (
       <ProjectOverviewSummary
         target={screen.target}
-        onBack={() => setScreen({ name: 'dashboard' })}
+        onBack={goBack}
         onOpenLevel={(target) => {
-          setDashboardContext({
+          const nextDashboardContext = {
             projectId: target.projectId,
             levelId: target.levelId,
             roomId: target.focusedRoomId ?? '',
-          });
-          setScreen({ name: 'level-overview', target });
+          };
+
+          pushScreen({ name: 'level-overview', target }, nextDashboardContext);
         }}
       />
     );
@@ -78,25 +393,27 @@ export default function App() {
       initialProjectId={dashboardContext.projectId}
       initialLevelId={dashboardContext.levelId}
       initialRoomId={dashboardContext.roomId}
+      onContextChange={updateDashboardContext}
       onOpenRoom={(target) => {
-        setDashboardContext(target);
-        setScreen({ name: 'room-editor', target });
+        pushScreen({ name: 'room-editor', target }, target);
       }}
       onOpenLevelOverview={(target) => {
-        setDashboardContext({
+        const nextDashboardContext = {
           projectId: target.projectId,
           levelId: target.levelId,
           roomId: target.focusedRoomId ?? '',
-        });
-        setScreen({ name: 'level-overview', target });
+        };
+
+        pushScreen({ name: 'level-overview', target }, nextDashboardContext);
       }}
       onOpenProjectOverview={(target) => {
-        setDashboardContext((currentTarget) => ({
+        const nextDashboardContext = {
           projectId: target.projectId,
-          levelId: target.focusedLevelId ?? currentTarget.levelId,
-          roomId: currentTarget.roomId,
-        }));
-        setScreen({ name: 'project-overview', target });
+          levelId: target.focusedLevelId ?? dashboardContext.levelId,
+          roomId: dashboardContext.roomId,
+        };
+
+        pushScreen({ name: 'project-overview', target }, nextDashboardContext);
       }}
     />
   );
