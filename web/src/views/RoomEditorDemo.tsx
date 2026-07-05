@@ -522,15 +522,22 @@ export function RoomEditorDemo() {
         name: projectName,
       });
 
-      await refreshProjects(createdProject.id);
+      const nextProjects = await listProjects();
+      setAvailableProjects(nextProjects);
+      setSelectedProjectId((currentProjectId) => (
+        nextProjects.some((project) => project.id === currentProjectId)
+          ? currentProjectId
+          : EMPTY_PROJECT_ID
+      ));
+      setNewLevelProjectId((currentProjectId) => {
+        if (nextProjects.some((project) => project.id === currentProjectId)) {
+          return currentProjectId;
+        }
+
+        return createdProject.id;
+      });
       setNewProjectNameInput(DEFAULT_PROJECT_NAME);
-      setSelectedProjectId(createdProject.id);
-      setAvailableLevels([]);
-      setSelectedLevelId(EMPTY_LEVEL_ID);
-      setAvailableRooms([]);
-      setLevelRoomSnapshots([]);
-      clearActiveRoomSelection();
-      setStatusMessage(`Projet créé : ${createdProject.name}.`);
+      setStatusMessage(`Projet créé : ${createdProject.name}. Sélectionne-le dans la liste pour l'activer.`);
     });
   };
 
@@ -748,7 +755,7 @@ export function RoomEditorDemo() {
           ) : (
             <>
               <p style={{ marginTop: 0, color: '#57606a' }}>
-                Crée un projet, liste les projets existants, puis sélectionne le projet actif par son nom avant de gérer ses niveaux.
+                La création et la sélection sont séparées : crée un projet par son nom, puis sélectionne explicitement le projet actif avant de gérer ses niveaux.
               </p>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>

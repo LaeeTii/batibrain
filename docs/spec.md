@@ -136,6 +136,7 @@ Modifier la longueur d’un mur en éditant la zone de saisie
 ## 4.2 Navigation
 ### Prompt
 ```ts
+// Garder la création de projet séparée de la sélection du projet actif
 // Créer un formulaire de niveau séparé de la sélection du niveau actif
 // Créer une liste déroulante de pièces dont la sélection change la vue du canvas
 // et garder la création de pièce dans un formulaire séparé
