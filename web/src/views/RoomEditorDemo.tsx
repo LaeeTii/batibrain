@@ -123,6 +123,7 @@ export function RoomEditorDemo() {
   const [levelRoomSnapshots, setLevelRoomSnapshots] = useState<RoomSnapshot[]>([]);
   const [newProjectNameInput, setNewProjectNameInput] = useState(DEFAULT_PROJECT_NAME);
   const [selectedProjectId, setSelectedProjectId] = useState(EMPTY_PROJECT_ID);
+  const [newLevelProjectId, setNewLevelProjectId] = useState(EMPTY_PROJECT_ID);
   const [newLevelNameInput, setNewLevelNameInput] = useState(DEFAULT_LEVEL_NAME);
   const [selectedLevelId, setSelectedLevelId] = useState(EMPTY_LEVEL_ID);
   const [newRoomNameInput, setNewRoomNameInput] = useState(DEFAULT_ROOM_NAME);
@@ -324,6 +325,12 @@ export function RoomEditorDemo() {
         ? candidateProjectId
         : nextProjects[0]?.id ?? EMPTY_PROJECT_ID;
     });
+    setNewLevelProjectId((currentProjectId) => {
+      const candidateProjectId = preferredProjectId ?? currentProjectId;
+      return nextProjects.some((project) => project.id === candidateProjectId)
+        ? candidateProjectId
+        : nextProjects[0]?.id ?? EMPTY_PROJECT_ID;
+    });
     return nextProjects;
   }
 
@@ -351,7 +358,7 @@ export function RoomEditorDemo() {
       const candidateLevelId = preferredLevelId ?? currentLevelId;
       return nextLevels.some((level) => level.id === candidateLevelId)
         ? candidateLevelId
-        : nextLevels[0]?.id ?? EMPTY_LEVEL_ID;
+        : EMPTY_LEVEL_ID;
     });
     return nextLevels;
   }
@@ -429,6 +436,7 @@ export function RoomEditorDemo() {
         return;
       }
 
+      setSelectedLevelId(firstLevel.id);
       const nextRooms = await refreshRoomsForLevel(firstLevel.id);
       const nextSnapshots = await refreshRoomSnapshotsForRooms(nextRooms);
       const firstSnapshot = nextSnapshots[0];
@@ -482,6 +490,12 @@ export function RoomEditorDemo() {
       applyActiveRoomSnapshot(firstSnapshot);
       setStatusMessage(`Pièce affichée : ${firstSnapshot.room.name}.`);
     });
+  };
+
+  const handleNewLevelProjectChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setNewLevelProjectId(event.target.value);
+    setStatusMessage(null);
+    setErrorMessage(null);
   };
 
   const handleListProjects = () => {
@@ -541,13 +555,14 @@ export function RoomEditorDemo() {
 
   const handleCreateLevel = () => {
     void runRoomAction('create-level', async () => {
+      const projectId = newLevelProjectId.trim();
       const levelName = newLevelNameInput.trim();
 
-      if (!selectedProjectId) {
+      if (!projectId) {
         throw new Error('Sélectionne un projet avant de créer un niveau.');
       }
 
-      if (!isUuid(selectedProjectId)) {
+      if (!isUuid(projectId)) {
         throw new Error('Le projet sélectionné est invalide.');
       }
 
@@ -556,17 +571,16 @@ export function RoomEditorDemo() {
       }
 
       const createdLevel = await createLevel({
-        projectId: selectedProjectId,
+        projectId,
         name: levelName,
       });
 
-      await refreshLevelsForProject(createdLevel.projectId, createdLevel.id);
+      if (createdLevel.projectId === selectedProjectId) {
+        await refreshLevelsForProject(createdLevel.projectId);
+      }
+
       setNewLevelNameInput(DEFAULT_LEVEL_NAME);
-      setSelectedLevelId(createdLevel.id);
-      setAvailableRooms([]);
-      setLevelRoomSnapshots([]);
-      clearActiveRoomSelection();
-      setStatusMessage(`Niveau créé : ${createdLevel.name}.`);
+      setStatusMessage(`Niveau créé : ${createdLevel.name}. Sélectionne-le dans la liste si tu veux l'afficher.`);
     });
   };
 
@@ -794,20 +808,20 @@ export function RoomEditorDemo() {
           ) : (
             <>
               <p style={{ marginTop: 0, color: '#57606a' }}>
-                Crée un niveau dans le projet actif, charge les niveaux de ce projet, puis sélectionne le niveau par son nom pour travailler sur les pièces associées.
+                La création et la sélection sont séparées : crée un niveau avec son projet et son nom, puis utilise la liste pour choisir le niveau actif du projet affiché.
               </p>
 
               <p style={{ marginTop: 0 }}>
-                <strong>Projet :</strong>{' '}
+                <strong>Projet actif pour la sélection :</strong>{' '}
                 {selectedProject ? selectedProject.name : 'aucun projet sélectionné'}
               </p>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
                 <label style={{ display: 'grid', gap: 6 }}>
-                  Projet
+                  Projet de création
                   <select
-                    value={selectedProjectId}
-                    onChange={handleSelectedProjectChange}
+                    value={newLevelProjectId}
+                    onChange={handleNewLevelProjectChange}
                     disabled={isBusy || availableProjects.length === 0}
                   >
                     <option value="">
@@ -836,7 +850,7 @@ export function RoomEditorDemo() {
                   <select
                     value={selectedLevelId}
                     onChange={handleSelectedLevelChange}
-                    disabled={isBusy || availableLevels.length === 0}
+                    disabled={isBusy || !selectedProjectId || availableLevels.length === 0}
                   >
                     <option value="">
                       {availableLevels.length === 0 ? 'Aucun niveau chargé pour ce projet' : 'Sélectionner un niveau'}
@@ -854,7 +868,7 @@ export function RoomEditorDemo() {
                 <button type="button" onClick={handleListLevels} disabled={isBusy || !selectedProjectId}>
                   {busyAction === 'list-levels' ? 'Chargement...' : 'Lister les niveaux'}
                 </button>
-                <button type="button" onClick={handleCreateLevel} disabled={isBusy || !selectedProjectId}>
+                <button type="button" onClick={handleCreateLevel} disabled={isBusy || !newLevelProjectId}>
                   {busyAction === 'create-level' ? 'Création...' : 'Créer le niveau'}
                 </button>
               </div>

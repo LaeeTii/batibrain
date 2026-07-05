@@ -31,10 +31,12 @@ Construire une application web + mobile pour piloter des travaux de maison, avec
 ## Découpage de livraison
 
 ### V1
+- création de niveau via un formulaire `projet + nom`, indépendante de la sélection du niveau actif
 - création / édition de pièce polygonale, y compris insertion et suppression de sommet tant que la pièce reste valide
 - création de pièce via un formulaire `niveau + nom`, indépendante de la sélection de la pièce affichée
 - affichage des longueurs de murs
 - sélection d'un mur
+- sélection d’un niveau via une liste déroulante qui charge les pièces de ce niveau
 - sélection d’une pièce via une liste déroulante qui met à jour le canvas
 - ajout d'ouverture simple
 - sauvegarde en base
