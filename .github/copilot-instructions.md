@@ -32,6 +32,7 @@
 
 ## UI Guidelines
 
+- **Always use `DashboardLayout` for new views**: Every new page in `web/src/views/` must be wrapped in the `DashboardLayout` component from `web/src/components/DashboardLayout.tsx` to ensure the sidebar (`dashboard-sidebar`) is displayed consistently across all pages.
 - When creating new views, always use the defined CSS variables for button styling:
   - **Create buttons** (`Créer`, `Ajouter`, `Nouveau`): Use `--create-button-color` (green) and `--create-button-text-color` (white) with class `dashboard-createButton`
   - **View buttons** (`Vue`, `Voir`): Use `--view-button-color` (blue) and `--view-button-text-color` (white) with class `dashboard-viewButton`

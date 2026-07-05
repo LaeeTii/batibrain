@@ -1,4 +1,5 @@
 import React from 'react';
+import { DashboardLayout } from '../components/DashboardLayout';
 import type { DashboardLevelTarget, DashboardProjectTarget } from './RoomsDashboard';
 
 interface ProjectOverviewSummaryProps {
@@ -8,7 +9,7 @@ interface ProjectOverviewSummaryProps {
 }
 export function ProjectOverviewSummary({ target, onBack }: ProjectOverviewSummaryProps) {
   return (
-    <main className="project-overview">
+    <DashboardLayout>
       <header className="project-overview__header">
         <button type="button" className="dashboard-outlineButton" onClick={onBack}>
           Retour au tableau de bord
@@ -18,6 +19,6 @@ export function ProjectOverviewSummary({ target, onBack }: ProjectOverviewSummar
           <h1 className="dashboard-pageTitle">Plan global du projet</h1>
         </div>
       </header>
-    </main>
+    </DashboardLayout>
   );
 }

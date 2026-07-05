@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { formatLengthCm } from '../../../shared/src/geometry';
 import type { Level, Opening, Project } from '../../../shared/src/types';
 import { LevelPlanCanvas } from '../components/LevelPlanCanvas';
+import { DashboardLayout } from '../components/DashboardLayout';
 import { getLevelMetrics } from '../lib/roomMetrics';
 import { hasSupabaseConfig } from '../lib/supabase';
 import { createLevel, listLevelsByProject } from '../services/levels';
@@ -366,20 +367,18 @@ export function LevelOverviewSummary({
   };
 
   return (
-    <main className="level-overview">
+    <DashboardLayout>
       <header className="level-overview__header">
         <div>
           <h1 className="dashboard-pageTitle">
             Vue d’ensemble — {(selectedLevel?.name ?? target.levelName) || 'Niveau actif'}
           </h1>
-
         </div>
 
         <div className="level-overview__headerActions">
           <button type="button" className="dashboard-outlineButton" onClick={onBack}>
             Retour au tableau de bord
           </button>
-
         </div>
       </header>
 
@@ -648,6 +647,6 @@ export function LevelOverviewSummary({
           </div>
         </div>
       ) : null}
-    </main>
+      </DashboardLayout>
   );
 }

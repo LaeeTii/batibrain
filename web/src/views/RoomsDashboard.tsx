@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import type { Level, Project } from '../../../shared/src/types';
 import { RoomPreview } from '../components/RoomPreview';
+import { DashboardLayout } from '../components/DashboardLayout';
 import { countExteriorWalls, getRoomAreaM2 } from '../lib/roomMetrics';
 import { hasSupabaseConfig } from '../lib/supabase';
 import { createLevel, listLevelsByProject } from '../services/levels';
@@ -20,16 +21,6 @@ const AREA_FORMATTER = new Intl.NumberFormat('fr-FR', {
 });
 const COUNT_FORMATTER = new Intl.NumberFormat('fr-FR');
 const CARD_ACCENT_COLORS = ['#d47a52', '#8fa35d', '#5b88c7', '#d4a94b', '#8c7bc8', '#c27b98'];
-const DASHBOARD_NAV_ITEMS = [
-  { shortLabel: 'TB', label: 'Tableau de bord', isActive: true },
-  { shortLabel: 'ET', label: 'Étages', isActive: false },
-  { shortLabel: 'PC', label: 'Pièces', isActive: false },
-  { shortLabel: 'TV', label: 'Travaux', isActive: false },
-  { shortLabel: 'DC', label: 'Documents', isActive: false },
-  { shortLabel: 'PH', label: 'Photos', isActive: false },
-  { shortLabel: 'TK', label: 'Tâches', isActive: false },
-  { shortLabel: 'IA', label: 'Assistant IA', isActive: false },
-];
 export interface DashboardRoomTarget {
   projectId: string;
   levelId: string;
@@ -503,44 +494,12 @@ export function RoomsDashboard({
   };
 
   return (
-    <div className="dashboard-shell">
-      <aside className="dashboard-sidebar">
-        <div className="dashboard-brandBlock">
-          <div className="dashboard-brandMark">BB</div>
-          <div>
-            <h1 className="dashboard-brandTitle">BatiBrain</h1>
-          </div>
-        </div>
+    <DashboardLayout>
+      <header className="dashboard-topbar">
+        <h2 className="dashboard-pageTitle">Tableau de bord</h2>
+      </header>
 
-        <div className="dashboard-profileCard">
-          <div className="dashboard-profileAvatar">PM</div>
-          <div>
-            <strong>Profil projet</strong>
-            <p className="dashboard-userMeta">Propriétaire</p>
-          </div>
-        </div>
-
-        <nav className="dashboard-nav">
-          {DASHBOARD_NAV_ITEMS.map((item) => (
-            <button
-              key={item.label}
-              type="button"
-              className={`dashboard-navItem ${item.isActive ? 'is-active' : ''}`}
-              disabled={!item.isActive}
-            >
-              <span className="dashboard-navIcon">{item.shortLabel}</span>
-              <span>{item.label}</span>
-            </button>
-          ))}
-        </nav>
-      </aside>
-
-      <main className="dashboard-main">
-        <header className="dashboard-topbar">
-          <h2 className="dashboard-pageTitle">Tableau de bord</h2>
-        </header>
-
-        <section className="dashboard-contentPanel">
+      <section className="dashboard-contentPanel">
           <div className="dashboard-projectBar">
             <label className="dashboard-field dashboard-field--project">
               <span>Projet</span>
@@ -825,7 +784,6 @@ export function RoomsDashboard({
             </section>
           </div>
         ) : null}
-      </main>
-    </div>
+      </DashboardLayout>
   );
 }

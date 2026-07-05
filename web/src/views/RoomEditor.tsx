@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { RoomCanvas } from '../components/RoomCanvas';
+import { DashboardLayout } from '../components/DashboardLayout';
 import type { Level, Opening, Project, Room, Vertex, Wall } from '../../../shared/src/types';
 import type { DashboardRoomTarget } from './RoomsDashboard';
 import {
@@ -822,8 +823,8 @@ export function RoomEditorDemo({
   };
 
   return (
-    <main style={{ padding: 24, fontFamily: 'Avenir Next, Segoe UI, sans-serif', color: '#24292f' }}>
-      <header style={{ marginBottom: 16 }}>
+    <DashboardLayout>
+      <header style={{ marginBottom: 16, padding: '0 24px' }}>
         {onBack ? (
           <button
             type="button"
@@ -1334,6 +1335,6 @@ export function RoomEditorDemo({
           </p>
         </div>
       </section>
-    </main>
+    </DashboardLayout>
   );
 }

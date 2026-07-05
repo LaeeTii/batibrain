@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { RoomCanvas } from '../components/RoomCanvas';
+import { DashboardLayout } from '../components/DashboardLayout';
 import type { Level, Opening, Project, Room, Vertex, Wall } from '../../../shared/src/types';
 import {
   angleAtVertexDegrees,
@@ -737,8 +738,8 @@ export function RoomEditorDemo() {
   };
 
   return (
-    <main style={{ padding: 24, fontFamily: 'Inter, system-ui, sans-serif', color: '#24292f' }}>
-      <header style={{ marginBottom: 16 }}>
+    <DashboardLayout>
+      <header style={{ marginBottom: 16, padding: '0 24px' }}>
         <h1 style={{ marginBottom: 8 }}>Prototype — éditeur de pièce polygonale</h1>
         <p style={{ marginTop: 0, color: '#57606a' }}>
           Base de départ pour le MVP : vue de dessus, sélection de mur, métriques automatiques.
@@ -1226,6 +1227,6 @@ export function RoomEditorDemo() {
           </p>
         </div>
       </section>
-    </main>
+    </DashboardLayout>
   );
 }
