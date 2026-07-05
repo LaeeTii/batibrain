@@ -15,6 +15,7 @@
   --accent-strong: #4d33d8;
   --success: #2a8a57;
   --danger: #b9445e;
+  --create-button-color: #22c55e;
   --shadow-soft: 0 24px 60px rgba(24, 33, 51, 0.08);
   --shadow-card: 0 12px 32px rgba(24, 33, 51, 0.08);
   line-height: 1.5;
@@ -370,6 +371,13 @@ textarea {
   cursor: pointer;
 }
 
+.dashboard-createButton {
+  background: var(--create-button-color);
+  color: #fff;
+  box-shadow: 0 18px 36px rgba(34, 197, 94, 0.26);
+  cursor: pointer;
+}
+
 .dashboard-textButton {
   padding: 0;
   background: transparent;
@@ -646,6 +654,289 @@ textarea {
   flex-wrap: wrap;
 }
 
+.level-overview__panel {
+  padding: 26px;
+}
+
+.level-overview__headerActions,
+.level-overview__filters,
+.level-overview__filterActions,
+.level-overview__toolbar,
+.level-overview__toolbarActions,
+.level-planCanvas__controls,
+.level-overview__openingActions,
+.level-overview__roomSummaryActions,
+.level-overview__focusedRoomMeta {
+  display: flex;
+  gap: 12px;
+}
+
+.level-planCanvas__controls {
+  flex-direction: row;
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  z-index: 10;
+  background: var(--bg-surface);
+  border-radius: 12px;
+  padding: 8px;
+  box-shadow: var(--shadow-soft);
+}
+
+.level-overview__headerActions,
+.level-overview__toolbarActions,
+.level-overview__filterActions,
+.level-planCanvas__controls,
+.level-overview__openingActions {
+  justify-content: flex-end;
+}
+
+.level-overview__headerActions,
+.level-overview__filters,
+.level-overview__toolbar,
+.level-overview__toolbarActions,
+.level-planCanvas__controls,
+.level-overview__focusedRoomMeta {
+  flex-wrap: wrap;
+}
+
+.level-overview__filters {
+  align-items: flex-end;
+}
+
+.level-overview__filterActions {
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.level-overview__workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 20px;
+  align-items: start;
+}
+
+.level-overview__canvasPanel,
+.level-overview__summaryCard {
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+  border-radius: 26px;
+  background: var(--bg-surface-strong);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-soft);
+}
+
+.level-overview__toolbar {
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.level-overview__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--bg-surface-muted);
+  box-shadow: inset 0 0 0 1px rgba(159, 173, 197, 0.28);
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
+.level-overview__toggle input {
+  accent-color: var(--accent-strong);
+}
+
+.level-overview__exportMenu {
+  position: relative;
+}
+
+.level-overview__exportCard {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 4;
+  width: 290px;
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--bg-surface-strong);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-card);
+}
+
+.level-overview__exportCard p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+.level-overview__loadingState {
+  display: grid;
+  gap: 12px;
+}
+
+.level-overview__skeletonCanvas {
+  min-height: 520px;
+  border-radius: 26px;
+}
+
+.level-overview__emptyState {
+  min-height: 320px;
+  align-content: center;
+}
+
+.level-overview__canvasHint,
+.level-planCanvas__legend {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.level-overview__openingsSection {
+  display: grid;
+  gap: 16px;
+}
+
+.level-overview__openingList,
+.level-overview__roomSummaryList {
+  display: grid;
+  gap: 12px;
+}
+
+.level-overview__openingRow,
+.level-overview__roomSummaryCard {
+  border-radius: 22px;
+  background: var(--bg-surface-muted);
+}
+
+.level-overview__openingRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 16px;
+  align-items: center;
+  padding: 18px 20px;
+}
+
+.level-overview__openingRow p,
+.level-overview__roomSummaryCard p {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+}
+
+.level-overview__openingMeta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: var(--text-muted);
+}
+
+.level-overview__openingMeta span,
+.level-overview__focusedRoomMeta span {
+  padding: 8px 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.level-overview__sidebar {
+  display: grid;
+  gap: 16px;
+  position: sticky;
+  top: 28px;
+}
+
+.level-overview__summaryHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.level-overview__statsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.level-overview__statTile {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--bg-surface-muted);
+}
+
+.level-overview__statTile span {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+.level-overview__statTile strong {
+  font-size: 1.18rem;
+}
+
+.level-overview__statTile--wide {
+  grid-column: 1 / -1;
+}
+
+.level-overview__roomSummaryCard {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid transparent;
+}
+
+.level-overview__roomSummaryCard.is-focused {
+  border-color: rgba(90, 61, 240, 0.26);
+  box-shadow: inset 0 0 0 1px rgba(90, 61, 240, 0.12);
+}
+
+.level-overview__roomSummaryActions {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.level-overview__summaryCard--accent {
+  background:
+    linear-gradient(180deg, rgba(90, 61, 240, 0.06), rgba(255, 255, 255, 0.98)),
+    var(--bg-surface-strong);
+}
+
+.level-planCanvas {
+  display: grid;
+  gap: 14px;
+}
+
+.level-planCanvas__svg {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--border-soft);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at top right, rgba(90, 61, 240, 0.08), transparent 28%),
+    linear-gradient(180deg, #fbfcff 0%, #f4f7fb 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  touch-action: none;
+}
+
+.level-planCanvas__zoomButton {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  background: var(--bg-surface);
+  color: var(--text-strong);
+  cursor: pointer;
+  font-size: 16px;
+  box-shadow: var(--shadow-soft);
+}
+
 .dashboard-skeletonPreview,
 .dashboard-skeletonBar {
   background: linear-gradient(90deg, rgba(223, 229, 240, 0.65), rgba(245, 247, 251, 0.95), rgba(223, 229, 240, 0.65));
@@ -693,6 +984,14 @@ textarea {
   .dashboard-nav {
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   }
+
+  .level-overview__workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .level-overview__sidebar {
+    position: static;
+  }
 }
 
 @media (max-width: 820px) {
@@ -710,7 +1009,15 @@ textarea {
   .dashboard-summaryStrip,
   .project-overview__levelHeading,
   .project-overview__levelStats,
-  .dashboard-modalActions {
+  .dashboard-modalActions,
+  .level-overview__headerActions,
+  .level-overview__filters,
+  .level-overview__filterActions,
+  .level-overview__toolbar,
+  .level-overview__toolbarActions,
+  .level-planCanvas__controls,
+  .level-overview__openingActions,
+  .level-overview__roomSummaryActions {
     flex-direction: column;
     align-items: stretch;
   }
@@ -739,5 +1046,29 @@ textarea {
   .dashboard-summaryButton {
     min-width: 0;
     width: 100%;
+  }
+
+  .level-overview__statsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .level-overview__openingRow {
+    grid-template-columns: 1fr;
+  }
+
+  .level-overview__openingMeta,
+  .level-overview__openingActions,
+  .level-overview__roomSummaryActions {
+    justify-content: flex-start;
+  }
+
+  .level-overview__filterActions {
+    margin-left: 0;
+  }
+
+  .level-overview__exportCard {
+    left: 0;
+    right: auto;
+    width: min(100vw - 72px, 290px);
   }
 }

@@ -352,11 +352,9 @@ export default function App() {
   if (screen.name === 'level-overview') {
     return (
       <LevelOverviewSummary
-        projectName={screen.target.projectName}
-        levelName={screen.target.levelName}
-        rooms={screen.target.rooms}
-        totalAreaM2={screen.target.totalAreaM2}
+        target={screen.target}
         onBack={goBack}
+        onContextChange={updateDashboardContext}
         onOpenRoom={(roomId) => {
           const nextTarget = {
             projectId: screen.target.projectId,
@@ -365,6 +363,15 @@ export default function App() {
           };
 
           pushScreen({ name: 'room-editor', target: nextTarget }, nextTarget);
+        }}
+        onOpenProjectOverview={(target) => {
+          const nextDashboardContext = {
+            projectId: target.projectId,
+            levelId: target.focusedLevelId ?? screen.target.levelId,
+            roomId: screen.target.focusedRoomId ?? '',
+          };
+
+          pushScreen({ name: 'project-overview', target }, nextDashboardContext);
         }}
       />
     );

@@ -206,11 +206,16 @@ Créer la vue web d’entrée qui liste les pièces du niveau actif sans mélang
 Créer la vue web de plan global correspondant à la maquette d’étage, avec navigation niveau/projet et résumé latéral. Suivre la maquette web correspondante.
 
 #### Prompt Copilot
-```ts
-// Créer une vue étage avec sélection du projet et du niveau actif
-// afficher toutes les pièces du niveau sur un même canvas avec grille, murs et mesures activables
-// permettre zoom, déplacement, export du plan et sélection d'une pièce depuis le plan
-// afficher un résumé latéral du niveau avec surface totale, nombre de pièces, hauteurs et ouvertures
+```
+* Dans le header :
+ Afficher le projet actif et le sélécteur de niveau 
+* Dans le contenu principal :
+ - afficher toutes les pièces du niveau sur un même canvas avec grille et mesures activables
+ - permettre d'exporter le plan détaillé en PDF avec la liste des pièces et des métriques (murs, ouvertures, surfaces) ou le plan simple avec la grille et l'échelle.
+- permettre zoom, déplacement, export du plan et sélection d'une pièce depuis le plan
+// permettre de voir le détail de la liste des ouvertures dessous le plan
+* Dans le panneau latéral droit:
+afficher un résumé du niveau avec surface totale, nombre de pièces, hauteurs min, hauteur max, nombre de fenêtres, nombre de portes, nombre de murs extérieurs.
 ```
 
 ### 4.2.3 Éditeur de pièce — Vue du dessus
