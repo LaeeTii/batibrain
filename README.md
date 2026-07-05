@@ -1,4 +1,6 @@
-# App web + mobile de gestion de travaux
+# BatiBrain
+
+App web + mobile de gestion de travaux
 
 Ce starter pack fournit une base **MVP** pour démarrer rapidement :
 

@@ -2,7 +2,7 @@
 # SPEC — Plan d’action + Prompts Copilot
 
 ## 🎯 Objectif
-Construire progressivement une application de gestion de travaux avec un moteur géométrique robuste.
+Construire progressivement BatiBrain, une application de gestion de travaux avec un moteur géométrique robuste.
 
 ---
 
@@ -140,10 +140,64 @@ Créer la vue web d’entrée qui liste les pièces du niveau actif sans mélang
 
 #### Prompt Copilot
 ```ts
-// Créer un tableau de bord web avec sélection du projet actif
-// lister les pièces du niveau actif sous forme de cartes avec surface, revêtement et aperçu
-// garder la création de projet, niveau et pièce dans des formulaires séparés de la sélection courante
-// ajouter un accès explicite vers la vue d’ensemble du niveau
+/**
+ * CONTEXTE PRODUIT :
+ * BatiBrain, app de gestion de rénovation maison avec navigation par pièces. (plus de mode démo/prototype)
+ * Dashboard = point d'entrée principal.
+ *
+ * OBJECTIF :
+ * Implémenter une page Dashboard complète avec :
+ * - header projet
+ * - liste de pièces
+ *
+ * DONNÉES :
+ * type Piece = {
+ *   id: string
+ *   name: string
+ *   surface: number
+ * }
+ *
+ * UI :
+ * - Header :
+ *   - Titre "Tableau de bord"
+ *   - choix du projet actif
+ *   - Bouton d'ajout de niveau
+
+ * - Contenu principal :
+ *   - Choix du niveau actif
+ *   - Bouton de vue d'ensemble du niveau
+ *   - Bouton d'ajout de pièce
+ *   - grille de cartes
+ *   - chaque carte = pièce
+ *   - hover effect
+ * 
+ * - Footer : 
+ *   - nombre de pièces
+ *   - surface totale
+ *   - nombre de murs extérieurs
+ *   - nombre d'ouvertures
+ *   - Bouton de vue d'ensemble du projet
+ *
+ *
+ * DESIGN SYSTEM :
+ * - spacing cohérent
+ * - font moderne
+ * - couleurs neutres + bleu accent
+ * - ombres légères
+ * - transitions fluides
+ * - Cf maquettes dans /Users/56593p/workspaces/perso/app-maison/docs/maquettes/web/web-tableau de bord.png
+ *
+ * COMPORTEMENT :
+ * - clic sur bouton vue d'ensemble du projet → vue projet
+ * - clic sur bouton vue d'ensemble du niveau → vue étage
+ * - clic ajout pièce → vue pièce avec pièce vide
+ * - clic carte → vue pièce
+ * - affichage surface formatée (m²)
+ *
+ * BONUS :
+ * - état vide (aucune pièce)
+ * - skeleton loading
+ */
 ```
 
 ### 4.2.2 Vue globale — Étage

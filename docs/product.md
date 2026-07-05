@@ -1,7 +1,7 @@
-# Produit — Application de gestion de travaux maison
+# Produit — BatiBrain
 
 ## Objectif
-Construire une application web + mobile pour piloter des travaux de maison, avec un coeur métier centré sur les pièces et les murs.
+Construire BatiBrain, une application web + mobile pour piloter des travaux de maison, avec un coeur métier centré sur les pièces et les murs.
 
 ## MVP
 

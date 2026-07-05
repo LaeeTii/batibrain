@@ -1,8 +1,25 @@
 :root {
-  font-family: Inter, system-ui, sans-serif;
+  font-family: 'Avenir Next', 'Segoe UI', sans-serif;
+  --font-sans: 'Avenir Next', 'Segoe UI', sans-serif;
+  --bg-shell: #e8eef7;
+  --bg-sidebar: radial-gradient(circle at top, rgba(85, 126, 248, 0.22), transparent 28%), linear-gradient(180deg, #0d1527 0%, #131f38 100%);
+  --bg-surface: rgba(255, 255, 255, 0.88);
+  --bg-surface-strong: #ffffff;
+  --bg-surface-muted: rgba(242, 246, 252, 0.92);
+  --border-soft: rgba(151, 164, 187, 0.28);
+  --border-strong: rgba(107, 124, 154, 0.2);
+  --text-strong: #182133;
+  --text-muted: #64718a;
+  --accent: #5a3df0;
+  --accent-soft: rgba(90, 61, 240, 0.14);
+  --accent-strong: #4d33d8;
+  --success: #2a8a57;
+  --danger: #b9445e;
+  --shadow-soft: 0 24px 60px rgba(24, 33, 51, 0.08);
+  --shadow-card: 0 12px 32px rgba(24, 33, 51, 0.08);
   line-height: 1.5;
   font-weight: 400;
-  color: #24292f;
+  color: var(--text-strong);
   background:
     radial-gradient(circle at top left, rgba(14, 84, 233, 0.08), transparent 28%),
     linear-gradient(180deg, #f7f9fc 0%, #eef3f9 100%);
@@ -19,11 +36,12 @@
 html,
 body,
 #root {
-  min-height: 100%;
+  min-height: 100vh;
 }
 
 body {
   margin: 0;
+  background: var(--bg-shell);
 }
 
 button,
@@ -31,4 +49,695 @@ input,
 textarea,
 select {
   font: inherit;
+}
+
+button {
+  border: 0;
+}
+
+input,
+select,
+textarea {
+  color: var(--text-strong);
+}
+
+.dashboard-shell {
+  display: grid;
+  grid-template-columns: 272px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.dashboard-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 28px 20px;
+  color: rgba(255, 255, 255, 0.92);
+  background: var(--bg-sidebar);
+}
+
+.dashboard-brandBlock,
+.dashboard-profileCard,
+.dashboard-sidebarFooter,
+.dashboard-contentPanel,
+.room-card,
+.project-overview__levelCard,
+.dashboard-modalCard,
+.dashboard-summaryStrip,
+.level-overview__roomRow {
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-soft);
+}
+
+.dashboard-brandBlock {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.dashboard-brandMark,
+.dashboard-profileAvatar,
+.dashboard-navIcon,
+.dashboard-iconButton,
+.summary-stat::before {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+}
+
+.dashboard-brandMark {
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.dashboard-sidebarLabel {
+  margin: 0 0 2px;
+  color: rgba(232, 238, 247, 0.7);
+  font-size: 0.85rem;
+}
+
+.dashboard-brandTitle,
+.dashboard-pageTitle,
+.dashboard-levelTitle,
+.room-card__title {
+  margin: 0;
+}
+
+.dashboard-profileCard,
+.dashboard-sidebarFooter {
+  padding: 16px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.dashboard-profileCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.dashboard-profileAvatar {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.08));
+  font-weight: 700;
+}
+
+.dashboard-nav {
+  display: grid;
+  gap: 10px;
+}
+
+.dashboard-navItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.82);
+  text-align: left;
+  cursor: default;
+}
+
+.dashboard-navItem.is-active {
+  background: linear-gradient(135deg, rgba(103, 87, 255, 0.88), rgba(86, 128, 246, 0.72));
+  color: #fff;
+  box-shadow: 0 18px 36px rgba(49, 69, 161, 0.34);
+}
+
+.dashboard-navIcon {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 8px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.dashboard-userMeta {
+  margin: 4px 0 0;
+  color: rgba(232, 238, 247, 0.74);
+}
+
+.dashboard-sidebarFooter {
+  margin-top: auto;
+}
+
+.dashboard-sidebarAction {
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  cursor: pointer;
+}
+
+.dashboard-main,
+.level-overview,
+.project-overview {
+  padding: 28px;
+}
+
+.dashboard-main {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.dashboard-topbar,
+.level-overview__header,
+.project-overview__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dashboard-eyebrow {
+  margin: 0 0 6px;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dashboard-pageTitle {
+  font-size: clamp(2rem, 3vw, 2.8rem);
+  line-height: 1.05;
+}
+
+.dashboard-subtitle {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+}
+
+.dashboard-topActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dashboard-iconButton {
+  width: 44px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--text-strong);
+  box-shadow: inset 0 0 0 1px rgba(172, 183, 200, 0.35);
+}
+
+.dashboard-contentPanel {
+  display: grid;
+  gap: 20px;
+  padding: 28px;
+  border-radius: 32px;
+  background: var(--bg-surface);
+  backdrop-filter: blur(14px);
+}
+
+.dashboard-projectBar,
+.dashboard-levelHeader,
+.dashboard-summaryStrip,
+.project-overview__levelHeading,
+.project-overview__levelStats,
+.room-card__titleRow,
+.room-card__stats,
+.dashboard-modalActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dashboard-projectActions,
+.dashboard-levelActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.dashboard-projectActions {
+  align-items: flex-end;
+}
+
+.dashboard-levelActions {
+  width: 100%;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+}
+
+.dashboard-levelButtons {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.dashboard-field {
+  display: grid;
+  gap: 8px;
+}
+
+.dashboard-field span {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.dashboard-field input,
+.dashboard-field select {
+  min-width: 240px;
+  padding: 13px 16px;
+  border: 1px solid rgba(167, 178, 196, 0.55);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.dashboard-field--compact select {
+  min-width: 220px;
+}
+
+.dashboard-toolbarMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.dashboard-statusDot {
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: #39b26b;
+  box-shadow: 0 0 0 6px rgba(57, 178, 107, 0.14);
+}
+
+.dashboard-primaryButton,
+.dashboard-outlineButton,
+.dashboard-textButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 13px 18px;
+  border-radius: 16px;
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.dashboard-primaryButton {
+  background: linear-gradient(135deg, var(--accent), #6f4bff);
+  color: #fff;
+  box-shadow: 0 18px 36px rgba(90, 61, 240, 0.26);
+  cursor: pointer;
+}
+
+.dashboard-outlineButton {
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--text-strong);
+  box-shadow: inset 0 0 0 1px rgba(159, 173, 197, 0.42);
+  cursor: pointer;
+}
+
+.dashboard-textButton {
+  padding: 0;
+  background: transparent;
+  color: var(--accent-strong);
+  cursor: pointer;
+}
+
+.dashboard-primaryButton:hover,
+.dashboard-outlineButton:hover,
+.dashboard-iconButton:hover,
+.room-card:hover,
+.project-overview__levelCard:hover,
+.level-overview__roomRow:hover {
+  transform: translateY(-1px);
+}
+
+.dashboard-primaryButton:disabled,
+.dashboard-outlineButton:disabled,
+.dashboard-iconButton:disabled,
+.dashboard-sidebarAction:disabled,
+.room-card:disabled,
+.dashboard-navItem:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.dashboard-banner,
+.dashboard-emptyState,
+.dashboard-modalCard,
+.dashboard-summaryStrip,
+.level-overview__roomRow,
+.project-overview__levelCard {
+  border-radius: 24px;
+  background: var(--bg-surface-strong);
+}
+
+.dashboard-banner {
+  padding: 16px 18px;
+}
+
+.dashboard-banner--success {
+  color: var(--success);
+  background: rgba(42, 138, 87, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(42, 138, 87, 0.16);
+}
+
+.dashboard-banner--error {
+  color: var(--danger);
+  background: rgba(185, 68, 94, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(185, 68, 94, 0.16);
+}
+
+.dashboard-emptyState {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  padding: 28px;
+  color: var(--text-muted);
+}
+
+.dashboard-emptyState h3 {
+  margin: 0;
+  color: var(--text-strong);
+}
+
+.dashboard-emptyState p {
+  margin: 0;
+}
+
+.dashboard-roomGrid,
+.project-overview__levelGrid,
+.level-overview__roomList {
+  display: grid;
+  gap: 18px;
+}
+
+.dashboard-roomGrid {
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+
+.room-card {
+  display: grid;
+  gap: 0;
+  padding: 0;
+  border-radius: 26px;
+  overflow: hidden;
+  background: var(--bg-surface-strong);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.room-card.is-active {
+  box-shadow: 0 22px 42px rgba(90, 61, 240, 0.18);
+  border-color: rgba(110, 90, 255, 0.28);
+}
+
+.room-card__body {
+  display: grid;
+  gap: 14px;
+  padding: 18px 20px 20px;
+}
+
+.room-card__area,
+.room-card__metaLabel,
+.room-card__finish,
+.summary-stat__label {
+  margin: 0;
+}
+
+.room-card__area,
+.room-card__finish,
+.room-card__stats,
+.room-card__badge,
+.summary-stat__label,
+.project-overview__levelStats,
+.project-overview__roomChip,
+.level-overview__roomMeta {
+  color: var(--text-muted);
+}
+
+.room-card__badge,
+.project-overview__levelBadge,
+.project-overview__roomChip {
+  padding: 8px 11px;
+  border-radius: 999px;
+  background: var(--bg-surface-muted);
+  font-size: 0.9rem;
+}
+
+.room-card__metaBlock {
+  display: grid;
+  gap: 4px;
+}
+
+.room-card__metaLabel {
+  font-size: 0.84rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.room-card__stats {
+  justify-content: flex-start;
+  gap: 14px;
+  font-size: 0.95rem;
+}
+
+.room-card__cta {
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+
+.room-preview {
+  position: relative;
+  min-height: 216px;
+  padding: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(250, 252, 255, 0.92)),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--room-preview-accent), white 78%), transparent 42%);
+}
+
+.room-preview__svg {
+  display: block;
+  width: 100%;
+  height: 180px;
+}
+
+.room-preview__shape {
+  fill: color-mix(in srgb, var(--room-preview-accent), white 80%);
+  stroke: rgba(48, 58, 74, 0.72);
+  stroke-width: 8;
+  stroke-linejoin: round;
+}
+
+.room-preview__opening {
+  stroke: rgba(255, 255, 255, 0.98);
+  stroke-width: 9;
+  stroke-linecap: round;
+}
+
+.dashboard-summaryStrip {
+  flex-wrap: wrap;
+  padding: 18px;
+}
+
+.summary-stat {
+  position: relative;
+  flex: 1 1 160px;
+  min-width: 145px;
+  padding: 18px 18px 18px 68px;
+  border-radius: 20px;
+  background: var(--bg-surface-muted);
+}
+
+.summary-stat::before {
+  content: '';
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  width: 36px;
+  height: 36px;
+  transform: translateY(-50%);
+  background: linear-gradient(135deg, rgba(90, 61, 240, 0.18), rgba(74, 175, 216, 0.18));
+}
+
+.summary-stat strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 1.35rem;
+}
+
+.dashboard-summaryButton {
+  min-width: 220px;
+}
+
+.dashboard-modalBackdrop {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(13, 21, 39, 0.46);
+  backdrop-filter: blur(10px);
+}
+
+.dashboard-modalCard {
+  width: min(100%, 460px);
+  padding: 24px;
+}
+
+.dashboard-panelTitle {
+  margin: 0 0 10px;
+  font-size: 1.4rem;
+}
+
+.project-overview__levelGrid {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.project-overview__levelCard,
+.level-overview__roomRow {
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+}
+
+.project-overview__levelCard.is-focused {
+  border-color: rgba(90, 61, 240, 0.24);
+  box-shadow: 0 24px 48px rgba(90, 61, 240, 0.14);
+}
+
+.project-overview__roomChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.level-overview__section {
+  margin-top: 24px;
+}
+
+.level-overview__sectionHeader {
+  margin-bottom: 16px;
+}
+
+.level-overview__roomList {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.level-overview__roomMeta {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.dashboard-skeletonPreview,
+.dashboard-skeletonBar {
+  background: linear-gradient(90deg, rgba(223, 229, 240, 0.65), rgba(245, 247, 251, 0.95), rgba(223, 229, 240, 0.65));
+  background-size: 200% 100%;
+  animation: dashboard-shimmer 1.6s linear infinite;
+}
+
+.dashboard-skeletonPreview {
+  height: 216px;
+}
+
+.dashboard-skeletonBar {
+  height: 14px;
+  border-radius: 999px;
+}
+
+.dashboard-skeletonBar--title {
+  width: 68%;
+  height: 20px;
+}
+
+.dashboard-skeletonBar--short {
+  width: 42%;
+}
+
+@keyframes dashboard-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (max-width: 1180px) {
+  .dashboard-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-sidebar {
+    gap: 18px;
+  }
+
+  .dashboard-nav {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+}
+
+@media (max-width: 820px) {
+  .dashboard-main,
+  .level-overview,
+  .project-overview {
+    padding: 18px;
+  }
+
+  .dashboard-topbar,
+  .level-overview__header,
+  .project-overview__header,
+  .dashboard-projectBar,
+  .dashboard-levelHeader,
+  .dashboard-summaryStrip,
+  .project-overview__levelHeading,
+  .project-overview__levelStats,
+  .dashboard-modalActions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dashboard-topActions,
+  .dashboard-projectActions,
+  .dashboard-levelActions,
+  .dashboard-levelButtons {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .dashboard-topActions > *,
+  .dashboard-projectActions > *,
+  .dashboard-levelActions > *,
+  .dashboard-levelButtons > * {
+    flex: 1 1 auto;
+  }
+
+  .dashboard-levelActions {
+    flex-wrap: wrap;
+  }
+
+  .dashboard-field input,
+  .dashboard-field select,
+  .dashboard-summaryButton {
+    min-width: 0;
+    width: 100%;
+  }
 }
