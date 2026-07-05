@@ -191,6 +191,7 @@ Créer la vue web d’entrée qui liste les pièces du niveau actif sans mélang
  * - clic sur bouton vue d'ensemble du projet → vue projet
  * - clic sur bouton vue d'ensemble du niveau → vue étage
  * - clic ajout pièce → vue pièce avec pièce vide
+ * - la pièce n'est persistée qu'au clic sur enregistrer dans la vue d'édition
  * - clic carte → vue pièce
  * - affichage surface formatée (m²)
  *

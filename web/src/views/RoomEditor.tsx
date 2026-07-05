@@ -109,6 +109,27 @@ function hasSplitWallHeight(wall: Wall): boolean {
     && wall.heightLeftCm !== wall.heightRightCm;
 }
 
+function remapOpeningsToWalls(sourceWalls: Wall[], targetWalls: Wall[], openings: Opening[]): Opening[] {
+  const wallIndexById = new Map(sourceWalls.map((wall, index) => [wall.id, index]));
+
+  return openings.flatMap((opening) => {
+    const wallIndex = wallIndexById.get(opening.wallId);
+    if (wallIndex === undefined) {
+      return [];
+    }
+
+    const targetWall = targetWalls[wallIndex];
+    if (!targetWall) {
+      return [];
+    }
+
+    return [{
+      ...opening,
+      wallId: targetWall.id,
+    }];
+  });
+}
+
 type HistoryUpdateMode = 'push' | 'replace';
 
 interface RoomEditorDemoProps {
@@ -420,9 +441,14 @@ export function RoomEditorDemo({
     setSelectedWallIndex(null);
   }
 
-  function clearActiveRoomSelection() {
-    setSelectedRoomId('');
+  function openDraftRoom(nextRoomName = DEFAULT_ROOM_NAME) {
     resetCanvasToDraft();
+    setSelectedRoomId('');
+    setRoomNameInput(nextRoomName);
+  }
+
+  function clearActiveRoomSelection() {
+    openDraftRoom();
   }
 
   function applyActiveRoomSnapshot(snapshot: RoomSnapshot) {
@@ -463,6 +489,18 @@ export function RoomEditorDemo({
       setSelectedLevelId(preferredLevel.id);
       const nextRooms = await refreshRoomsForLevel(preferredLevel.id);
       const nextSnapshots = await refreshRoomSnapshotsForRooms(nextRooms);
+
+      if (initialRoomId === '') {
+        openDraftRoom();
+        notifyContextChange({
+          projectId: preferredProject.id,
+          levelId: preferredLevel.id,
+          roomId: '',
+        }, 'replace');
+        setStatusMessage('Brouillon local prêt. Enregistre la pièce affichée pour la créer en base.');
+        return;
+      }
+
       const preferredSnapshot = nextSnapshots.find((snapshot) => snapshot.room.id === initialRoomId) ?? nextSnapshots[0];
 
       if (!preferredSnapshot) {
@@ -632,47 +670,23 @@ export function RoomEditorDemo({
   };
 
   const handleCreateRoom = () => {
-    void runRoomAction('create', async () => {
-      const roomName = newRoomNameInput.trim();
+    const roomName = newRoomNameInput.trim();
 
-      if (!selectedLevelId) {
-        throw new Error('Sélectionne un niveau avant de créer la pièce.');
-      }
+    if (!selectedLevelId) {
+      setErrorMessage('Sélectionne un niveau avant de préparer la pièce.');
+      return;
+    }
 
-      if (!isUuid(selectedLevelId)) {
-        throw new Error('Le niveau sélectionné est invalide.');
-      }
+    if (!isUuid(selectedLevelId)) {
+      setErrorMessage('Le niveau sélectionné est invalide.');
+      return;
+    }
 
-      if (!roomName) {
-        throw new Error('Renseigne un nom avant de créer la pièce.');
-      }
-
-      const createdRoom = await createRoom({
-        levelId: selectedLevelId,
-        name: roomName,
-      });
-
-      const defaultGeometry = createDefaultRoomGeometry(createdRoom.id);
-      const savedVertices = await replaceRoomVertices(
-        createdRoom.id,
-        defaultGeometry.vertices,
-      );
-      const savedWalls = await replaceRoomWalls(
-        createdRoom.id,
-        savedVertices,
-        defaultGeometry.walls,
-      );
-
-      if (savedWalls.length !== 4) {
-        throw new Error('La pièce créée doit contenir exactement 4 murs.');
-      }
-
-      const nextRooms = await refreshRoomsForLevel(createdRoom.levelId);
-      await refreshRoomSnapshotsForRooms(nextRooms);
-
-      setNewRoomNameInput(DEFAULT_ROOM_NAME);
-      setStatusMessage(`Pièce créée : ${createdRoom.name}. Sélectionne-la dans la liste pour l'afficher dans le canvas.`);
-    });
+    openDraftRoom(roomName);
+    setNewRoomNameInput(DEFAULT_ROOM_NAME);
+    setStatusMessage('Brouillon local prêt. Enregistre la pièce affichée pour la créer en base.');
+    setErrorMessage(null);
+    notifyContextChange({ projectId: selectedProjectId, levelId: selectedLevelId, roomId: '' }, 'push');
   };
 
   const handleSelectedRoomChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -713,10 +727,6 @@ export function RoomEditorDemo({
 
   const handleSaveRoom = () => {
     void runRoomAction('save', async () => {
-      if (!activeRoom) {
-        throw new Error('Charge ou crée une pièce avant de l’enregistrer.');
-      }
-
       const roomName = roomNameInput.trim();
 
       if (!selectedLevelId) {
@@ -731,22 +741,36 @@ export function RoomEditorDemo({
         throw new Error('Renseigne un nom avant de sauvegarder la pièce.');
       }
 
-      const savedRoom = await updateRoom({
-        ...activeRoom,
-        levelId: selectedLevelId,
-        name: roomName,
-      });
+      const isCreatingRoom = !activeRoom;
+      const savedRoom = activeRoom
+        ? await updateRoom({
+          ...activeRoom,
+          levelId: selectedLevelId,
+          name: roomName,
+        })
+        : await createRoom({
+          levelId: selectedLevelId,
+          name: roomName,
+        });
+
+      const sourceVertices = isCreatingRoom
+        ? prepareVerticesForRoom(vertices, savedRoom.id, true)
+        : prepareVerticesForRoom(vertices, savedRoom.id);
 
       const savedVertices = await replaceRoomVertices(
         savedRoom.id,
-        prepareVerticesForRoom(vertices, savedRoom.id),
+        sourceVertices,
       );
       const savedWalls = await replaceRoomWalls(
         savedRoom.id,
         savedVertices,
         remapWallsToVertices(vertices, savedVertices, wallDefinitions),
       );
-      const savedOpenings = await replaceRoomOpenings(savedVertices, savedWalls, openings);
+      const savedOpenings = await replaceRoomOpenings(
+        savedVertices,
+        savedWalls,
+        isCreatingRoom ? remapOpeningsToWalls(wallDefinitions, savedWalls, openings) : openings,
+      );
 
       const nextRooms = await refreshRoomsForLevel(savedRoom.levelId);
       await refreshRoomSnapshotsForRooms(nextRooms);
@@ -755,7 +779,16 @@ export function RoomEditorDemo({
       setSelectedRoomId(savedRoom.id);
       setRoomNameInput(savedRoom.name);
       applyRoomGeometry(savedVertices, savedWalls, savedOpenings);
-      setStatusMessage(`Pièce enregistrée : ${savedRoom.name}.`);
+      notifyContextChange({
+        projectId: selectedProjectId,
+        levelId: selectedLevelId,
+        roomId: savedRoom.id,
+      }, 'replace');
+      setStatusMessage(
+        isCreatingRoom
+          ? `Pièce créée et enregistrée : ${savedRoom.name}.`
+          : `Pièce enregistrée : ${savedRoom.name}.`,
+      );
     });
   };
 
@@ -1012,7 +1045,7 @@ export function RoomEditorDemo({
 
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
                 <button type="button" onClick={handleCreateRoom} disabled={isBusy || !selectedLevelId}>
-                  {busyAction === 'create' ? 'Création...' : 'Créer la pièce'}
+                  Préparer un brouillon
                 </button>
               </div>
 
@@ -1034,7 +1067,7 @@ export function RoomEditorDemo({
                 </select>
               </label>
 
-              {activeRoom ? (
+              {activeRoom || selectedLevelId ? (
                 <>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12, marginTop: 16 }}>
                     <label style={{ display: 'grid', gap: 6 }}>
@@ -1048,20 +1081,26 @@ export function RoomEditorDemo({
                     </label>
 
                     <div style={{ display: 'grid', gap: 6 }}>
-                      <span>Identifiant</span>
+                      <span>{activeRoom ? 'Identifiant' : 'Statut'}</span>
                       <div style={{ padding: '8px 12px', border: '1px solid #d0d7de', borderRadius: 6, background: '#f6f8fa', color: '#57606a' }}>
-                        {activeRoom.id}
+                        {activeRoom ? activeRoom.id : 'Brouillon local non sauvegardé'}
                       </div>
                     </div>
                   </div>
 
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
                     <button type="button" onClick={handleSaveRoom} disabled={isBusy || !selectedLevelId}>
-                      {busyAction === 'save' ? 'Enregistrement...' : 'Enregistrer la pièce affichée'}
+                      {busyAction === 'save'
+                        ? 'Enregistrement...'
+                        : activeRoom
+                          ? 'Enregistrer la pièce affichée'
+                          : 'Enregistrer le brouillon'}
                     </button>
-                    <button type="button" onClick={handleDeleteRoom} disabled={isBusy}>
-                      {busyAction === 'delete' ? 'Suppression...' : 'Supprimer la pièce affichée'}
-                    </button>
+                    {activeRoom ? (
+                      <button type="button" onClick={handleDeleteRoom} disabled={isBusy}>
+                        {busyAction === 'delete' ? 'Suppression...' : 'Supprimer la pièce affichée'}
+                      </button>
+                    ) : null}
                   </div>
                 </>
               ) : null}

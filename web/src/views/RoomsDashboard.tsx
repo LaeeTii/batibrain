@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { createRectangleRoomGeometry } from '../../../shared/src/geometry';
 import type { Level, Project } from '../../../shared/src/types';
 import { RoomPreview } from '../components/RoomPreview';
 import { countExteriorWalls, getRoomAreaM2 } from '../lib/roomMetrics';
@@ -7,21 +6,14 @@ import { hasSupabaseConfig } from '../lib/supabase';
 import { createLevel, listLevelsByProject } from '../services/levels';
 import { createProject, listProjects } from '../services/projects';
 import {
-  createRoom,
   listRoomsByLevel,
   loadRoomSnapshot,
-  replaceRoomVertices,
-  replaceRoomWalls,
 } from '../services/rooms';
 import type { RoomSnapshot } from '../services/rooms';
 
 const EMPTY_ID = '';
-const DEFAULT_ROOM_SIDE_CM = 200;
-const DEFAULT_ROOM_HEIGHT_CM = 250;
-const DEFAULT_WALL_THICKNESS_CM = 10;
 const DEFAULT_PROJECT_NAME = 'Mon projet';
 const DEFAULT_LEVEL_NAME = 'Nouveau niveau';
-const DEFAULT_ROOM_NAME = 'Nouvelle pièce';
 const AREA_FORMATTER = new Intl.NumberFormat('fr-FR', {
   minimumFractionDigits: 0,
   maximumFractionDigits: 2,
@@ -88,13 +80,6 @@ type DashboardCard = {
   flooringLabel: string;
   accentColor: string;
 };
-
-function createDefaultRoomGeometry(roomId: string) {
-  return createRectangleRoomGeometry(roomId, DEFAULT_ROOM_SIDE_CM, DEFAULT_ROOM_SIDE_CM, {
-    wallThicknessCm: DEFAULT_WALL_THICKNESS_CM,
-    wallHeightCm: DEFAULT_ROOM_HEIGHT_CM,
-  });
-}
 
 function formatArea(areaM2: number): string {
   return `${AREA_FORMATTER.format(areaM2)} m²`;
@@ -449,41 +434,24 @@ export function RoomsDashboard({
   };
 
   const handleCreateRoom = () => {
-    void runDashboardAction('create-room', async () => {
-      const levelId = activeLevelId.trim();
-      const roomName = buildAutoName(
-        DEFAULT_ROOM_NAME,
-        roomCards.map((card) => card.snapshot.room.name),
-      );
+    const levelId = activeLevelId.trim();
 
-      if (!levelId) {
-        throw new Error('Choisis un niveau actif avant d’ajouter une pièce.');
-      }
+    if (!levelId) {
+      setErrorMessage('Choisis un niveau actif avant d’ajouter une pièce.');
+      return;
+    }
 
-      const createdRoom = await createRoom({
-        levelId,
-        name: roomName,
-      });
+    if (!selectedProject || !onOpenRoom) {
+      return;
+    }
 
-      const defaultGeometry = createDefaultRoomGeometry(createdRoom.id);
-      const savedVertices = await replaceRoomVertices(createdRoom.id, defaultGeometry.vertices);
-      const savedWalls = await replaceRoomWalls(createdRoom.id, savedVertices, defaultGeometry.walls);
-
-      if (savedWalls.length !== 4) {
-        throw new Error('La pièce créée doit contenir exactement 4 murs.');
-      }
-
-      const nextSnapshots = await refreshRoomSnapshotsForLevel(levelId, createdRoom.id);
-      setHighlightedRoomId(pickExistingRoomId(nextSnapshots, createdRoom.id));
-      setStatusMessage(`Pièce créée : ${createdRoom.name}. L’éditeur s’ouvre sur cette nouvelle pièce.`);
-
-      if (selectedProject && onOpenRoom) {
-        onOpenRoom({
-          projectId: selectedProject.id,
-          levelId,
-          roomId: createdRoom.id,
-        });
-      }
+    setErrorMessage(null);
+    setStatusMessage('Brouillon local ouvert. La pièce sera créée uniquement quand tu l’enregistreras depuis l’éditeur.');
+    setHighlightedRoomId(EMPTY_ID);
+    onOpenRoom({
+      projectId: selectedProject.id,
+      levelId,
+      roomId: EMPTY_ID,
     });
   };
 

@@ -34,7 +34,8 @@ Construire BatiBrain, une application web + mobile pour piloter des travaux de m
 - création de projet via un formulaire `nom`, indépendante de la sélection du projet actif
 - création de niveau via un formulaire `projet + nom`, indépendante de la sélection du niveau actif
 - création / édition de pièce polygonale, y compris insertion et suppression de sommet tant que la pièce reste valide
-- création de pièce via un formulaire `niveau + nom`, indépendante de la sélection de la pièce affichée
+- préparation de pièce via un formulaire `niveau + nom`, indépendante de la sélection de la pièce affichée
+- création effective d’une pièce uniquement lors du clic sur `Enregistrer` dans la vue d’édition
 - affichage des longueurs de murs
 - sélection d'un mur
 - sélection d’un niveau via une liste déroulante qui charge les pièces de ce niveau
