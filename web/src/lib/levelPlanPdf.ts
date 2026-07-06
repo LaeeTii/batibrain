@@ -1,9 +1,21 @@
 import jsPDF from 'jspdf';
+import { formatLengthCm, sortVertices, wallsFromVertices } from '../../../shared/src/geometry';
+import type { LevelMetricSummary } from './roomMetrics';
+import type { RoomSnapshot } from '../services/rooms';
 
 interface ExportSimpleLevelPlanPdfOptions {
   svgElement: SVGSVGElement;
   projectName: string;
   levelName: string;
+  exportedAt?: Date;
+}
+
+interface ExportDetailedLevelPlanPdfOptions {
+  svgElement: SVGSVGElement;
+  projectName: string;
+  levelName: string;
+  metrics: LevelMetricSummary;
+  snapshots: RoomSnapshot[];
   exportedAt?: Date;
 }
 
@@ -13,10 +25,20 @@ interface PageLayout {
   marginMm: number;
 }
 
+interface TableColumn {
+  label: string;
+  widthMm: number;
+  align?: 'left' | 'right';
+}
+
 const PX_PER_MM = 3.78;
 const PAGE_MARGIN_MM = 12;
 const CARTOUCHE_HEIGHT_MM = 24;
 const PDF_FORMAT = 'a4';
+const AREA_FORMATTER = new Intl.NumberFormat('fr-FR', {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+});
 
 function pad(value: number): string {
   return String(value).padStart(2, '0');
@@ -45,6 +67,102 @@ function buildFileName(projectName: string, levelName: string, exportedAt: Date)
   const dateSegment = formatDateForFile(exportedAt);
 
   return `${projectSlug}-${levelSlug}-${dateSegment}.pdf`;
+}
+
+function buildDetailedFileName(projectName: string, levelName: string, exportedAt: Date): string {
+  const projectSlug = slugify(projectName);
+  const levelSlug = slugify(levelName);
+  const dateSegment = formatDateForFile(exportedAt);
+
+  return `${projectSlug}-${levelSlug}-detail-${dateSegment}.pdf`;
+}
+
+function formatArea(areaM2: number): string {
+  return `${AREA_FORMATTER.format(areaM2)} m2`;
+}
+
+function formatOptionalLength(lengthCm: number | null): string {
+  return lengthCm === null ? 'n/d' : formatLengthCm(lengthCm);
+}
+
+function formatOpeningType(type: 'door' | 'window' | 'other'): string {
+  if (type === 'door') {
+    return 'Porte';
+  }
+  if (type === 'window') {
+    return 'Fenetre';
+  }
+  return 'Ouverture';
+}
+
+function drawTableHeader(pdf: jsPDF, columns: TableColumn[], xStart: number, y: number) {
+  let cursorX = xStart;
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(35, 45, 64);
+  pdf.setFontSize(9);
+
+  for (const column of columns) {
+    const x = column.align === 'right' ? cursorX + column.widthMm - 1 : cursorX + 1;
+    pdf.text(column.label, x, y, {
+      align: column.align === 'right' ? 'right' : 'left',
+      baseline: 'middle',
+    });
+    cursorX += column.widthMm;
+  }
+}
+
+function drawTableRow(
+  pdf: jsPDF,
+  columns: TableColumn[],
+  row: string[],
+  xStart: number,
+  y: number,
+  isEven: boolean,
+) {
+  const rowHeight = 7;
+  const totalWidth = columns.reduce((sum, column) => sum + column.widthMm, 0);
+
+  if (isEven) {
+    pdf.setFillColor(248, 250, 252);
+    pdf.rect(xStart, y - rowHeight + 1, totalWidth, rowHeight, 'F');
+  }
+
+  let cursorX = xStart;
+  pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(52, 63, 84);
+  pdf.setFontSize(8.5);
+
+  columns.forEach((column, index) => {
+    const cellValue = row[index] ?? '';
+    const x = column.align === 'right' ? cursorX + column.widthMm - 1 : cursorX + 1;
+    pdf.text(cellValue, x, y - 2, {
+      align: column.align === 'right' ? 'right' : 'left',
+      baseline: 'middle',
+      maxWidth: Math.max(column.widthMm - 2, 8),
+    });
+    cursorX += column.widthMm;
+  });
+
+  pdf.setDrawColor(221, 227, 236);
+  pdf.line(xStart, y + 1, xStart + totalWidth, y + 1);
+}
+
+function buildWallsRows(snapshots: RoomSnapshot[]): string[][] {
+  return snapshots.flatMap((snapshot) => {
+    const derivedWalls = wallsFromVertices(sortVertices(snapshot.vertices));
+
+    return derivedWalls.map((derivedWall) => {
+      const wall = snapshot.walls[derivedWall.index];
+      return [
+        snapshot.room.name,
+        `Mur ${derivedWall.index + 1}`,
+        formatLengthCm(derivedWall.lengthCm),
+        formatOptionalLength(wall?.thicknessCm ?? null),
+        formatOptionalLength(wall?.heightLeftCm ?? null),
+        formatOptionalLength(wall?.heightRightCm ?? null),
+      ];
+    });
+  });
 }
 
 function getSvgAspectRatio(svgElement: SVGSVGElement): number {
@@ -268,6 +386,212 @@ export async function exportSimpleLevelPlanPdf({
   drawCartouche(pdf, layout, projectName, levelName, exportedAt);
 
   const fileName = buildFileName(projectName, levelName, exportedAt);
+  pdf.save(fileName);
+
+  return fileName;
+}
+
+export async function exportDetailedLevelPlanPdf({
+  svgElement,
+  projectName,
+  levelName,
+  metrics,
+  snapshots,
+  exportedAt = new Date(),
+}: ExportDetailedLevelPlanPdfOptions): Promise<string> {
+  const renderedRect = svgElement.getBoundingClientRect();
+  const renderedAspectRatio = renderedRect.width > 0 && renderedRect.height > 0
+    ? renderedRect.width / renderedRect.height
+    : getSvgAspectRatio(svgElement);
+
+  const orientation: 'portrait' | 'landscape' = 'landscape';
+  const layout = getPageLayout(orientation);
+  const pdf = new jsPDF({
+    orientation,
+    unit: 'mm',
+    format: PDF_FORMAT,
+    compress: true,
+  });
+
+  const topY = layout.marginMm;
+  const bottomY = layout.heightMm - layout.marginMm;
+  const contentWidthMm = layout.widthMm - layout.marginMm * 2;
+  let cursorY = topY;
+  let pageNumber = 1;
+
+  const drawPageHeader = () => {
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(23, 34, 52);
+    pdf.setFontSize(14);
+    pdf.text('Export détaillé - Niveau', layout.marginMm, layout.marginMm + 4);
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9.5);
+    pdf.setTextColor(74, 85, 104);
+    pdf.text(`Projet: ${projectName}`, layout.marginMm, layout.marginMm + 10);
+    pdf.text(`Niveau: ${levelName}`, layout.marginMm + 72, layout.marginMm + 10);
+    pdf.text(`Date: ${formatDateDisplay(exportedAt)}`, layout.marginMm + 145, layout.marginMm + 10);
+
+    pdf.setDrawColor(214, 221, 230);
+    pdf.line(layout.marginMm, layout.marginMm + 13, layout.marginMm + contentWidthMm, layout.marginMm + 13);
+
+    pdf.setFontSize(8);
+    pdf.setTextColor(129, 140, 156);
+    pdf.text(`Page ${pageNumber}`, layout.marginMm + contentWidthMm, bottomY, { align: 'right' });
+    cursorY = layout.marginMm + 18;
+  };
+
+  const ensureSpace = (heightNeeded: number) => {
+    if (cursorY + heightNeeded <= bottomY - 5) {
+      return;
+    }
+
+    pdf.addPage(PDF_FORMAT, orientation);
+    pageNumber += 1;
+    drawPageHeader();
+  };
+
+  const drawSectionTitle = (title: string) => {
+    ensureSpace(9);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(35, 45, 64);
+    pdf.setFontSize(11);
+    pdf.text(title, layout.marginMm, cursorY);
+    cursorY += 5;
+  };
+
+  const drawTableSection = (title: string, columns: TableColumn[], rows: string[][]) => {
+    drawSectionTitle(title);
+    ensureSpace(10);
+
+    const xStart = layout.marginMm;
+    const rowHeight = 7;
+
+    drawTableHeader(pdf, columns, xStart, cursorY + 2);
+    cursorY += 5;
+
+    rows.forEach((row, index) => {
+      ensureSpace(rowHeight + 2);
+      drawTableRow(pdf, columns, row, xStart, cursorY + rowHeight - 1, index % 2 === 0);
+      cursorY += rowHeight;
+    });
+
+    cursorY += 4;
+  };
+
+  drawPageHeader();
+
+  const planMaxHeightMm = 82;
+  const planMaxWidthMm = contentWidthMm;
+  let planWidthMm = planMaxWidthMm;
+  let planHeightMm = planWidthMm / renderedAspectRatio;
+  if (planHeightMm > planMaxHeightMm) {
+    planHeightMm = planMaxHeightMm;
+    planWidthMm = planHeightMm * renderedAspectRatio;
+  }
+
+  const planX = layout.marginMm + (planMaxWidthMm - planWidthMm) / 2;
+  const planY = cursorY;
+  ensureSpace(planHeightMm + 10);
+
+  try {
+    const renderedImageData = await rasterizeRenderedSvg(svgElement);
+    pdf.addImage(renderedImageData, 'PNG', planX, planY, planWidthMm, planHeightMm, undefined, 'FAST');
+  } catch {
+    try {
+      await drawSvgInPdf(pdf, svgElement, planX, planY, planWidthMm, planHeightMm);
+    } catch {
+      const contentWidthPx = Math.max(Math.round(planWidthMm * PX_PER_MM), 1200);
+      const contentHeightPx = Math.max(Math.round(planHeightMm * PX_PER_MM), 900);
+      const imageData = await rasterizeSvg(svgElement, contentWidthPx, contentHeightPx);
+      pdf.addImage(imageData, 'PNG', planX, planY, planWidthMm, planHeightMm, undefined, 'FAST');
+    }
+  }
+
+  cursorY += planHeightMm + 8;
+
+  drawSectionTitle('Metriques principales');
+  ensureSpace(20);
+  pdf.setFillColor(246, 248, 252);
+  pdf.roundedRect(layout.marginMm, cursorY, contentWidthMm, 16, 2, 2, 'F');
+  pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(52, 63, 84);
+  pdf.setFontSize(9.5);
+  const metricLine1 = [
+    `Surface totale: ${formatArea(metrics.totalAreaM2)}`,
+    `Pieces: ${metrics.roomCount}`,
+    `Murs exterieurs: ${metrics.exteriorWallsCount}`,
+  ].join(' | ');
+  const metricLine2 = [
+    `Ouvertures: ${metrics.openingsCount}`,
+    `Portes: ${metrics.doorsCount}`,
+    `Fenetres: ${metrics.windowsCount}`,
+    `H min/max: ${formatOptionalLength(metrics.minHeightCm)} / ${formatOptionalLength(metrics.maxHeightCm)}`,
+  ].join(' | ');
+  pdf.text(metricLine1, layout.marginMm + 3, cursorY + 6);
+  pdf.text(metricLine2, layout.marginMm + 3, cursorY + 12);
+  cursorY += 21;
+
+  drawTableSection(
+    'Liste des pieces',
+    [
+      { label: 'Piece', widthMm: 66 },
+      { label: 'Surface', widthMm: 30, align: 'right' },
+      { label: 'Murs', widthMm: 20, align: 'right' },
+      { label: 'Ouvertures', widthMm: 26, align: 'right' },
+      { label: 'Portes', widthMm: 20, align: 'right' },
+      { label: 'Fenetres', widthMm: 22, align: 'right' },
+      { label: 'H min/max', widthMm: 77 },
+    ],
+    metrics.rooms.map((room) => [
+      room.name,
+      formatArea(room.areaM2),
+      String(room.wallCount),
+      String(room.openingsCount),
+      String(room.doorsCount),
+      String(room.windowsCount),
+      `${formatOptionalLength(room.minHeightCm)} / ${formatOptionalLength(room.maxHeightCm)}`,
+    ]),
+  );
+
+  drawTableSection(
+    'Liste des murs',
+    [
+      { label: 'Piece', widthMm: 70 },
+      { label: 'Mur', widthMm: 20 },
+      { label: 'Longueur', widthMm: 28, align: 'right' },
+      { label: 'Epaisseur', widthMm: 28, align: 'right' },
+      { label: 'H gauche', widthMm: 28, align: 'right' },
+      { label: 'H droite', widthMm: 28, align: 'right' },
+    ],
+    buildWallsRows(snapshots),
+  );
+
+  drawTableSection(
+    'Liste des ouvertures',
+    [
+      { label: 'Piece', widthMm: 52 },
+      { label: 'Mur', widthMm: 18 },
+      { label: 'Type', widthMm: 24 },
+      { label: 'Largeur', widthMm: 24, align: 'right' },
+      { label: 'Hauteur', widthMm: 24, align: 'right' },
+      { label: 'Allege', widthMm: 24, align: 'right' },
+      { label: 'Position', widthMm: 24, align: 'right' },
+      { label: 'ID', widthMm: 33 },
+    ],
+    metrics.openings.map((opening) => [
+      opening.roomName,
+      `M${opening.wallIndex + 1}`,
+      formatOpeningType(opening.type),
+      formatLengthCm(opening.widthCm),
+      formatLengthCm(opening.heightCm),
+      formatLengthCm(opening.bottomCm),
+      formatLengthCm(opening.offsetCm),
+      opening.openingId.slice(0, 8),
+    ]),
+  );
+
+  const fileName = buildDetailedFileName(projectName, levelName, exportedAt);
   pdf.save(fileName);
 
   return fileName;

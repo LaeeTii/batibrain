@@ -24,6 +24,7 @@ Mode d'exécution: projet personnel, sans sprint. On avance par tâches détaill
 - Vue niveau avec zoom, déplacement, grille, mesures, focus pièce, liste détaillée des ouvertures.
 - Affichage des angles calculés dans la vue pièce (liste textuelle).
 - Export PDF simple en vue niveau: plan lisible avec grille, échelle graphique et cartouche minimal (projet, niveau, date).
+- Export PDF détaillé en vue niveau: plan, métriques globales et tableaux pièces, murs, ouvertures avec dimensions.
 
 ### 1.2 Partiellement effectué
 

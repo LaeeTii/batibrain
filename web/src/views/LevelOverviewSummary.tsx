@@ -3,7 +3,7 @@ import { formatLengthCm } from '../../../shared/src/geometry';
 import type { Level, Opening, Project } from '../../../shared/src/types';
 import { LevelPlanCanvas } from '../components/LevelPlanCanvas';
 import { DashboardLayout } from '../components/DashboardLayout';
-import { exportSimpleLevelPlanPdf } from '../lib/levelPlanPdf';
+import { exportDetailedLevelPlanPdf, exportSimpleLevelPlanPdf } from '../lib/levelPlanPdf';
 import { getLevelMetrics } from '../lib/roomMetrics';
 import { hasSupabaseConfig } from '../lib/supabase';
 import { createLevel, listLevelsByProject } from '../services/levels';
@@ -131,6 +131,7 @@ export function LevelOverviewSummary({
   const [isLevelModalOpen, setIsLevelModalOpen] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [isExportingSimplePdf, setIsExportingSimplePdf] = useState(false);
+  const [isExportingDetailedPdf, setIsExportingDetailedPdf] = useState(false);
   const levelPlanSvgRef = useRef<SVGSVGElement | null>(null);
 
   const selectedProject = useMemo(
@@ -400,6 +401,39 @@ export function LevelOverviewSummary({
     }
   };
 
+  const handleExportDetailedPdf = async () => {
+    if (roomSnapshots.length === 0) {
+      setErrorMessage('Ajoute au moins une pièce au niveau avant de lancer l’export PDF détaillé.');
+      return;
+    }
+
+    const svgElement = levelPlanSvgRef.current;
+    if (!svgElement) {
+      setErrorMessage('Le plan n’est pas prêt. Réessaie après le chargement de la vue.');
+      return;
+    }
+
+    setIsExportingDetailedPdf(true);
+    setErrorMessage(null);
+
+    try {
+      const fileName = await exportDetailedLevelPlanPdf({
+        svgElement,
+        projectName: selectedProject?.name ?? target.projectName,
+        levelName: selectedLevel?.name ?? target.levelName,
+        metrics,
+        snapshots: roomSnapshots,
+      });
+
+      setIsExportMenuOpen(false);
+      setStatusMessage(`Export PDF détaillé généré : ${fileName}`);
+    } catch (error) {
+      setErrorMessage(formatErrorMessage(error));
+    } finally {
+      setIsExportingDetailedPdf(false);
+    }
+  };
+
   return (
     <DashboardLayout>
       <header className="level-overview__header">
@@ -513,14 +547,19 @@ export function LevelOverviewSummary({
                         type="button"
                         className="dashboard-exportButton"
                         onClick={() => void handleExportSimplePdf()}
-                        disabled={isExportingSimplePdf || roomSnapshots.length === 0 || isLoading}
+                        disabled={isExportingSimplePdf || isExportingDetailedPdf || roomSnapshots.length === 0 || isLoading}
                       >
                         {isExportingSimplePdf ? 'Génération en cours...' : 'Plan simple avec grille et échelle'}
                       </button>
-                      <button type="button" className="dashboard-exportButton" disabled>
-                        Plan détaillé avec métriques
+                      <button
+                        type="button"
+                        className="dashboard-exportButton"
+                        onClick={() => void handleExportDetailedPdf()}
+                        disabled={isExportingSimplePdf || isExportingDetailedPdf || roomSnapshots.length === 0 || isLoading}
+                      >
+                        {isExportingDetailedPdf ? 'Génération en cours...' : 'Plan détaillé avec métriques'}
                       </button>
-                      <p>Le plan simple est disponible. L’export détaillé sera ajouté dans une prochaine itération.</p>
+                      <p>Le plan détaillé inclut le plan, les métriques globales et les tableaux pièces, murs et ouvertures.</p>
                     </div>
                   ) : null}
                 </div>
