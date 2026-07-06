@@ -15,6 +15,7 @@ interface LevelPlanCanvasProps {
   showGrid?: boolean;
   showMeasurements?: boolean;
   height?: number;
+  exportSvgRef?: React.MutableRefObject<SVGSVGElement | null>;
   onFocusRoom?: (roomId: string) => void;
   onOpenRoom?: (roomId: string) => void;
 }
@@ -121,6 +122,7 @@ export function LevelPlanCanvas({
   showGrid = true,
   showMeasurements = true,
   height,
+  exportSvgRef,
   onFocusRoom,
   onOpenRoom,
 }: LevelPlanCanvasProps) {
@@ -174,6 +176,18 @@ export function LevelPlanCanvas({
     setViewport(baseViewBox);
     setPanState(null);
   }, [baseViewBox]);
+
+  useEffect(() => {
+    if (exportSvgRef) {
+      exportSvgRef.current = svgRef.current;
+    }
+
+    return () => {
+      if (exportSvgRef) {
+        exportSvgRef.current = null;
+      }
+    };
+  }, [exportSvgRef]);
 
   function zoomAt(factor: number, anchor: { x: number; y: number }) {
     setViewport((currentViewport) => {

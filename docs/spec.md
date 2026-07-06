@@ -23,10 +23,10 @@ Mode d'exécution: projet personnel, sans sprint. On avance par tâches détaill
 - Tableau de bord web avec navigation projet/niveau/pièce et métriques globales.
 - Vue niveau avec zoom, déplacement, grille, mesures, focus pièce, liste détaillée des ouvertures.
 - Affichage des angles calculés dans la vue pièce (liste textuelle).
+- Export PDF simple en vue niveau: plan lisible avec grille, échelle graphique et cartouche minimal (projet, niveau, date).
 
 ### 1.2 Partiellement effectué
 
-- Export PDF en vue niveau: menu et intentions présentes, mais génération réelle non implémentée.
 - Dessin des ouvertures sur plan: rendu de base présent, mais pas encore de conventions visuelles métier avancées.
 
 ### 1.3 Non effectué

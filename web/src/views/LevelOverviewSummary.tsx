@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { formatLengthCm } from '../../../shared/src/geometry';
 import type { Level, Opening, Project } from '../../../shared/src/types';
 import { LevelPlanCanvas } from '../components/LevelPlanCanvas';
 import { DashboardLayout } from '../components/DashboardLayout';
+import { exportSimpleLevelPlanPdf } from '../lib/levelPlanPdf';
 import { getLevelMetrics } from '../lib/roomMetrics';
 import { hasSupabaseConfig } from '../lib/supabase';
 import { createLevel, listLevelsByProject } from '../services/levels';
@@ -129,6 +130,8 @@ export function LevelOverviewSummary({
   const [showMeasurements, setShowMeasurements] = useState(true);
   const [isLevelModalOpen, setIsLevelModalOpen] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const [isExportingSimplePdf, setIsExportingSimplePdf] = useState(false);
+  const levelPlanSvgRef = useRef<SVGSVGElement | null>(null);
 
   const selectedProject = useMemo(
     () => availableProjects.find((project) => project.id === activeProjectId) ?? null,
@@ -366,6 +369,37 @@ export function LevelOverviewSummary({
     onOpenRoom?.(roomId);
   };
 
+  const handleExportSimplePdf = async () => {
+    if (roomSnapshots.length === 0) {
+      setErrorMessage('Ajoute au moins une pièce au niveau avant de lancer l’export PDF.');
+      return;
+    }
+
+    const svgElement = levelPlanSvgRef.current;
+    if (!svgElement) {
+      setErrorMessage('Le plan n’est pas prêt. Réessaie après le chargement de la vue.');
+      return;
+    }
+
+    setIsExportingSimplePdf(true);
+    setErrorMessage(null);
+
+    try {
+      const fileName = await exportSimpleLevelPlanPdf({
+        svgElement,
+        projectName: selectedProject?.name ?? target.projectName,
+        levelName: selectedLevel?.name ?? target.levelName,
+      });
+
+      setIsExportMenuOpen(false);
+      setStatusMessage(`Export PDF généré : ${fileName}`);
+    } catch (error) {
+      setErrorMessage(formatErrorMessage(error));
+    } finally {
+      setIsExportingSimplePdf(false);
+    }
+  };
+
   return (
     <DashboardLayout>
       <header className="level-overview__header">
@@ -474,14 +508,19 @@ export function LevelOverviewSummary({
 
                   {isExportMenuOpen ? (
                     <div className="level-overview__exportCard">
-                      <strong>Exports prévus</strong>
-                      <button type="button" className="dashboard-exportButton" disabled>
-                        Plan simple avec grille et échelle
+                      <strong>Exports PDF</strong>
+                      <button
+                        type="button"
+                        className="dashboard-exportButton"
+                        onClick={() => void handleExportSimplePdf()}
+                        disabled={isExportingSimplePdf || roomSnapshots.length === 0 || isLoading}
+                      >
+                        {isExportingSimplePdf ? 'Génération en cours...' : 'Plan simple avec grille et échelle'}
                       </button>
                       <button type="button" className="dashboard-exportButton" disabled>
                         Plan détaillé avec métriques
                       </button>
-                      <p>La génération PDF réelle est réservée à une itération suivante.</p>
+                      <p>Le plan simple est disponible. L’export détaillé sera ajouté dans une prochaine itération.</p>
                     </div>
                   ) : null}
                 </div>
@@ -506,6 +545,7 @@ export function LevelOverviewSummary({
                 highlightedRoomId={focusedRoomId}
                 showGrid={showGrid}
                 showMeasurements={showMeasurements}
+                exportSvgRef={levelPlanSvgRef}
                 onFocusRoom={handleFocusRoom}
               />
             )}
