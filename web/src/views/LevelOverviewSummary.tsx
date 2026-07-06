@@ -12,7 +12,6 @@ import { listRoomsByLevel, loadRoomSnapshot } from '../services/rooms';
 import type { RoomSnapshot } from '../services/rooms';
 import type {
   DashboardLevelTarget,
-  DashboardProjectTarget,
   DashboardRoomTarget,
 } from './RoomsDashboard';
 
@@ -31,7 +30,6 @@ interface LevelOverviewSummaryProps {
   onBack: () => void;
   onContextChange?: (target: DashboardRoomTarget, historyMode?: HistoryUpdateMode) => void;
   onOpenRoom?: (roomId: string) => void;
-  onOpenProjectOverview?: (target: DashboardProjectTarget) => void;
 }
 
 function formatArea(areaM2: number): string {
@@ -113,7 +111,6 @@ export function LevelOverviewSummary({
   onBack,
   onContextChange,
   onOpenRoom,
-  onOpenProjectOverview,
 }: LevelOverviewSummaryProps) {
   const supabaseConfigured = hasSupabaseConfig();
   const [availableProjects, setAvailableProjects] = useState<Project[]>([]);
@@ -348,18 +345,6 @@ export function LevelOverviewSummary({
     });
   };
 
-  const handleOpenProjectOverview = () => {
-    if (!selectedProject || !onOpenProjectOverview) {
-      return;
-    }
-
-    onOpenProjectOverview({
-      projectId: selectedProject.id,
-      projectName: selectedProject.name,
-      focusedLevelId: selectedLevel?.id,
-    });
-  };
-
   const handleFocusRoom = (roomId: string) => {
     setFocusedRoomId(roomId);
     notifyContextChange({ projectId: activeProjectId, levelId: activeLevelId, roomId }, 'replace');
@@ -473,14 +458,6 @@ export function LevelOverviewSummary({
           </label>
 
           <div className="level-overview__filterActions">
-            <button
-              type="button"
-              className="dashboard-viewButton"
-              onClick={handleOpenProjectOverview}
-              disabled={!selectedProject || !onOpenProjectOverview}
-            >
-              Vue projet
-            </button>
             <button
               type="button"
               className="dashboard-createButton"

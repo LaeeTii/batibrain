@@ -27,12 +27,6 @@ export interface DashboardRoomTarget {
   roomId: string;
 }
 
-export interface DashboardProjectTarget {
-  projectId: string;
-  projectName: string;
-  focusedLevelId?: string;
-}
-
 export interface DashboardLevelRoomSummary {
   roomId: string;
   name: string;
@@ -60,7 +54,6 @@ interface RoomsDashboardProps {
   onContextChange?: (target: DashboardRoomTarget, historyMode?: HistoryUpdateMode) => void;
   onOpenRoom?: (target: DashboardRoomTarget) => void;
   onOpenLevelOverview?: (target: DashboardLevelTarget) => void;
-  onOpenProjectOverview?: (target: DashboardProjectTarget) => void;
 }
 
 type DashboardCard = {
@@ -144,7 +137,6 @@ export function RoomsDashboard({
   onContextChange,
   onOpenRoom,
   onOpenLevelOverview,
-  onOpenProjectOverview,
 }: RoomsDashboardProps) {
   const supabaseConfigured = hasSupabaseConfig();
 
@@ -481,18 +473,6 @@ export function RoomsDashboard({
     });
   };
 
-  const handleOpenProjectOverview = () => {
-    if (!selectedProject || !onOpenProjectOverview) {
-      return;
-    }
-
-    onOpenProjectOverview({
-      projectId: selectedProject.id,
-      projectName: selectedProject.name,
-      focusedLevelId: selectedLevel?.id,
-    });
-  };
-
   return (
     <DashboardLayout>
       <header className="dashboard-topbar">
@@ -706,15 +686,6 @@ export function RoomsDashboard({
               <span className="summary-stat__label">Ouvertures</span>
               <strong>{formatCount(totalOpeningsCount)}</strong>
             </article>
-
-            <button
-              type="button"
-              className="dashboard-viewButton dashboard-summaryButton"
-              onClick={handleOpenProjectOverview}
-              disabled={!selectedProject || !onOpenProjectOverview}
-            >
-              Voir le plan global
-            </button>
           </div>
         </section>
 

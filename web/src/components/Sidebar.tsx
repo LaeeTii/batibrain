@@ -2,8 +2,6 @@ import React from 'react';
 
 const DASHBOARD_NAV_ITEMS = [
   { shortLabel: 'TB', label: 'Tableau de bord', isActive: true },
-  { shortLabel: 'ET', label: 'Étages', isActive: false },
-  { shortLabel: 'PC', label: 'Pièces', isActive: false },
   { shortLabel: 'TV', label: 'Travaux', isActive: false },
   { shortLabel: 'DC', label: 'Documents', isActive: false },
   { shortLabel: 'PH', label: 'Photos', isActive: false },

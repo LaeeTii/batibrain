@@ -1,18 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { LevelOverviewSummary } from './views/LevelOverviewSummary';
-import { ProjectOverviewSummary } from './views/ProjectOverviewSummary';
 import { RoomEditorDemo as RoomEditor } from './views/RoomEditor';
 import {
   RoomsDashboard,
   type DashboardLevelTarget,
-  type DashboardProjectTarget,
   type DashboardRoomTarget,
 } from './views/RoomsDashboard';
 
 type AppScreen =
   | { name: 'dashboard' }
   | { name: 'level-overview'; target: DashboardLevelTarget }
-  | { name: 'project-overview'; target: DashboardProjectTarget }
   | { name: 'room-editor'; target: DashboardRoomTarget };
 
 type AppHistoryState = {
@@ -67,17 +64,6 @@ function createScreenFromRoute(
     };
   }
 
-  if (routeName === 'project-overview') {
-    return {
-      name: 'project-overview',
-      target: {
-        projectId: dashboardContext.projectId,
-        projectName: '',
-        focusedLevelId: dashboardContext.levelId || undefined,
-      },
-    };
-  }
-
   return { name: 'dashboard' };
 }
 
@@ -121,10 +107,6 @@ function isAppScreen(value: unknown): value is AppScreen {
   }
 
   if (screenName === 'level-overview') {
-    return 'target' in value && typeof value.target === 'object' && value.target !== null;
-  }
-
-  if (screenName === 'project-overview') {
     return 'target' in value && typeof value.target === 'object' && value.target !== null;
   }
 
@@ -221,17 +203,6 @@ function syncScreenWithContext(
         projectId: dashboardContext.projectId,
         levelId: dashboardContext.levelId,
         focusedRoomId: dashboardContext.roomId || undefined,
-      },
-    };
-  }
-
-  if (screen.name === 'project-overview') {
-    return {
-      name: 'project-overview',
-      target: {
-        ...screen.target,
-        projectId: dashboardContext.projectId,
-        focusedLevelId: dashboardContext.levelId || undefined,
       },
     };
   }
@@ -364,33 +335,6 @@ export default function App() {
 
           pushScreen({ name: 'room-editor', target: nextTarget }, nextTarget);
         }}
-        onOpenProjectOverview={(target) => {
-          const nextDashboardContext = {
-            projectId: target.projectId,
-            levelId: target.focusedLevelId ?? screen.target.levelId,
-            roomId: screen.target.focusedRoomId ?? '',
-          };
-
-          pushScreen({ name: 'project-overview', target }, nextDashboardContext);
-        }}
-      />
-    );
-  }
-
-  if (screen.name === 'project-overview') {
-    return (
-      <ProjectOverviewSummary
-        target={screen.target}
-        onBack={goBack}
-        onOpenLevel={(target) => {
-          const nextDashboardContext = {
-            projectId: target.projectId,
-            levelId: target.levelId,
-            roomId: target.focusedRoomId ?? '',
-          };
-
-          pushScreen({ name: 'level-overview', target }, nextDashboardContext);
-        }}
       />
     );
   }
@@ -412,15 +356,6 @@ export default function App() {
         };
 
         pushScreen({ name: 'level-overview', target }, nextDashboardContext);
-      }}
-      onOpenProjectOverview={(target) => {
-        const nextDashboardContext = {
-          projectId: target.projectId,
-          levelId: target.focusedLevelId ?? dashboardContext.levelId,
-          roomId: dashboardContext.roomId,
-        };
-
-        pushScreen({ name: 'project-overview', target }, nextDashboardContext);
       }}
     />
   );
