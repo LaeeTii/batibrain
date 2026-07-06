@@ -101,21 +101,76 @@ Critères d'acceptation:
 Prompt Copilot (texte brut):
 Ajoute un export PDF détaillé dans la vue niveau avec plan, métriques globales et tableau des pièces et ouvertures. Réutilise les fonctions de calcul existantes pour éviter les divergences de valeurs entre UI et PDF.
 
-#### Tâche 1.3 — Dessins métier des ouvertures sur plans
+#### Tâche 1.3 — Implémentation de la vraie vue pièce depuis la maquette
 Objectif:
-- Améliorer la lisibilité du plan avec conventions visuelles explicites.
+- Remplacer la vue pièce de démo par la vraie vue pièce conforme à la maquette cible.
 
 Inclut:
-- Style distinct porte, fenêtre, autre.
-- Légende minimale.
+- Première lecture de la maquette correspondante et description synthétique des éléments UI attendus.
+- Implémentation de la vue pièce en s'appuyant sur cette maquette.
+- Respect des instructions UI définies dans le projet.
 
 Critères d'acceptation:
-- Un utilisateur distingue visuellement une porte d'une fenêtre sans ouvrir le panneau latéral.
+- La vue pièce affichée dans l'application n'utilise plus la vue de démo initiale.
+- La structure, les composants et les interactions clés sont alignés avec la maquette de référence.
+- Les choix UI implémentés respectent les guidelines UI du projet.
 
 Prompt Copilot (texte brut):
-Améliore le rendu des ouvertures dans les canvas pièce et niveau avec des styles visuels distincts pour porte, fenêtre et autre. Ajoute une légende simple et vérifie la lisibilité sur fond clair.
+Implémente la vraie vue pièce à la place de la vue de démo actuelle. Commence par une première lecture de la maquette de la vue pièce pour la décrire brièvement, puis développe la vue en t'appuyant sur cette maquette et en respectant strictement les instructions UI du projet.
 
-#### Tâche 1.4 — Affichage des angles sur les plans
+#### Tâche 1.4 — Implémentation de la vue mur depuis la maquette
+Objectif:
+- Créer la vue mur fonctionnelle à partir de la maquette dédiée.
+
+Inclut:
+- Première lecture de la maquette correspondante et description synthétique des éléments UI attendus.
+- Implémentation de la vue mur en s'appuyant sur cette maquette.
+- Respect des instructions UI définies dans le projet.
+
+Critères d'acceptation:
+- La vue mur est disponible et navigable depuis le flux produit.
+- La structure, les composants et les interactions clés sont alignés avec la maquette de référence.
+- Les choix UI implémentés respectent les guidelines UI du projet.
+
+Prompt Copilot (texte brut):
+Implémente la vue mur en te basant sur la maquette dédiée. Commence par une première lecture de la maquette pour la décrire brièvement, puis développe la vue en t'appuyant sur cette maquette et en respectant strictement les instructions UI du projet.
+
+#### Tâche 1.5 — Champ niveau d'étage
+Objectif:
+- Ajouter un champ métier niveau pour un étage afin de représenter les sous-sols et étages.
+
+Inclut:
+- Ajout du champ niveau sur l'entité étage.
+- Saisie et affichage de valeurs entières négatives et positives (exemples: -2, -1, 0, 1, 2).
+- Persistance et restitution correcte dans les vues concernées.
+
+Critères d'acceptation:
+- Un étage peut être créé et modifié avec une valeur de niveau entière.
+- Les valeurs négatives, nulles et positives sont acceptées et conservées après rechargement.
+- Les libellés UI restent explicites entre nom d'étage et niveau.
+
+Prompt Copilot (texte brut):
+Ajoute un champ niveau pour les étages avec prise en charge des valeurs entières négatives et positives (par exemple -2, -1, 0, 1, 2). Assure la persistance des données et l'affichage cohérent dans les vues de navigation projet et niveau.
+
+#### Tâche 1.6 — Sélection multiple des niveaux dans LevelOverviewSummary
+Objectif:
+- Permettre la visualisation superposée de plusieurs étages depuis la vue LevelOverviewSummary.
+
+Inclut:
+- Remplacement du sélecteur de niveau unique par un sélecteur multi-choix.
+- Rendu superposé des étages sélectionnés.
+- Ordonnancement visuel: niveau le plus bas en dessous, niveaux supérieurs au-dessus.
+- Variation de teinte: plus le niveau est élevé, plus il est foncé.
+
+Critères d'acceptation:
+- L'utilisateur peut sélectionner plusieurs niveaux simultanément.
+- Le rendu affiche bien une superposition conforme à l'ordre des niveaux.
+- La variation visuelle de teinte selon le niveau est perceptible et cohérente.
+
+Prompt Copilot (texte brut):
+Dans LevelOverviewSummary, remplace le sélecteur de niveau simple par un sélecteur multi-choix. Quand plusieurs niveaux sont sélectionnés, affiche-les superposés avec le niveau le plus bas en dessous et rends les niveaux plus foncés à mesure qu'ils sont plus élevés.
+
+#### Tâche 1.7 — Affichage des angles sur les plans
 Objectif:
 - Afficher les angles directement dans le dessin, avec option activable.
 
@@ -130,7 +185,7 @@ Critères d'acceptation:
 Prompt Copilot (texte brut):
 Ajoute un affichage optionnel des angles dans le plan de pièce avec un toggle UI. Les valeurs doivent reprendre les calculs existants et rester lisibles pendant le zoom et le déplacement.
 
-#### Tâche 1.5 — Icône de pièce
+#### Tâche 1.8 — Icône de pièce
 Objectif:
 - Permettre d'associer un pictogramme à une pièce.
 
@@ -192,7 +247,38 @@ Critères d'acceptation:
 Prompt Copilot (texte brut):
 Implémente une détection d'adjacence entre pièces au niveau des murs et ajoute une validation des ouvertures intérieures basée sur cette adjacence. Les messages d'erreur doivent expliquer pourquoi l'ouverture est refusée.
 
-#### Tâche 2.4 — Lignes de côte (longueur, hauteur, épaisseur)
+#### Tâche 2.4 — Dessins métier des ouvertures sur plans
+Objectif:
+- Améliorer la lisibilité du plan avec conventions visuelles explicites.
+
+Inclut:
+- Style distinct porte, fenêtre, autre.
+- Légende minimale.
+
+Critères d'acceptation:
+- Un utilisateur distingue visuellement une porte d'une fenêtre sans ouvrir le panneau latéral.
+
+Prompt Copilot (texte brut):
+Améliore le rendu des ouvertures dans les canvas pièce et niveau avec des styles visuels distincts pour porte, fenêtre et autre. Ajoute une légende simple et vérifie la lisibilité sur fond clair.
+
+#### Tâche 2.5 — Profils de hauteur multiples sur un mur
+Objectif:
+- Permettre à un mur de porter plus de deux hauteurs en modélisant un profil de hauteurs le long du mur.
+
+Inclut:
+- Modèle de données pour une liste ordonnée de points de hauteur d'un mur.
+- Stockage pour chaque hauteur de sa distance horizontale depuis le point de départ du mur.
+- Validation minimale de cohérence (distances ordonnées, dans les bornes du mur).
+
+Critères d'acceptation:
+- Un mur peut stocker plus de deux hauteurs.
+- Chaque hauteur est associée à une distance horizontale valide depuis le début du mur.
+- Les données restent cohérentes et exploitables dans les règles métier existantes.
+
+Prompt Copilot (texte brut):
+Fais évoluer le modèle des murs pour gérer plusieurs hauteurs le long d'un même mur. Stocke chaque hauteur avec sa distance horizontale depuis le point de départ du mur et ajoute les validations nécessaires pour garantir la cohérence des données.
+
+#### Tâche 2.6 — Lignes de côte (longueur, hauteur, épaisseur)
 Objectif:
 - Donner une lecture technique directe des dimensions.
 
