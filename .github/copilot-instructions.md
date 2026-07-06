@@ -30,14 +30,14 @@
 - Do not introduce features beyond the current MVP priorities unless the user explicitly asks for them.
 - If the documentation does not fully answer the task, make the smallest assumption consistent with the existing docs and state that assumption clearly.
 
-## UI Guidelines
+## Autres Guidelines Spécifiques
+| **Thématique**       | **Fichier**                                  | **Description**                                  |
+|----------------------|--------------------------------------------|------------------------------------------------|
+| **UI**               | [ui-guidelines.instructions.md](./ui-guidelines.instructions.md) | Règles pour les vues, composants et styles.    |
+| **Modèle de données**| [data-model-guidelines.instructions.md](./data-model-guidelines.instructions.md) | Règles métiers et conventions de données. |
+| **Workflow Git**     | [git-workflow.instructions.md](./git-workflow.instructions.md) | Conventional Commit et bonnes pratiques Git. |
 
-- **Always use `DashboardLayout` for new views**: Every new page in `web/src/views/` must be wrapped in the `DashboardLayout` component from `web/src/components/DashboardLayout.tsx` to ensure the sidebar (`dashboard-sidebar`) is displayed consistently across all pages.
-- When creating new views, always use the defined CSS variables for button styling:
-  - **Create buttons** (`Créer`, `Ajouter`, `Nouveau`): Use `--create-button-color` (green) and `--create-button-text-color` (white) with class `dashboard-createButton`
-  - **View buttons** (`Vue`, `Voir`): Use `--view-button-color` (blue) and `--view-button-text-color` (white) with class `dashboard-viewButton`
-  - **Export buttons** (`Export`, `Exporter`): Use `--export-button-color` (gray) and `--export-button-text-color` (white) with class `dashboard-exportButton`
-  - **Outline buttons**: Keep using `dashboard-outlineButton` for secondary actions
+---
 
 ## Utilisation du conventionnal commit pour git :
 ### Types Requiring Ticket Reference
