@@ -18,6 +18,7 @@ export interface RoomCanvasProps {
   width?: number;
   height?: number;
   selectedWallIndex?: number | null;
+  showInspector?: boolean;
   onVerticesChange: (next: Vertex[]) => void;
   onWallSelect?: (wallIndex: number) => void;
 }
@@ -140,6 +141,7 @@ export function RoomCanvas({
   width = 900,
   height = 700,
   selectedWallIndex = null,
+  showInspector = true,
   onVerticesChange,
   onWallSelect,
 }: RoomCanvasProps) {
@@ -405,7 +407,7 @@ export function RoomCanvas({
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 16 }}>
+    <div className={`room-canvas ${showInspector ? '' : 'room-canvas--solo'}`.trim()}>
       <svg
         ref={svgRef}
         viewBox={`${viewBox.minX} ${viewBox.minY} ${viewBox.width} ${viewBox.height}`}
@@ -661,7 +663,8 @@ export function RoomCanvas({
         )}
       </svg>
 
-      <aside style={{ border: '1px solid #d0d7de', borderRadius: 8, padding: 16, background: 'white' }}>
+      {showInspector ? (
+        <aside style={{ border: '1px solid #d0d7de', borderRadius: 8, padding: 16, background: 'white' }}>
         <h3 style={{ marginTop: 0 }}>Métadonnées</h3>
         <p><strong>Sommets :</strong> {sortedVertices.length}</p>
         <p><strong>Surface :</strong> {areaM2.toFixed(2)} m²</p>
@@ -735,7 +738,8 @@ export function RoomCanvas({
             </li>
           ))}
         </ol>
-      </aside>
+        </aside>
+      ) : null}
     </div>
   );
 }

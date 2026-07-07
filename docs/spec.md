@@ -25,6 +25,7 @@ Mode d'exécution: projet personnel, sans sprint. On avance par tâches détaill
 - Affichage des angles calculés dans la vue pièce (liste textuelle).
 - Export PDF simple en vue niveau: plan lisible avec grille, échelle graphique et cartouche minimal (projet, niveau, date).
 - Export PDF détaillé en vue niveau: plan, métriques globales et tableaux pièces, murs, ouvertures avec dimensions.
+- Vue pièce web alignée avec la maquette de référence: structure en panneaux, liste de pièces, zone de dessin outillée et panneau métriques/propriétés.
 
 ### 1.2 Partiellement effectué
 

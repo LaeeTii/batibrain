@@ -8,6 +8,7 @@ import {
   centroid,
   createRectangleRoomGeometry,
   formatOpeningValidationIssue,
+  polygonAreaCm2,
   remapWallsToVertices,
   syncOpeningsWithWalls,
   syncWallsWithVertices,
@@ -40,6 +41,15 @@ const DEFAULT_ROOM_SIDE_CM = 200;
 const DEFAULT_ROOM_HEIGHT_CM = 250;
 const DEFAULT_WALL_THICKNESS_CM = 10;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const OPENING_REMAP_EPSILON = 1e-6;
+const AREA_FORMATTER = new Intl.NumberFormat('fr-FR', {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+});
+const LENGTH_FORMATTER = new Intl.NumberFormat('fr-FR', {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+});
 
 type OpeningDraft = {
   type: Opening['type'];
@@ -100,6 +110,20 @@ function parseMetricInput(value: string): number {
   return Number(value.replace(',', '.'));
 }
 
+function formatAreaM2(value: number): string {
+  return `${AREA_FORMATTER.format(value)} m²`;
+}
+
+function formatMeters(value: number): string {
+  return `${LENGTH_FORMATTER.format(value)} m`;
+}
+
+function openingTypeLabel(type: Opening['type']): string {
+  if (type === 'door') return 'Porte';
+  if (type === 'window') return 'Fenêtre';
+  return 'Ouverture';
+}
+
 function getEditableWallHeightCm(wall: Wall): number | null {
   return wall.heightLeftCm ?? wall.heightRightCm ?? null;
 }
@@ -131,9 +155,91 @@ function remapOpeningsToWalls(sourceWalls: Wall[], targetWalls: Wall[], openings
   });
 }
 
+function wallLengthsById(vertices: Vertex[], walls: Wall[]): Map<string, number> {
+  const verticesById = new Map(vertices.map((vertex) => [vertex.id, vertex]));
+  return new Map(
+    walls.map((wall) => {
+      const startVertex = verticesById.get(wall.startVertexId);
+      const endVertex = verticesById.get(wall.endVertexId);
+
+      if (!startVertex || !endVertex) {
+        return [wall.id, 0];
+      }
+
+      return [wall.id, Math.hypot(endVertex.x - startVertex.x, endVertex.y - startVertex.y)];
+    }),
+  );
+}
+
+function remapOpeningsAfterWallSplit(
+  targetVertices: Vertex[],
+  sourceWalls: Wall[],
+  targetWalls: Wall[],
+  openings: Opening[],
+): Opening[] {
+  const targetWallIds = new Set(targetWalls.map((wall) => wall.id));
+  const sourceWallsById = new Map(sourceWalls.map((wall) => [wall.id, wall]));
+  const targetWallsByStartVertex = new Map<string, Wall[]>();
+  const targetWallLengths = wallLengthsById(targetVertices, targetWalls);
+
+  for (const wall of targetWalls) {
+    const wallsStartingAtVertex = targetWallsByStartVertex.get(wall.startVertexId) ?? [];
+    wallsStartingAtVertex.push(wall);
+    targetWallsByStartVertex.set(wall.startVertexId, wallsStartingAtVertex);
+  }
+
+  return openings.flatMap((opening) => {
+    if (targetWallIds.has(opening.wallId)) {
+      return [opening];
+    }
+
+    const sourceWall = sourceWallsById.get(opening.wallId);
+    if (!sourceWall) {
+      return [];
+    }
+
+    const firstSegmentCandidates = targetWallsByStartVertex.get(sourceWall.startVertexId) ?? [];
+
+    for (const firstSegment of firstSegmentCandidates) {
+      const secondSegment = (targetWallsByStartVertex.get(firstSegment.endVertexId) ?? []).find(
+        (candidateWall) => candidateWall.endVertexId === sourceWall.endVertexId,
+      );
+
+      if (!secondSegment) {
+        continue;
+      }
+
+      const firstSegmentLengthCm = targetWallLengths.get(firstSegment.id) ?? 0;
+      const secondSegmentLengthCm = targetWallLengths.get(secondSegment.id) ?? 0;
+      const openingCenterCm = opening.offsetCm + opening.widthCm / 2;
+      const keepOnFirstSegment = openingCenterCm <= firstSegmentLengthCm + OPENING_REMAP_EPSILON;
+      const targetWall = keepOnFirstSegment ? firstSegment : secondSegment;
+      const targetWallLengthCm = keepOnFirstSegment ? firstSegmentLengthCm : secondSegmentLengthCm;
+      const rawOffsetCm = keepOnFirstSegment
+        ? opening.offsetCm
+        : opening.offsetCm - firstSegmentLengthCm;
+      const offsetCm = Math.max(0, rawOffsetCm);
+      const availableWidthCm = targetWallLengthCm - offsetCm;
+
+      if (availableWidthCm <= OPENING_REMAP_EPSILON) {
+        return [];
+      }
+
+      return [{
+        ...opening,
+        wallId: targetWall.id,
+        offsetCm,
+        widthCm: Math.min(opening.widthCm, availableWidthCm),
+      }];
+    }
+
+    return [];
+  });
+}
+
 type HistoryUpdateMode = 'push' | 'replace';
 
-interface RoomEditorDemoProps {
+interface RoomEditorProps {
   initialProjectId?: string;
   initialLevelId?: string;
   initialRoomId?: string;
@@ -141,13 +247,13 @@ interface RoomEditorDemoProps {
   onContextChange?: (target: DashboardRoomTarget, historyMode?: HistoryUpdateMode) => void;
 }
 
-export function RoomEditorDemo({
+export function RoomEditor({
   initialProjectId,
   initialLevelId,
   initialRoomId,
   onBack,
   onContextChange,
-}: RoomEditorDemoProps) {
+}: RoomEditorProps) {
   const supabaseConfigured = hasSupabaseConfig();
   const initialDraft = useMemo(() => createDefaultRoomGeometry(), []);
   const [vertices, setVertices] = useState<Vertex[]>(initialDraft.vertices);
@@ -172,6 +278,7 @@ export function RoomEditorDemo({
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [openingFormMessage, setOpeningFormMessage] = useState<string | null>(null);
+  const [inspectorTab, setInspectorTab] = useState<'metrics' | 'objects'>('metrics');
 
   const walls = useMemo(() => wallsFromVertices(vertices), [vertices]);
   const selectedWall = selectedWallIndex === null ? null : walls[selectedWallIndex] ?? null;
@@ -213,6 +320,23 @@ export function RoomEditorDemo({
         vertices: snapshot.vertices,
       }));
   }, [activeRoom, levelRoomSnapshots]);
+  const areaM2 = useMemo(() => polygonAreaCm2(vertices) / 10000, [vertices]);
+  const perimeterM = useMemo(
+    () => walls.reduce((sum, wall) => sum + wall.lengthCm, 0) / 100,
+    [walls],
+  );
+  const roomHeightM = useMemo(() => {
+    const heightsCm = wallDefinitions
+      .flatMap((wall) => [wall.heightLeftCm, wall.heightRightCm])
+      .filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
+
+    if (heightsCm.length === 0) {
+      return null;
+    }
+
+    const averageHeight = heightsCm.reduce((sum, value) => sum + value, 0) / heightsCm.length;
+    return averageHeight / 100;
+  }, [wallDefinitions]);
   const isBusy = busyAction !== null;
 
   function notifyContextChange(target: DashboardRoomTarget, historyMode: HistoryUpdateMode = 'replace') {
@@ -241,10 +365,14 @@ export function RoomEditorDemo({
   }
 
   function handleVerticesChange(nextVertices: Vertex[]) {
-    const nextWalls = syncWallsWithVertices(nextVertices, wallDefinitions);
+    const previousWalls = wallDefinitions;
+    const nextWalls = syncWallsWithVertices(nextVertices, previousWalls);
     setVertices(nextVertices);
     setWallDefinitions(nextWalls);
-    setOpenings((currentOpenings) => syncOpeningsWithWalls(nextWalls, currentOpenings));
+    setOpenings((currentOpenings) => syncOpeningsWithWalls(
+      nextWalls,
+      remapOpeningsAfterWallSplit(nextVertices, previousWalls, nextWalls, currentOpenings),
+    ));
   }
 
   function updateSelectedWall(nextWall: Wall) {
@@ -690,15 +818,15 @@ export function RoomEditorDemo({
     notifyContextChange({ projectId: selectedProjectId, levelId: selectedLevelId, roomId: '' }, 'push');
   };
 
-  const handleSelectedRoomChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const nextRoomId = event.target.value;
+  function selectRoom(nextRoomId: string, historyMode: HistoryUpdateMode = 'push') {
+    setSelectedRoomId(nextRoomId);
 
     setStatusMessage(null);
     setErrorMessage(null);
 
     if (!nextRoomId) {
       clearActiveRoomSelection();
-      notifyContextChange({ projectId: selectedProjectId, levelId: selectedLevelId, roomId: '' }, 'push');
+      notifyContextChange({ projectId: selectedProjectId, levelId: selectedLevelId, roomId: '' }, historyMode);
       return;
     }
 
@@ -709,7 +837,7 @@ export function RoomEditorDemo({
         projectId: selectedProjectId,
         levelId: selectedLevelId,
         roomId: cachedSnapshot.room.id,
-      }, 'push');
+      }, historyMode);
       setStatusMessage(`Pièce affichée : ${cachedSnapshot.room.name}.`);
       return;
     }
@@ -721,14 +849,20 @@ export function RoomEditorDemo({
         projectId: selectedProjectId,
         levelId: selectedLevelId,
         roomId: snapshot.room.id,
-      }, 'push');
+      }, historyMode);
       setStatusMessage(`Pièce affichée : ${snapshot.room.name}.`);
     });
+  }
+
+  const handleSelectedRoomChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    selectRoom(event.target.value, 'push');
   };
 
   const handleSaveRoom = () => {
     void runRoomAction('save', async () => {
-      const roomName = roomNameInput.trim();
+      const draftRoomName = roomNameInput.trim();
+      const newRoomDraftName = newRoomNameInput.trim();
+      const roomName = draftRoomName || (!activeRoom ? newRoomDraftName : '');
 
       if (!selectedLevelId) {
         throw new Error('Sélectionne un niveau avant d’enregistrer la pièce.');
@@ -824,517 +958,332 @@ export function RoomEditorDemo({
 
   return (
     <DashboardLayout>
-      <header style={{ marginBottom: 16, padding: '0 24px' }}>
-        {onBack ? (
-          <button
-            type="button"
-            onClick={onBack}
-            style={{
-              marginBottom: 12,
-              padding: '10px 14px',
-              borderRadius: 999,
-              border: '1px solid #d0d7de',
-              background: 'white',
-              color: '#24292f',
-              cursor: 'pointer',
-            }}
-          >
-            Retour au tableau de bord
-          </button>
-        ) : null}
-        <h1 style={{ marginBottom: 8 }}>Prototype — éditeur de pièce polygonale</h1>
-        <p style={{ marginTop: 0, color: '#57606a' }}>
-          Base de départ pour le MVP : vue de dessus, sélection de mur, métriques automatiques.
-        </p>
+      <header className="room-editor__header">
+        <div>
+          <h2 className="dashboard-pageTitle">Editeur de piece (vue du dessus)</h2>
+          <p className="room-editor__breadcrumbs">
+            {selectedProject?.name || 'Projet'}
+            {' > '}
+            {selectedLevel?.name || 'Niveau'}
+            {' > '}
+            {roomNameInput.trim() || activeRoom?.name || 'Nouvelle piece'}
+          </p>
+        </div>
+        <div className="room-editor__headerActions">
+          {onBack ? (
+            <button type="button" className="dashboard-outlineButton" onClick={onBack}>
+              Retour
+            </button>
+          ) : null}
+        </div>
       </header>
 
-      <section style={{ marginBottom: 24, display: 'grid', gap: 16 }}>
-        <div style={{ border: '1px solid #d0d7de', borderRadius: 8, padding: 16, background: 'white' }}>
-          <h3 style={{ marginTop: 0 }}>Projets</h3>
-          {!supabaseConfigured ? (
-            <p style={{ marginBottom: 0, color: '#57606a' }}>
-              Supabase n&apos;est pas configuré. Définis VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY dans web/.env.local pour activer la gestion des projets, niveaux et pièces depuis l&apos;interface.
-            </p>
-          ) : (
-            <>
-              <p style={{ marginTop: 0, color: '#57606a' }}>
-                La création et la sélection sont séparées : crée un projet par son nom, puis sélectionne explicitement le projet actif avant de gérer ses niveaux.
-              </p>
+      {errorMessage ? (
+        <div className="dashboard-banner dashboard-banner--error">{errorMessage}</div>
+      ) : null}
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
-                <label style={{ display: 'grid', gap: 6 }}>
-                  Nom du projet
-                  <input
-                    value={newProjectNameInput}
-                    onChange={(event) => setNewProjectNameInput(event.target.value)}
-                    placeholder="Maison principale, appartement, extension..."
-                    disabled={isBusy}
-                  />
-                </label>
+      {!supabaseConfigured ? (
+        <section className="dashboard-emptyState">
+          <h3>Supabase non configure</h3>
+          <p>
+            Definis VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY dans web/.env.local pour activer
+            la gestion des projets, niveaux et pieces.
+          </p>
+        </section>
+      ) : (
+        <section className="room-editor__workspace">
+          <aside className="room-editor__roomsPanel">
+            <div className="room-editor__panelHeader">
+              <h3 className="dashboard-panelTitle">Pieces</h3>
+              <button
+                type="button"
+                className="room-editor__iconAction"
+                onClick={handleCreateRoom}
+                disabled={isBusy || !selectedLevelId}
+                aria-label="Preparer une nouvelle piece"
+              >
+                +
+              </button>
+            </div>
 
-                <label style={{ display: 'grid', gap: 6 }}>
-                  Projet sélectionné
-                  <select
-                    value={selectedProjectId}
-                    onChange={handleSelectedProjectChange}
-                    disabled={isBusy || availableProjects.length === 0}
-                  >
-                    <option value="">
-                      {availableProjects.length === 0 ? 'Aucun projet chargé' : 'Sélectionner un projet'}
-                    </option>
-                    {availableProjects.map((project) => (
-                      <option key={project.id} value={project.id}>
-                        {project.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
-                <button type="button" onClick={handleListProjects} disabled={isBusy}>
-                  {busyAction === 'list-projects' ? 'Chargement...' : 'Lister les projets'}
-                </button>
-                <button type="button" className="dashboard-createButton" onClick={handleCreateProject} disabled={isBusy}>
-                  {busyAction === 'create-project' ? 'Création...' : 'Créer le projet'}
-                </button>
-              </div>
-
-              <p style={{ marginBottom: 0, color: '#57606a' }}>
-                {selectedProject
-                  ? `Projet actif : ${selectedProject.name} (${selectedProject.id})`
-                  : 'Aucun projet sélectionné pour les opérations sur les niveaux.'}
-              </p>
-            </>
-          )}
-        </div>
-
-        <div style={{ border: '1px solid #d0d7de', borderRadius: 8, padding: 16, background: 'white' }}>
-          <h3 style={{ marginTop: 0 }}>Niveaux</h3>
-          {!supabaseConfigured ? (
-            <p style={{ marginBottom: 0, color: '#57606a' }}>
-              Supabase n&apos;est pas configuré. Définis VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY dans web/.env.local pour activer la gestion des niveaux et des pièces depuis l&apos;interface.
-            </p>
-          ) : (
-            <>
-              <p style={{ marginTop: 0, color: '#57606a' }}>
-                La création et la sélection sont séparées : crée un niveau avec son projet et son nom, puis utilise la liste pour choisir le niveau actif du projet affiché.
-              </p>
-
-              <p style={{ marginTop: 0 }}>
-                <strong>Projet actif pour la sélection :</strong>{' '}
-                {selectedProject ? selectedProject.name : 'aucun projet sélectionné'}
-              </p>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
-                <label style={{ display: 'grid', gap: 6 }}>
-                  Projet de création
-                  <select
-                    value={newLevelProjectId}
-                    onChange={handleNewLevelProjectChange}
-                    disabled={isBusy || availableProjects.length === 0}
-                  >
-                    <option value="">
-                      {availableProjects.length === 0 ? 'Aucun projet disponible' : 'Sélectionner un projet'}
-                    </option>
-                    {availableProjects.map((project) => (
-                      <option key={project.id} value={project.id}>
-                        {project.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label style={{ display: 'grid', gap: 6 }}>
-                  Nom du niveau
-                  <input
-                    value={newLevelNameInput}
-                    onChange={(event) => setNewLevelNameInput(event.target.value)}
-                    placeholder="Rez-de-chaussée, étage, sous-sol..."
-                    disabled={isBusy}
-                  />
-                </label>
-
-                <label style={{ display: 'grid', gap: 6, gridColumn: '1 / -1' }}>
-                  Niveau sélectionné
-                  <select
-                    value={selectedLevelId}
-                    onChange={handleSelectedLevelChange}
-                    disabled={isBusy || !selectedProjectId || availableLevels.length === 0}
-                  >
-                    <option value="">
-                      {availableLevels.length === 0 ? 'Aucun niveau chargé pour ce projet' : 'Sélectionner un niveau'}
-                    </option>
-                    {availableLevels.map((level) => (
-                      <option key={level.id} value={level.id}>
-                        {level.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
-                <button type="button" onClick={handleListLevels} disabled={isBusy || !selectedProjectId}>
-                  {busyAction === 'list-levels' ? 'Chargement...' : 'Lister les niveaux'}
-                </button>
-                <button type="button" className="dashboard-createButton" onClick={handleCreateLevel} disabled={isBusy || !newLevelProjectId}>
-                  {busyAction === 'create-level' ? 'Création...' : 'Créer le niveau'}
-                </button>
-              </div>
-
-              <p style={{ marginBottom: 0, color: '#57606a' }}>
-                {selectedLevel
-                  ? `Niveau actif : ${selectedLevel.name} (${selectedLevel.id})`
-                  : 'Aucun niveau sélectionné pour les opérations sur les pièces.'}
-              </p>
-            </>
-          )}
-        </div>
-
-        <div style={{ border: '1px solid #d0d7de', borderRadius: 8, padding: 16, background: 'white' }}>
-          <h3 style={{ marginTop: 0 }}>Pièces</h3>
-          {!supabaseConfigured ? (
-            <p style={{ marginBottom: 0, color: '#57606a' }}>
-              Supabase n&apos;est pas configuré. Définis VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY dans web/.env.local pour activer la création, le chargement et la suppression depuis l&apos;interface.
-            </p>
-          ) : (
-            <>
-              <p style={{ marginTop: 0, color: '#57606a' }}>
-                La création et la sélection sont séparées : crée une pièce avec son niveau et son nom, puis utilise la liste pour choisir celle affichée dans le canvas.
-              </p>
-
-              <p style={{ marginTop: 0 }}>
-                <strong>Niveau :</strong>{' '}
-                {selectedLevel ? selectedLevel.name : 'aucun niveau sélectionné'}
-              </p>
-
-              <p style={{ marginTop: 0 }}>
-                <strong>Pièce active :</strong>{' '}
-                {activeRoom ? `${activeRoom.name} (${activeRoom.id})` : 'brouillon local non sauvegardé'}
-              </p>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
-                <label style={{ display: 'grid', gap: 6 }}>
-                  Niveau de création
-                  <select
-                    value={selectedLevelId}
-                    onChange={handleSelectedLevelChange}
-                    disabled={isBusy || availableLevels.length === 0}
-                  >
-                    <option value="">
-                      {availableLevels.length === 0 ? 'Aucun niveau disponible' : 'Sélectionner un niveau'}
-                    </option>
-                    {availableLevels.map((level) => (
-                      <option key={level.id} value={level.id}>
-                        {level.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label style={{ display: 'grid', gap: 6 }}>
-                  Nom de la nouvelle pièce
-                  <input
-                    value={newRoomNameInput}
-                    onChange={(event) => setNewRoomNameInput(event.target.value)}
-                    placeholder="Cuisine, salon, chambre..."
-                    disabled={isBusy}
-                  />
-                </label>
-              </div>
-
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
-                <button type="button" className="dashboard-createButton" onClick={handleCreateRoom} disabled={isBusy || !selectedLevelId}>
-                  Préparer un brouillon
-                </button>
-              </div>
-
-              <label style={{ display: 'grid', gap: 6, marginTop: 16 }}>
-                Pièce affichée dans le canvas
+            <div className="room-editor__filtersRow">
+              <label className="dashboard-field dashboard-field--compact">
+                <span>Projet</span>
                 <select
-                  value={selectedRoomId}
-                  onChange={handleSelectedRoomChange}
-                  disabled={isBusy || availableRooms.length === 0}
+                  value={selectedProjectId}
+                  onChange={handleSelectedProjectChange}
+                  disabled={isBusy || availableProjects.length === 0}
                 >
                   <option value="">
-                    {availableRooms.length === 0 ? 'Aucune pièce disponible pour ce niveau' : 'Sélectionner une pièce'}
+                    {availableProjects.length === 0 ? 'Aucun projet' : 'Selectionner un projet'}
                   </option>
-                  {availableRooms.map((room) => (
-                    <option key={room.id} value={room.id}>
-                      {room.name}
+                  {availableProjects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
                     </option>
                   ))}
                 </select>
               </label>
 
-              {activeRoom || selectedLevelId ? (
-                <>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12, marginTop: 16 }}>
-                    <label style={{ display: 'grid', gap: 6 }}>
-                      Nom de la pièce affichée
-                      <input
-                        value={roomNameInput}
-                        onChange={(event) => setRoomNameInput(event.target.value)}
-                        placeholder="Cuisine, salon, chambre..."
-                        disabled={isBusy}
-                      />
-                    </label>
+              <label className="dashboard-field dashboard-field--compact">
+                <span>Niveau</span>
+                <select
+                  value={selectedLevelId}
+                  onChange={handleSelectedLevelChange}
+                  disabled={isBusy || !selectedProjectId || availableLevels.length === 0}
+                >
+                  <option value="">
+                    {availableLevels.length === 0 ? 'Aucun niveau' : 'Selectionner un niveau'}
+                  </option>
+                  {availableLevels.map((level) => (
+                    <option key={level.id} value={level.id}>
+                      {level.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
 
-                    <div style={{ display: 'grid', gap: 6 }}>
-                      <span>{activeRoom ? 'Identifiant' : 'Statut'}</span>
-                      <div style={{ padding: '8px 12px', border: '1px solid #d0d7de', borderRadius: 6, background: '#f6f8fa', color: '#57606a' }}>
-                        {activeRoom ? activeRoom.id : 'Brouillon local non sauvegardé'}
-                      </div>
-                    </div>
-                  </div>
+            <label className="dashboard-field dashboard-field--compact">
+              <span>Nom de la nouvelle piece</span>
+              <input
+                value={newRoomNameInput}
+                onChange={(event) => setNewRoomNameInput(event.target.value)}
+                placeholder="Cuisine, salon, chambre..."
+                disabled={isBusy}
+              />
+            </label>
 
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
-                    <button type="button" onClick={handleSaveRoom} disabled={isBusy || !selectedLevelId}>
-                      {busyAction === 'save'
-                        ? 'Enregistrement...'
-                        : activeRoom
-                          ? 'Enregistrer la pièce affichée'
-                          : 'Enregistrer le brouillon'}
-                    </button>
-                    {activeRoom ? (
-                      <button type="button" onClick={handleDeleteRoom} disabled={isBusy}>
-                        {busyAction === 'delete' ? 'Suppression...' : 'Supprimer la pièce affichée'}
-                      </button>
-                    ) : null}
-                  </div>
-                </>
-              ) : null}
+            <div className="room-editor__list">
+              {availableRooms.length === 0 ? (
+                <p className="room-editor__hint">Aucune piece pour ce niveau.</p>
+              ) : (
+                availableRooms.map((room) => {
+                  const roomSnapshot = levelRoomSnapshots.find((snapshot) => snapshot.room.id === room.id);
+                  const roomArea = roomSnapshot ? polygonAreaCm2(roomSnapshot.vertices) / 10000 : null;
+                  const isSelected = room.id === selectedRoomId;
 
-              {statusMessage ? (
-                <p style={{ marginBottom: 0, color: '#0a6c3c' }}>{statusMessage}</p>
-              ) : null}
-
-              {errorMessage ? (
-                <p style={{ marginBottom: 0, color: '#cf222e' }}>{errorMessage}</p>
-              ) : null}
-            </>
-          )}
-        </div>
-      </section>
-
-      <RoomCanvas
-        vertices={vertices}
-        wallDefinitions={wallDefinitions}
-        openings={openings}
-        contextRooms={contextRooms}
-        selectedWallIndex={selectedWallIndex}
-        onVerticesChange={handleVerticesChange}
-        onWallSelect={setSelectedWallIndex}
-      />
-
-      {contextRooms.length > 0 ? (
-        <p style={{ marginTop: 12, marginBottom: 0, color: '#57606a' }}>
-          Vue étage active : {contextRooms.length} autre(s) pièce(s) du niveau sont affichée(s) en gris avec leurs coordonnées globales.
-        </p>
-      ) : null}
-
-      <section style={{ marginTop: 24, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        <div style={{ border: '1px solid #d0d7de', borderRadius: 8, padding: 16, background: 'white' }}>
-          <h3 style={{ marginTop: 0 }}>Mur sélectionné</h3>
-          {selectedWall && selectedWallDefinition ? (
-            <>
-              <p><strong>Index :</strong> {selectedWall.index + 1}</p>
-              <p><strong>Départ :</strong> ({selectedWall.start.x}, {selectedWall.start.y})</p>
-              <p><strong>Fin :</strong> ({selectedWall.end.x}, {selectedWall.end.y})</p>
-              <p><strong>Longueur :</strong> {(selectedWall.lengthCm / 100).toFixed(2)} m</p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
-                <label style={{ display: 'grid', gap: 6 }}>
-                  Épaisseur (cm)
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.5"
-                    value={selectedWallDefinition.thicknessCm ?? ''}
-                    onChange={handleSelectedWallThicknessChange}
-                    placeholder="7, 10, 14..."
-                  />
-                </label>
-
-                <label style={{ display: 'grid', gap: 6 }}>
-                  Hauteur (cm)
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={getEditableWallHeightCm(selectedWallDefinition) ?? ''}
-                    onChange={handleSelectedWallHeightChange}
-                    placeholder="250"
-                  />
-                </label>
-
-                <label style={{ display: 'grid', gap: 6, gridColumn: '1 / -1' }}>
-                  Matériau
-                  <input
-                    value={selectedWallDefinition.material ?? ''}
-                    onChange={handleSelectedWallMaterialChange}
-                    placeholder="Brique, placo, béton, bois..."
-                  />
-                </label>
-              </div>
-
-              {hasSplitWallHeight(selectedWallDefinition) ? (
-                <p style={{ color: '#57606a', fontSize: 14, marginBottom: 0 }}>
-                  Ce mur possède déjà deux hauteurs distinctes en base. Modifier la hauteur ici appliquera la même valeur aux deux extrémités.
-                </p>
-              ) : null}
-
-              <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #d8dee4' }}>
-                <h4 style={{ marginTop: 0, marginBottom: 8 }}>Ouvertures</h4>
-                <p style={{ color: '#57606a', fontSize: 14, marginTop: 0 }}>
-                  La position est mesurée depuis le sommet de départ du mur. Une ouverture doit rester entièrement dans le mur et ne pas chevaucher une autre ouverture du même mur.
-                </p>
-
-                {selectedWallOpeningIssues.length > 0 ? (
-                  <div style={{ marginBottom: 12, padding: 12, borderRadius: 6, background: '#fff8c5', color: '#7a4e00' }}>
-                    {selectedWallOpeningIssues.map((issue) => (
-                      <p key={`${issue.opening.id}:${issue.code}`} style={{ margin: 0 }}>
-                        {formatOpeningValidationIssue(issue)}
-                      </p>
-                    ))}
-                  </div>
-                ) : null}
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
-                  <label style={{ display: 'grid', gap: 6 }}>
-                    Type
-                    <select
-                      value={openingDraft.type}
-                      onChange={(event) => handleOpeningDraftChange('type', event.target.value)}
+                  return (
+                    <button
+                      key={room.id}
+                      type="button"
+                      className={`room-editor__roomRow ${isSelected ? 'is-active' : ''}`}
+                      onClick={() => selectRoom(room.id, 'push')}
                     >
-                      <option value="door">Porte</option>
-                      <option value="window">Fenêtre</option>
-                      <option value="other">Autre</option>
-                    </select>
-                  </label>
+                      <strong>{room.name}</strong>
+                      <span>{roomArea === null ? 'Surface...' : formatAreaM2(roomArea)}</span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </aside>
 
-                  <label style={{ display: 'grid', gap: 6 }}>
-                    Position (cm)
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={openingDraft.offsetCm}
-                      onChange={(event) => handleOpeningDraftChange('offsetCm', event.target.value)}
-                      placeholder="0"
-                    />
-                  </label>
+          <div className="room-editor__canvasPanel">
+            <div className="room-editor__toolbar">
+              <div className="room-editor__toolGroup">
+                <button type="button" className="room-editor__toolButton is-active">Dessiner</button>
+                <button type="button" className="room-editor__toolButton">Selection</button>
+                <button type="button" className="room-editor__toolButton">Deplacer</button>
+                <button type="button" className="room-editor__toolButton">Mesurer</button>
+                <button type="button" className="room-editor__toolButton">Annoter</button>
+              </div>
+              <button
+                type="button"
+                className="dashboard-primaryButton room-editor__toolbarSave"
+                onClick={handleSaveRoom}
+                disabled={isBusy || !selectedLevelId}
+              >
+                {busyAction === 'save' ? 'Enregistrement...' : activeRoom ? 'Enregistrer' : 'Creer la piece'}
+              </button>
+            </div>
 
-                  <label style={{ display: 'grid', gap: 6 }}>
-                    Largeur (cm)
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={openingDraft.widthCm}
-                      onChange={(event) => handleOpeningDraftChange('widthCm', event.target.value)}
-                      placeholder="90"
-                    />
-                  </label>
+            <RoomCanvas
+              vertices={vertices}
+              wallDefinitions={wallDefinitions}
+              openings={openings}
+              contextRooms={contextRooms}
+              selectedWallIndex={selectedWallIndex}
+              showInspector={false}
+              height={760}
+              onVerticesChange={handleVerticesChange}
+              onWallSelect={setSelectedWallIndex}
+            />
+          </div>
 
-                  <label style={{ display: 'grid', gap: 6 }}>
-                    Allège / bas (cm)
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={openingDraft.bottomCm}
-                      onChange={(event) => handleOpeningDraftChange('bottomCm', event.target.value)}
-                      placeholder="0"
-                    />
-                  </label>
+          <aside className="room-editor__inspector">
+            <div className="room-editor__panelHeader">
+              <h3 className="dashboard-panelTitle">{roomNameInput.trim() || activeRoom?.name || 'Piece'}</h3>
+            </div>
 
-                  <label style={{ display: 'grid', gap: 6, gridColumn: '1 / -1' }}>
-                    Hauteur (cm)
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={openingDraft.heightCm}
-                      onChange={(event) => handleOpeningDraftChange('heightCm', event.target.value)}
-                      placeholder="215"
-                    />
-                  </label>
+            <div className="room-editor__tabs">
+              <button
+                type="button"
+                className={`room-editor__tab ${inspectorTab === 'metrics' ? 'is-active' : ''}`}
+                onClick={() => setInspectorTab('metrics')}
+              >
+                Metriques
+              </button>
+              <button
+                type="button"
+                className={`room-editor__tab ${inspectorTab === 'objects' ? 'is-active' : ''}`}
+                onClick={() => setInspectorTab('objects')}
+              >
+                Objet
+              </button>
+            </div>
+
+            {inspectorTab === 'metrics' ? (
+              <div className="room-editor__statsList">
+                <div className="room-editor__statRow"><span>Surface</span><strong>{formatAreaM2(areaM2)}</strong></div>
+                <div className="room-editor__statRow"><span>Perimetre</span><strong>{formatMeters(perimeterM)}</strong></div>
+                <div className="room-editor__statRow">
+                  <span>Hauteur sous plafond</span>
+                  <strong>{roomHeightM === null ? 'N/A' : formatMeters(roomHeightM)}</strong>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handleAddOpening}
-                  style={{ marginTop: 12, padding: '10px 12px', borderRadius: 6, border: '1px solid #d0d7de', background: '#0e54e9', color: 'white' }}
-                >
-                  Ajouter l’ouverture
-                </button>
+                <h4 className="room-editor__sectionTitle">Murs ({walls.length})</h4>
+                <ul className="room-editor__wallList">
+                  {walls.map((wall) => (
+                    <li key={wall.index}>
+                      <button
+                        type="button"
+                        className={`room-editor__wallItem ${selectedWallIndex === wall.index ? 'is-active' : ''}`}
+                        onClick={() => setSelectedWallIndex(wall.index)}
+                      >
+                        <span>{wall.index + 1}</span>
+                        <strong>{formatMeters(wall.lengthCm / 100)}</strong>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
 
-                {openingFormMessage ? (
-                  <p style={{ marginTop: 8, marginBottom: 0, color: '#cf222e', fontSize: 14 }}>
-                    {openingFormMessage}
-                  </p>
-                ) : null}
-
-                {selectedWallOpenings.length > 0 ? (
-                  <ul style={{ paddingLeft: 18, marginTop: 16, marginBottom: 0 }}>
-                    {selectedWallOpenings.map((opening) => (
-                      <li key={opening.id} style={{ marginBottom: 10 }}>
-                        <div>
-                          <strong>
-                            {opening.type === 'door'
-                              ? 'Porte'
-                              : opening.type === 'window'
-                                ? 'Fenêtre'
-                                : 'Ouverture'}
-                          </strong>
-                          {' '}— position {opening.offsetCm} cm, largeur {opening.widthCm} cm, hauteur {opening.heightCm} cm
-                          {opening.bottomCm > 0 ? `, allège ${opening.bottomCm} cm` : ''}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveOpening(opening.id)}
-                          style={{ marginTop: 6, padding: '6px 10px', borderRadius: 6, border: '1px solid #d0d7de', background: '#f6f8fa', color: '#24292f' }}
-                        >
-                          Supprimer
-                        </button>
+                <h4 className="room-editor__sectionTitle">Angles</h4>
+                <ul className="room-editor__anglesList">
+                  {vertices.map((vertex, index) => {
+                    const prev = vertices[(index - 1 + vertices.length) % vertices.length];
+                    const next = vertices[(index + 1) % vertices.length];
+                    return (
+                      <li key={vertex.id}>
+                        v{index + 1}: {angleAtVertexDegrees(prev, vertex, next).toFixed(1)}°
                       </li>
-                    ))}
-                  </ul>
+                    );
+                  })}
+                </ul>
+                <p className="room-editor__hint">
+                  Centre: ({center.x.toFixed(0)}, {center.y.toFixed(0)})
+                </p>
+              </div>
+            ) : (
+              <div className="room-editor__propertiesPanel">
+                {selectedWall && selectedWallDefinition ? (
+                  <div className="room-editor__wallEditor">
+                    <h4 className="room-editor__sectionTitle">Ouvertures du mur {selectedWall.index + 1}</h4>
+
+                    {selectedWallOpeningIssues.length > 0 ? (
+                      <div className="dashboard-banner dashboard-banner--error">
+                        {selectedWallOpeningIssues.map((issue) => (
+                          <p key={`${issue.opening.id}:${issue.code}`}>
+                            {formatOpeningValidationIssue(issue)}
+                          </p>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    <h5 className="room-editor__sectionTitle">Ouvertures</h5>
+                    <div className="room-editor__fieldGrid">
+                      <label className="dashboard-field dashboard-field--compact room-editor__openingTypeField">
+                        <span>Type</span>
+                        <select
+                          value={openingDraft.type}
+                          onChange={(event) => handleOpeningDraftChange('type', event.target.value)}
+                        >
+                          <option value="door">Porte</option>
+                          <option value="window">Fenetre</option>
+                          <option value="other">Autre</option>
+                        </select>
+                      </label>
+                      <label className="dashboard-field dashboard-field--compact">
+                        <span>Position (cm)</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={openingDraft.offsetCm}
+                          onChange={(event) => handleOpeningDraftChange('offsetCm', event.target.value)}
+                        />
+                      </label>
+                      <label className="dashboard-field dashboard-field--compact">
+                        <span>Largeur (cm)</span>
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={openingDraft.widthCm}
+                          onChange={(event) => handleOpeningDraftChange('widthCm', event.target.value)}
+                        />
+                      </label>
+                      <label className="dashboard-field dashboard-field--compact">
+                        <span>Allege (cm)</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={openingDraft.bottomCm}
+                          onChange={(event) => handleOpeningDraftChange('bottomCm', event.target.value)}
+                        />
+                      </label>
+                      <label className="dashboard-field dashboard-field--compact">
+                        <span>Hauteur (cm)</span>
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={openingDraft.heightCm}
+                          onChange={(event) => handleOpeningDraftChange('heightCm', event.target.value)}
+                        />
+                      </label>
+                    </div>
+
+                    <button type="button" className="dashboard-viewButton" onClick={handleAddOpening}>
+                      Ajouter ouverture
+                    </button>
+
+                    {openingFormMessage ? (
+                      <div className="dashboard-banner dashboard-banner--error">{openingFormMessage}</div>
+                    ) : null}
+
+                    {selectedWallOpenings.length === 0 ? (
+                      <p className="room-editor__hint">Aucune ouverture sur ce mur.</p>
+                    ) : (
+                      <ul className="room-editor__openingsList">
+                        {selectedWallOpenings.map((opening) => (
+                          <li key={opening.id}>
+                            <span>
+                              {openingTypeLabel(opening.type)} - {opening.widthCm} x {opening.heightCm} cm
+                            </span>
+                            <button
+                              type="button"
+                              className="room-editor__openingDeleteButton"
+                              onClick={() => handleRemoveOpening(opening.id)}
+                              aria-label={`Supprimer l'ouverture ${openingTypeLabel(opening.type)}`}
+                              title="Supprimer"
+                            >
+                              X
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                 ) : (
-                  <p style={{ color: '#57606a', fontSize: 14, marginBottom: 0, marginTop: 16 }}>
-                    Aucune ouverture n’est encore définie sur ce mur.
-                  </p>
+                  <p className="room-editor__hint">Selectionne un mur dans le plan pour ajouter une ouverture.</p>
                 )}
               </div>
-
-              <p style={{ color: '#57606a', fontSize: 14, marginBottom: 0 }}>
-                Clique sur le cartouche du mur dans le plan pour modifier sa longueur. Les propriétés métier et ouvertures sont persistées lors de l’enregistrement de la pièce.
-              </p>
-            </>
-          ) : (
-            <p style={{ color: '#57606a' }}>Clique sur un mur pour voir ses informations.</p>
-          )}
-        </div>
-
-        <div style={{ border: '1px solid #d0d7de', borderRadius: 8, padding: 16, background: 'white' }}>
-          <h3 style={{ marginTop: 0 }}>Angles calculés</h3>
-          <ul>
-            {vertices.map((vertex, index) => {
-              const prev = vertices[(index - 1 + vertices.length) % vertices.length];
-              const next = vertices[(index + 1) % vertices.length];
-              return (
-                <li key={vertex.id}>
-                  v{index} — {angleAtVertexDegrees(prev, vertex, next).toFixed(1)}°
-                </li>
-              );
-            })}
-          </ul>
-          <p style={{ color: '#57606a' }}>
-            Centre géométrique : ({center.x.toFixed(0)}, {center.y.toFixed(0)})
-          </p>
-        </div>
-      </section>
+            )}
+          </aside>
+        </section>
+      )}
     </DashboardLayout>
   );
 }

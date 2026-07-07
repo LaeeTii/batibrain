@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { LevelOverviewSummary } from './views/LevelOverviewSummary';
-import { RoomEditorDemo as RoomEditor } from './views/RoomEditor';
+import { RoomEditor } from './views/RoomEditor';
 import {
   RoomsDashboard,
   type DashboardLevelTarget,
