@@ -2,8 +2,10 @@
 
 ## Liste des vues
 - Vue tableau de bord
-- Vue globale du projet (éditeur 2D)
-    cf docs/plan_vue_globale.md
+- Vue édition globale du projet (éditeur 2D)
+    cf docs/ihm_editeur_2d_global.md
+- Vue métriques du projet (tableaux)
+    cf docs/plan_vue_metriques.md
 - Vue photos
     cf docs/plan_vue_photos.md
 - Vue documents
@@ -14,8 +16,8 @@
     cf docs/plan_vue_taches.md
 - Vue planning
     cf docs/plan_vue_planning.md
-- Vue pièce (éditeur 2D)
-    cf docs/plan_vue_piece.md
+- Vue édition pièce (éditeur 2D)
+    cf docs/ihm_editeur_2d_pièce.md
 - Vue login
     Champs : email, mot de passe, bouton "se connecter", lien "mot de passe oublié", lien "créer un compte"
 

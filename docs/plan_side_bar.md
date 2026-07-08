@@ -6,11 +6,13 @@
 - Séléction du projet courant (dropdown)
 - "créer un projet" (bouton) -> ouvre une modale.
 - "Tableau de bord" (bouton) -> ouvre la vue tableau de bord
-- "Photos" (bouton) -> ouvre la vue photos
-- "Documents" (bouton) -> ouvre la vue documents
-- "Travaux" (bouton) -> ouvre la vue travaux
-- "Tâches" (bouton) -> ouvre la vue tâches
-- "planning" (bouton) -> ouvre la vue planning
+- "Édition globale" (bouton) -> ouvre la vue édition globale du projet
+- "Métriques" (bouton) -> ouvre la vue métriques
+- "Photos" (bouton) -> ouvre la vue photos (désactivé pour le moment)
+- "Documents" (bouton) -> ouvre la vue documents (désactivé pour le moment)
+- "Travaux" (bouton) -> ouvre la vue travaux (désactivé pour le moment)
+- "Tâches" (bouton) -> ouvre la vue tâches (désactivé pour le moment)
+- "planning" (bouton) -> ouvre la vue planning (désactivé pour le moment)
 - "Paramètres" (bouton) ancré en bas de la side bar -> ouvre une modale avec les paramètres de l'application (langue, thème, etc., unité de mesure, etc.)
 
 ## Règles métiers
