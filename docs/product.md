@@ -1,4 +1,4 @@
-# Produit — BatiBrain
+# Produit — BatiBrain (obsolète - ne pas concidérer comme source de vérité mais utile pour le contexte historique)
 
 ## Objectif
 Construire BatiBrain, une application web + mobile pour piloter des travaux de maison, avec un coeur métier centré sur les pièces et les murs.

@@ -1,4 +1,4 @@
-# Modèle de données
+# Modèle de données (obsolète - ne pas concidérer comme source de vérité mais utile pour le contexte historique)
 
 ## Vue d'ensemble
 

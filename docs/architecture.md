@@ -18,12 +18,13 @@
 ## Principes d'architecture
 - la logique métier géométrique vit dans `shared/`
 - l'UI reste dans `web/` et `mobile/`
-- la base est la source de vérité métier
+- la spec est la source de vérité pour le produit (docs/ihm/ihm.md)
 - les projections (métriques, angles, vues dérivées) sont calculées
 
-## Séquencement recommandé
+## Séquencement
 1. Prototype géométrique web
 2. Persistance Supabase
+3. Application web pour gestion des plans et métriques
 3. Tâches et documents
 4. Version mobile
 5. Assistant LLM avec actions sécurisées

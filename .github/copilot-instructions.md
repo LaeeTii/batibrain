@@ -10,6 +10,29 @@
 - Use [README.md](../README.md) for the recommended development order.
 - If code, request, and documentation conflict, call out the mismatch explicitly and prefer the documented rule unless the user asks to change it.
 
+## Current Documentation Status (Temporary Rule)
+
+- At this stage, [docs/product.md](../docs/product.md), [docs/spec.md](../docs/spec.md), and [docs/data-model.md](../docs/data-model.md) are considered obsolete.
+- These files remain useful as historical context only and must not be treated as source of truth for new decisions.
+- The active source of truth is the ongoing functional specification rewrite in [docs/ihm/](../docs/ihm/), validated incrementally by the user.
+
+## Specification Rewrite Method (Mandatory)
+
+- Work methodically view by view, then component by component.
+- For each rewritten view/component spec, ensure it includes at least:
+- Objective
+- In-scope / out-of-scope
+- Screen structure
+- User interactions
+- Business rules
+- States and feedback
+- Displayed and edited data
+- Edge cases
+- Testable acceptance criteria
+- Record explicit assumptions and decisions when documentation is incomplete.
+- Do not start feature development from obsolete docs; wait for the rewritten specs and updated data model unless the user explicitly asks otherwise.
+- After the IHM/spec rewrite phase, rebuild [docs/data-model.md](../docs/data-model.md) from validated specs, then start implementation.
+
 ## Architecture Guardrails
 
 - Keep geometric and shared business logic in [shared/](../shared/).

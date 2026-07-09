@@ -1,4 +1,4 @@
-# SPEC PRODUIT ET TECHNIQUE — BATIBRAIN
+# SPEC PRODUIT ET TECHNIQUE — BATIBRAIN (obsolète - ne pas concidérer comme source de vérité mais utile pour le contexte historique)
 
 Date de mise à jour: 2026-07-06
 
