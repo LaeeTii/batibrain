@@ -1,28 +1,343 @@
 # IHM - DashboardView
 
 ## Objectif
-- A completer.
+- Faire du dashboard le point d'entree operationnel apres authentification pour consulter et piloter le projet courant.
+- S'appuyer sur le projet selectionne dans la sidebar, avec selection par defaut sur le dernier projet modifie.
+- Ne proposer la creation de projet depuis le dashboard que s'il n'existe encore aucun projet.
+- Afficher l'ensemble des cartes de pieces du projet courant.
+- Permettre le filtrage des pieces par niveau.
+- Permettre la recherche et le filtrage par nom de piece.
+- Permettre depuis le dashboard l'acces a la vue Editeur 2D global via un bouton principal.
+- Permettre des actions rapides sur chaque piece:
+	- aller vers l'edition par piece,
+	- ajouter une note,
+	- effectuer une suppression logique, avec masquage par defaut des pieces supprimees,
+	- lancer un export PDF au niveau de la piece en deux variantes: plan simple, ou plan avec detail.
+- Permettre un export PDF global depuis le dashboard avec deux variantes:
+	- exporter chaque plan de piece,
+	- exporter chaque plan de piece avec son detail.
+- Preparer le dashboard a des actions futures sur les pieces:
+	- ajouter une tache,
+	- ajouter un document,
+	- ajouter une photo.
+- Guider l'utilisateur avec des etats explicites quand le contexte est incomplet ou quand aucun resultat ne correspond aux filtres actifs.
 
 ## Perimetre
-- A completer.
+- In-scope:
+	- Affichage du dashboard dans le layout applicatif avec sidebar et projet courant issu de la sidebar.
+	- Selection implicite du projet courant, initialise par defaut sur le dernier projet modifie.
+	- Creation de projet depuis le dashboard uniquement lorsqu'aucun projet n'existe encore.
+	- Affichage de toutes les pieces du projet courant sous forme de cartes.
+	- Filtrage des cartes par niveau, avec une option Tous les niveaux par defaut.
+	- Recherche et filtrage par nom de piece via une recherche textuelle simple insensible a la casse.
+	- Acces principal a la vue Editeur 2D global.
+	- Actions par piece:
+		- ouvrir l'edition par piece,
+		- ajouter une note,
+		- suppression logique,
+		- export PDF piece en mode plan simple,
+		- export PDF piece en mode plan + detail.
+	- Export PDF global du projet courant depuis le dashboard:
+		- chaque plan de piece,
+		- chaque plan de piece + detail.
+	- Etats vides, etats sans resultat, etats de chargement et etats d'erreur lies aux donnees du dashboard.
+- Out-of-scope:
+	- Edition geometrique detaillee d'une piece.
+	- Comportement detaille de l'Editeur 2D global.
+	- Implementation detaillee des futures actions piece:
+		- ajouter une tache,
+		- ajouter un document,
+		- ajouter une photo.
+	- Gestion physique de suppression definitive en base si la regle metier cible est une suppression logique.
+	- Parametrage utilisateur detaille et gestion de session, deja couverts par d'autres vues/flux.
 
 ## Structure ecran
-- A completer.
+- Layout global:
+	- Sidebar applicative persistante a gauche.
+	- Zone principale dashboard a droite.
+- En-tete de la zone principale:
+	- Le nom du projet courant est affiche comme titre principal de la page.
+	- Le bouton principal d'acces a l'Editeur 2D global est visible dans cette zone.
+- Cas aucun projet:
+	- Pas de bandeau de contexte.
+	- Affichage d'une zone de bienvenue dans la zone principale.
+	- Cette zone contient uniquement:
+		- un texte de bienvenue,
+		- une action de creation de nouveau projet,
+		- la sidebar applicative reste visible.
+- Barre de filtres:
+	- Select de niveau avec option Tous les niveaux.
+	- Champ de recherche par nom de piece.
+	- Bouton d'export PDF global positionne a droite de la barre de filtres.
+	- Le bouton d'export PDF global ouvre deux choix:
+		- chaque plan de piece,
+		- chaque plan de piece + detail.
+- Zone de contenu principal:
+	- Grille de cartes de pieces du projet courant.
+	- Chaque carte affiche un apercu de plan, le nom de la piece, son niveau et les informations de synthese utiles.
+- Actions sur chaque carte:
+	- Actions visibles sous forme d'icones uniquement.
+	- Ouvrir l'edition de la piece.
+	- Ajouter une note.
+	- Supprimer logiquement.
+	- Export PDF via une seule icone ouvrant deux choix:
+		- plan simple,
+		- plan + detail.
+- Zone de synthese:
+	- Indicateurs agreges calcules sur les pieces visibles apres application des filtres.
+- Etats alternatifs dans la zone de contenu:
+	- Etat aucun projet avec zone de bienvenue.
+	- Etat chargement.
+	- Etat aucune piece.
+	- Etat aucun resultat apres filtres.
+	- Etat erreur de chargement.
 
 ## Interactions utilisateur
-- A completer.
+- Arrivee sur la vue:
+	- Si un projet courant existe, le dashboard charge ses pieces et applique par defaut le filtre Tous les niveaux.
+	- Si aucun projet n'existe, l'utilisateur voit la zone de bienvenue avec l'action de creation de projet.
+- Navigation principale:
+	- L'utilisateur peut ouvrir l'Editeur 2D global via le bouton principal de l'en-tete.
+- Filtrage:
+	- L'utilisateur peut choisir un niveau dans le select pour limiter les cartes affichees.
+	- L'utilisateur peut saisir tout ou partie du nom d'une piece dans le champ de recherche pour filtrer les cartes.
+	- La recherche par nom est insensible a la casse.
+	- Exemple: si l'utilisateur tape sin, une piece nommee cuisine doit apparaitre dans les resultats.
+	- Les filtres niveau et nom se combinent.
+- Export PDF global:
+	- L'utilisateur clique sur l'icone d'export de la barre de filtres.
+	- Un menu propose:
+		- exporter chaque plan de piece,
+		- exporter chaque plan de piece + detail.
+- Actions sur une carte de piece:
+	- Le clic sur la carte ouvre l'edition par piece.
+	- Les icones visibles sur la carte sont reservees aux actions secondaires.
+	- L'utilisateur peut ouvrir l'action d'ajout de note.
+	- L'utilisateur peut declencher la suppression logique.
+	- L'utilisateur peut cliquer sur l'icone d'export PDF de la carte pour choisir:
+		- plan simple,
+		- plan + detail.
+- Effet des actions:
+	- L'ouverture d'une piece amene vers la vue d'edition par piece.
+	- La suppression logique demande une confirmation avant execution.
+	- La suppression logique retire ensuite la piece de l'affichage par defaut.
+	- Les exports PDF lancent la generation sur le perimetre choisi.
+- Etat sans resultat:
+	- Si aucun filtre ne correspond, la grille est remplacee par un etat vide specifique aux filtres actifs.
 
 ## Regles metier
-- A completer.
+- Contexte projet:
+	- Le dashboard affiche les donnees du projet courant selectionne depuis la sidebar.
+	- Si plusieurs projets existent, le projet charge par defaut est le dernier projet modifie.
+	- La creation de projet depuis le dashboard n'est autorisee que si aucun projet n'existe encore.
+- Portee des donnees affichees:
+	- Le dashboard affiche les pieces du projet courant, tous niveaux confondus par defaut.
+	- Le filtre de niveau permet de restreindre l'affichage a un niveau specifique sans changer le projet courant.
+	- Les indicateurs agreges sont calcules sur les pieces visibles apres application des filtres.
+- Recherche:
+	- La recherche par nom fonctionne sur une sous-chaine, pas uniquement sur un prefixe.
+	- La recherche est insensible a la casse.
+	- Une piece correspond si la chaine saisie apparait n'importe ou dans son nom.
+- Actions sur les pieces:
+	- Le clic sur une carte ouvre l'edition de la piece ciblee.
+	- L'ajout de note est une action associee a la piece, sans changer le contexte projet.
+	- La suppression logique marque la piece comme supprimee sans suppression physique immediate.
+	- Une piece supprimee logiquement n'apparait plus dans l'affichage par defaut du dashboard.
+- Exports PDF:
+	- L'export PDF piece propose exactement deux variantes:
+		- plan simple,
+		- plan + detail.
+	- L'export PDF global propose exactement deux variantes:
+		- chaque plan de piece,
+		- chaque plan de piece + detail.
+	- Les pieces supprimees logiquement sont exclues par defaut des exports PDF globaux.
+- Etats d'affichage:
+	- Si aucun projet n'existe, le dashboard bascule sur l'etat de bienvenue.
+	- Si les filtres n'ont aucun resultat, le dashboard affiche un etat vide specifique sans perdre les filtres saisis.
+- Evolution future:
+	- Les actions futures (tache, document, photo) ne modifient pas le perimetre courant tant qu'elles ne sont pas specifiees dans une vue ou un composant dedie.
 
 ## Etats et feedback
-- A completer.
+- Etat initial charge:
+	- Si un projet courant existe, la vue charge les cartes de pieces et les indicateurs associes.
+	- Pendant ce chargement, la grille et les indicateurs affichent un etat de chargement lisible.
+- Etat aucun projet:
+	- La zone principale affiche un message de bienvenue.
+	- Une seule action principale est proposee: creer un nouveau projet.
+- Etat aucun niveau correspondant:
+	- Si le filtre de niveau ne retourne aucune piece visible, la vue affiche un etat vide lie aux filtres actifs.
+- Etat aucun resultat de recherche:
+	- Si la recherche par nom ne retourne aucune piece, la vue affiche un etat vide specifique.
+	- Les filtres saisis restent visibles et modifiables.
+- Etat normal:
+	- Les cartes de pieces sont affichees avec leurs actions iconees.
+	- Les indicateurs agreges sont visibles et synchronises avec les filtres actifs.
+- Etat export PDF:
+	- Lors du clic sur une icone d'export, un menu de choix s'ouvre.
+	- En cas d'echec, un message d'erreur explicite est affiche sans perdre le contexte courant.
+- Etat suppression logique:
+	- Avant execution, une confirmation explicite est demandee.
+	- Apres confirmation, la piece disparait de l'affichage par defaut.
+	- Un feedback de succes ou d'erreur est affiche.
+- Etat ajout de note:
+	- L'ouverture de l'action de note affiche un contexte clair sur la piece ciblee.
+	- En cas d'echec d'enregistrement, le message d'erreur reste local a l'action engagee.
+- Etat erreur:
+	- Si les donnees du dashboard ne peuvent pas etre chargees, un message d'erreur clair est affiche.
+	- L'utilisateur peut retenter l'action sans quitter la vue.
 
 ## Donnees affichees
-- A completer.
+- Donnees de contexte:
+	- Nom du projet courant affiche comme titre principal.
+	- Etat de presence ou d'absence de projet courant.
+- Donnees de filtrage:
+	- Niveau selectionne dans le filtre.
+	- Texte de recherche saisi pour filtrer les pieces par nom.
+	- Etat combine des filtres actifs.
+- Donnees listees:
+	- Ensemble des pieces visibles du projet courant apres application des filtres.
+	- Pour chaque piece:
+		- nom,
+		- niveau de rattachement,
+		- apercu de plan,
+		- informations de synthese utiles au dashboard,
+		- etat logique visible/non visible selon suppression logique.
+- Donnees d'actions piece:
+	- Disponibilite des actions secondaires:
+		- note,
+		- suppression logique,
+		- export PDF.
+	- Variantes d'export PDF disponibles pour la piece:
+		- plan simple,
+		- plan + detail.
+- Donnees d'actions globales:
+	- Disponibilite du bouton principal d'acces a l'Editeur 2D global.
+	- Disponibilite de l'export PDF global:
+		- chaque plan de piece,
+		- chaque plan de piece + detail.
+- Donnees agregees:
+	- Nombre de pieces visibles apres filtres.
+	- Surface totale visible apres filtres.
+	- Autres indicateurs globaux retenus par la vue sur le sous-ensemble visible.
+- Donnees d'etat:
+	- Etat de chargement des donnees.
+	- Etat d'erreur de chargement.
+	- Etat vide sans projet.
+	- Etat vide sans resultat apres filtres.
+- Donnees exclues par defaut:
+	- Les pieces supprimees logiquement ne sont pas affichees dans la grille courante.
+	- Les pieces supprimees logiquement ne sont pas incluses dans les exports PDF globaux par defaut.
 
 ## Cas limites
-- A completer.
+- Aucun projet existant:
+	- La vue affiche uniquement la zone de bienvenue et l'action de creation de projet.
+- Projet courant introuvable ou supprime:
+	- La vue retombe sur un etat vide controle plutot que sur une erreur bloquante.
+- Aucun resultat avec les filtres:
+	- Si la combinaison niveau + recherche nom ne retourne aucune piece, la vue affiche un etat vide specifique tout en conservant les filtres.
+- Recherche partielle ambigue:
+	- Plusieurs pieces peuvent correspondre a une meme sous-chaine; toutes les correspondances doivent etre affichees.
+- Recherche avec casse differente:
+	- La casse ne doit jamais empecher la remontee d'un resultat.
+- Niveau sans piece visible:
+	- Si un niveau est selectionne mais qu'aucune piece active n'y correspond, la grille reste vide avec message adapte.
+- Piece supprimee logiquement:
+	- Une piece supprimee ne doit plus reapparaitre dans la grille courante ni dans les exports globaux par defaut.
+- Export PDF impossible:
+	- Si l'export echoue, la vue conserve le contexte et affiche une erreur explicite.
+- Action carte sur donnee obsolete:
+	- Si une piece n'est plus accessible au moment d'ouvrir l'edition ou de lancer une action, la vue affiche une erreur controlee et rafraichit l'etat si necessaire.
+- Changement de projet via sidebar:
+	- Les filtres ne sont pas conserves entre deux projets et sont reinitialises sur le nouveau projet courant.
+- Nom de piece vide ou incomplet:
+	- Le nom de piece est un champ obligatoire.
+	- Si aucun nom n'est renseigne lors de la creation, la valeur par defaut appliquee est "Nouvelle piece".
+
+## Criteres d'acceptation testables
+- Scenario 1 - Aucun projet:
+	- Given aucun projet n'existe pour l'utilisateur
+	- When il ouvre DashboardView
+	- Then la zone principale affiche uniquement un message de bienvenue et l'action de creation de projet
+- Scenario 2 - Projet courant:
+	- Given plusieurs projets existent
+	- When l'utilisateur ouvre DashboardView
+	- Then le projet affiche correspond au dernier projet modifie
+	- And son nom est affiche comme titre principal
+- Scenario 3 - Filtre niveau par defaut:
+	- Given un projet contenant des pieces sur plusieurs niveaux
+	- When DashboardView s'ouvre
+	- Then le filtre niveau est positionne sur Tous les niveaux
+	- And toutes les pieces actives du projet sont affichees
+- Scenario 4 - Recherche partielle:
+	- Given une piece nommee Cuisine
+	- When l'utilisateur saisit sin dans la recherche
+	- Then la piece Cuisine apparait dans les resultats
+- Scenario 5 - Recherche insensible a la casse:
+	- Given une piece nommee Cuisine
+	- When l'utilisateur saisit CUI ou cui
+	- Then la piece Cuisine apparait dans les resultats
+- Scenario 6 - Combinaison des filtres:
+	- Given un projet avec plusieurs niveaux et plusieurs pieces
+	- When l'utilisateur selectionne un niveau puis saisit une recherche par nom
+	- Then seules les pieces correspondant au niveau choisi et au filtre texte sont affichees
+- Scenario 7 - Reset des filtres au changement de projet:
+	- Given un filtre niveau ou nom est actif
+	- When l'utilisateur change de projet depuis la sidebar
+	- Then les filtres du dashboard sont reinitialises
+	- And les donnees du nouveau projet sont chargees
+- Scenario 8 - Ouverture editeur global:
+	- Given un projet courant existe
+	- When l'utilisateur clique sur le bouton principal Editeur 2D global
+	- Then la vue Editeur 2D global s'ouvre pour le projet courant
+- Scenario 9 - Ouverture d'une piece:
+	- Given une carte piece est visible
+	- When l'utilisateur clique sur la carte
+	- Then la vue d'edition par piece de cette piece s'ouvre
+- Scenario 10 - Suppression logique:
+	- Given une piece visible dans la grille
+	- When l'utilisateur clique sur l'icone de suppression puis confirme l'action
+	- Then la piece est marquee comme supprimee logiquement
+	- And elle disparait de la grille par defaut
+- Scenario 11 - Export PDF piece:
+	- Given une carte piece visible
+	- When l'utilisateur clique sur l'icone d'export de la carte
+	- Then un choix est propose entre plan simple et plan + detail
+- Scenario 12 - Export PDF global:
+	- Given plusieurs pieces visibles dans le dashboard
+	- When l'utilisateur clique sur l'icone d'export global
+	- Then un choix est propose entre chaque plan de piece et chaque plan de piece + detail
+	- And les pieces supprimees logiquement sont exclues par defaut
+- Scenario 13 - Aucun resultat:
+	- Given un filtre niveau ou nom sans correspondance
+	- When le filtrage est applique
+	- Then un etat vide specifique est affiche
+	- And les filtres restent visibles et modifiables
+- Scenario 14 - Nom par defaut:
+	- Given une creation de piece sans nom saisi
+	- When la piece est enregistree
+	- Then son nom applique par defaut est Nouvelle piece
+
+## Recap decisions et hypotheses explicites
+- Decisions validees:
+	- Le dashboard s'appuie sur le projet courant selectionne dans la sidebar.
+	- Le projet charge par defaut est le dernier projet modifie.
+	- La creation de projet depuis le dashboard n'est possible que s'il n'existe encore aucun projet.
+	- Le dashboard affiche toutes les pieces du projet courant, avec filtre Tous les niveaux par defaut.
+	- La recherche par nom fonctionne sur une sous-chaine et reste insensible a la casse.
+	- Le nom du projet courant est le titre principal de la page; il n'y a pas de bandeau de contexte.
+	- En absence de projet, la vue affiche une zone de bienvenue avec une seule action de creation de projet.
+	- Le bouton principal de la vue ouvre l'Editeur 2D global.
+	- Le bouton d'export PDF global est place a droite dans la barre de filtres.
+	- Les actions de carte sont visibles sous forme d'icones uniquement.
+	- L'export PDF piece passe par une seule icone ouvrant deux choix: plan simple, plan + detail.
+	- L'export PDF global propose deux choix: chaque plan de piece, chaque plan de piece + detail.
+	- La suppression logique demande confirmation, masque la piece par defaut et exclut cette piece des exports globaux par defaut.
+	- Les filtres du dashboard sont reinitialises lors d'un changement de projet via la sidebar.
+	- Le nom de piece est obligatoire; si aucun nom n'est fourni lors de la creation, la valeur par defaut est Nouvelle piece.
+- Hypotheses explicites (a confirmer lors de l'implementation):
+	- Les informations de synthese affichees sur chaque carte seront precisees plus finement dans la spec du composant de carte.
+	- Le format exact du menu d'actions d'export PDF (popover, menu contextuel ou dropdown) reste un choix d'implementation tant que les deux variantes sont bien disponibles.
+	- Les actions futures sur les pieces (tache, document, photo) seront documentees dans un lot ulterieur sans modifier la presente spec tant qu'elles ne sont pas activees.
 
 ## References
 - Referentiel global : [ihm.md](../ihm.md)
