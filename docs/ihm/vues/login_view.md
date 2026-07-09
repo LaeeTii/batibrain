@@ -1,0 +1,220 @@
+# IHM - LoginView
+
+## Objectif
+- Permettre a un utilisateur de s'authentifier via email et mot de passe pour acceder aux donnees de ses projets.
+- Empecher l'acces aux vues metier tant qu'aucune session valide n'est active.
+- Rediriger automatiquement vers DashboardView apres une connexion reussie.
+- Rediriger automatiquement vers DashboardView si une session utilisateur est deja active a l'arrivee sur la vue.
+- Supporter le retour vers cette vue apres deconnexion depuis les parametres de l'application.
+
+## Perimetre
+- In-scope:
+	- Affichage d'un formulaire de connexion email + mot de passe.
+	- Validation minimale de saisie cote UI avant soumission (champs requis, format email).
+	- Soumission de l'authentification et creation/restauration de session utilisateur.
+	- Redirection vers DashboardView en cas de succes.
+	- Redirection automatique vers DashboardView si session deja active.
+	- Acces a un lien "mot de passe oublie" vers le flux de reinitialisation.
+	- Option "Se souvenir de moi".
+- Out-of-scope:
+	- Inscription utilisateur (creation de compte) depuis cette vue.
+	- Authentification sociale (Google, Microsoft, etc.).
+	- MFA/2FA.
+	- Gestion avancee du compte (profil, preferences), hors authentification.
+	- Gestion collaborative des autorisations projet (traitee dans d'autres vues/flux).
+
+## Structure ecran
+- Zone principale centree (carte de connexion) contenant:
+	- Logo + nom produit.
+	- Titre de vue: "Connexion".
+	- Champ Email.
+	- Champ Mot de passe.
+	- Case a cocher "Se souvenir de moi".
+	- Lien secondaire "Mot de passe oublie ?".
+	- Bouton primaire "Se connecter".
+- Zone de message contextuel dans la carte:
+	- Affichage des erreurs de validation ou d'authentification.
+- Pied de carte:
+	- Mention courte de securite/session (texte informatif non bloquant).
+- Comportement de layout:
+	- Affichage desktop: carte centree horizontalement et verticalement.
+	- Affichage mobile: carte en largeur fluide avec marges laterales, sans perte de lisibilite.
+
+## Interactions utilisateur
+- Saisie email:
+	- L'utilisateur renseigne son adresse email.
+	- La validation de format peut se faire au blur et au submit.
+- Saisie mot de passe:
+	- L'utilisateur renseigne son mot de passe (masque par defaut).
+	- Un bouton permet d'afficher/masquer le mot de passe.
+- Option "Se souvenir de moi":
+	- L'utilisateur peut activer/desactiver la persistance de session locale.
+- Soumission:
+	- Clic sur "Se connecter" ou appui sur Entree depuis un champ du formulaire.
+	- Si le formulaire est invalide, la soumission est bloquee et les erreurs sont affichees.
+- Lien "Mot de passe oublie ?":
+	- Ouvre le flux de reinitialisation (ecran dedie ou URL externe configuree).
+- Redirections:
+	- Si authentification reussie, redirection vers DashboardView.
+	- Si session deja active a l'ouverture de la vue, redirection automatique vers DashboardView.
+- Echec d'authentification:
+	- Le champ email est conserve.
+	- Le champ mot de passe est vide pour permettre une nouvelle saisie securisee.
+- Deconnexion (interaction transverse):
+	- Apres action "Se deconnecter" depuis les parametres, retour sur LoginView avec formulaire reinitialise.
+
+## Regles metier
+- Acces protege:
+	- Toute vue metier (DashboardView et suivantes) requiert une session authentifiee valide.
+	- Sans session valide, l'application force l'affichage de LoginView.
+- Authentification:
+	- Le flux de connexion repose sur Supabase Auth avec identifiants email + mot de passe.
+	- Une connexion est consideree valide uniquement si un token de session actif est obtenu.
+- Persistance de session:
+	- Si "Se souvenir de moi" est active, la session est persistee localement selon la politique du provider d'authentification.
+	- Si "Se souvenir de moi" est desactivee, la session est limitee a la duree de vie de la session courante.
+- Redirection post-login:
+	- Une connexion reussie redirige vers l'ecran initialement demande si cet ecran est autorise.
+	- Si aucun ecran initial n'est disponible, la redirection se fait vers DashboardView.
+	- Un utilisateur deja authentifie ne reste pas sur LoginView et est redirige vers l'ecran demande si disponible, sinon DashboardView.
+- Echecs de connexion:
+	- Apres plusieurs echecs consecutifs, la connexion est temporairement bloquee selon la politique de securite appliquee.
+	- Pendant ce blocage, toute nouvelle tentative est refusee avec un message explicite.
+- Deconnexion:
+	- La deconnexion invalide la session locale en cours.
+	- Apres deconnexion, l'utilisateur est redirige vers LoginView et ne peut plus acceder aux vues metier via navigation directe.
+- Donnees utilisateur:
+	- Les donnees projet affichees ensuite dans l'application sont scopees a l'utilisateur authentifie (protection minimale attendue cote session et acces aux donnees).
+
+## Etats et feedback
+- Etat initial:
+	- Formulaire vide, bouton Se connecter desactive tant que les champs requis ne sont pas valides.
+- Etat de saisie invalide:
+	- Messages d'erreur inline sous les champs concernes (email invalide, mot de passe manquant).
+	- Le focus est positionne sur le premier champ en erreur au submit.
+- Etat de soumission:
+	- Bouton Se connecter passe en etat de chargement.
+	- Le formulaire est temporairement non interactif pour eviter les doubles soumissions.
+- Etat succes:
+	- Message de succes optionnel tres bref, puis redirection automatique vers l'ecran cible.
+- Etat echec authentification:
+	- Message global non technique (identifiants invalides ou session impossible).
+	- Champ email conserve, champ mot de passe vide.
+- Etat blocage temporaire:
+	- Message explicite indiquant qu'un trop grand nombre d'echecs a ete detecte.
+	- Tentatives bloquees jusqu'a expiration de la temporisation.
+- Etat lien mot de passe oublie:
+	- Feedback de redirection vers le flux de reinitialisation.
+- Etat session active detectee:
+	- Aucun formulaire affiche durablement; redirection automatique vers l'ecran cible.
+
+## Donnees affichees
+- Donnees affichees:
+	- Nom produit et elements de contexte visuel de connexion (logo, titre).
+	- Labels et aides de saisie des champs Email et Mot de passe.
+	- Etat de la case Se souvenir de moi.
+	- Messages de validation (champ) et message global d'authentification.
+	- Etat de temporisation en cas de blocage temporaire (message + delai restant si disponible).
+	- Lien Mot de passe oublie.
+- Donnees editees:
+	- Email saisi par l'utilisateur.
+	- Mot de passe saisi par l'utilisateur.
+	- Choix Se souvenir de moi (booleen).
+- Donnees derivees (non editees directement):
+	- Validite locale du formulaire (format email, champs requis).
+	- Ecran cible de redirection apres authentification (ecran demande initialement ou DashboardView en fallback).
+- Donnees persistantes:
+	- Session d'authentification (token/session) selon politique de persistance.
+	- Aucune donnee metier projet n'est creee/modifiee depuis cette vue.
+- Regle de securite d'affichage:
+	- Le mot de passe n'est jamais reaffiche en clair par defaut.
+	- En cas d'echec de connexion, le mot de passe est purge du formulaire.
+
+## Cas limites
+- Tentative d'acces direct a une vue protegee sans session:
+	- L'utilisateur est redirige vers LoginView et l'ecran cible est memorise pour redirection apres login.
+- Session expiree pendant la navigation:
+	- A la prochaine verification d'acces, redirection vers LoginView avec message de session expiree.
+- Email avec format invalide:
+	- La soumission est bloquee cote UI, erreur inline affichee.
+- Champs vides au submit:
+	- La soumission est bloquee, focus sur le premier champ invalide.
+- Multiples clics rapides sur Se connecter:
+	- Une seule requete est traitee, les suivantes sont ignorees tant que l'etat de chargement est actif.
+- Echec reseau ou indisponibilite du provider d'authentification:
+	- Message d'erreur non technique, possibilite de reessayer sans perdre l'email saisi.
+- Compte non autorise / identifiants invalides:
+	- Message generique (sans preciser si email ou mot de passe est incorrect).
+- Blocage temporaire apres echecs successifs:
+	- Tentatives refusees jusqu'a expiration; message explicite affiche.
+- Lien Mot de passe oublie indisponible:
+	- Feedback d'erreur controle et invitation a reessayer plus tard.
+- Utilisateur deja authentifie accedant a LoginView:
+	- Redirection immediate vers l'ecran demande initialement (ou DashboardView en fallback).
+
+## Criteres d'acceptation testables
+- Scenario 1 - Acces protege sans session:
+	- Given un utilisateur non authentifie
+	- When il tente d'ouvrir une vue metier protegee
+	- Then LoginView est affichee et l'ecran demande est memorise pour redirection future
+- Scenario 2 - Connexion reussie:
+	- Given un utilisateur avec identifiants valides
+	- When il soumet le formulaire de connexion
+	- Then une session valide est creee
+	- And il est redirige vers l'ecran demande initialement
+	- And si aucun ecran n'est memorise, il est redirige vers DashboardView
+- Scenario 3 - Utilisateur deja connecte:
+	- Given un utilisateur deja authentifie
+	- When il ouvre LoginView
+	- Then il est redirige automatiquement vers l'ecran demande initialement ou DashboardView en fallback
+- Scenario 4 - Validation de formulaire:
+	- Given un email invalide ou un champ requis vide
+	- When l'utilisateur tente de soumettre
+	- Then la soumission est bloquee
+	- And les erreurs sont affichees inline
+	- And le focus va sur le premier champ invalide
+- Scenario 5 - Echec d'authentification:
+	- Given des identifiants invalides
+	- When l'utilisateur soumet le formulaire
+	- Then un message global non technique est affiche
+	- And le champ email est conserve
+	- And le champ mot de passe est vide
+- Scenario 6 - Blocage temporaire:
+	- Given plusieurs echecs consecutifs de connexion
+	- When une nouvelle tentative est faite pendant la temporisation
+	- Then la tentative est refusee
+	- And un message explicite de blocage est affiche
+- Scenario 7 - Se souvenir de moi:
+	- Given l'option Se souvenir de moi activee
+	- When la connexion reussit puis la page est rechargee
+	- Then la session est restauree selon la politique de persistance configuree
+- Scenario 8 - Mot de passe oublie:
+	- Given un utilisateur sur LoginView
+	- When il clique sur Mot de passe oublie ?
+	- Then le flux de reinitialisation est lance
+	- And un feedback adapte est affiche en cas d'indisponibilite
+- Scenario 9 - Deconnexion transverse:
+	- Given un utilisateur authentifie dans une vue metier
+	- When il clique sur Se deconnecter depuis les parametres
+	- Then la session est invalidee
+	- And LoginView est affichee
+	- And l'acces direct aux vues metier est de nouveau bloque
+
+## Recap decisions et hypotheses explicites
+- Decisions validees:
+	- Authentification MVP email + mot de passe uniquement.
+	- Redirection automatique d'un utilisateur deja authentifie vers une vue metier.
+	- Option Se souvenir de moi incluse dans LoginView.
+	- Lien Mot de passe oublie inclus dans LoginView.
+	- Bouton afficher/masquer le mot de passe inclus.
+	- En cas d'echec de connexion, email conserve et mot de passe purge.
+	- Redirection post-login vers l'ecran demande initialement, avec fallback DashboardView.
+	- Blocage temporaire apres echecs consecutifs de connexion.
+- Hypotheses explicites (a confirmer lors de l'implementation):
+	- La politique exacte de temporisation et le seuil d'echecs sont portes par le provider d'authentification et/ou une regle de securite applicative.
+	- Le flux Mot de passe oublie peut ouvrir un ecran dedie ou une URL externe selon la configuration retenue.
+	- La persistance de session associee a Se souvenir de moi suit les capacites de Supabase Auth et la configuration frontend finale.
+
+## References
+- Referentiel global : [ihm.md](../ihm.md)
+- Contexte de deconnexion : [ihm_side_bar_menu.md](../composants/ihm_side_bar_menu.md)
