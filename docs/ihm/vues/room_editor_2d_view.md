@@ -1,28 +1,365 @@
 # IHM - RoomEditor2DView
 
 ## Objectif
-- A completer.
+- Faire de RoomEditor2DView la vue de travail ciblee pour l'édition d'une pièce unique dans le contexte de son projet et de son niveau.
+- Permettre a l'utilisateur de modifier rapidement la géométrie et les proprietes de la pièce selectionnee sans perdre la lecture du contexte de niveau.
+- Offrir un parcours centre sur la pièce:
+	- ouverture depuis une carte pièce du dashboard,
+	- édition immediate de la pièce cible,
+	- retour fluide vers le dashboard ou bascule vers l'éditeur 2D global selon le besoin.
+- Permettre l'export PDF de la pièce courante en deux variantes:
+	- plan simple,
+	- plan + détail.
+- Donner une experience de precision locale sur la pièce, ses murs, ses ouvertures, ses côtes et ses notes rattachees.
+- Conserver la cohérence de sélection et de rendu avec les contrats transverses et canvas, sans redefinir les invariants geometriques dans cette vue.
 
-## Perimetre
-- A completer.
+## Périmètre
+- In-scope:
+	- Decrire le comportement global de la vue d'édition par pièce (structure ecran, parcours principal, transitions de navigation).
+	- Decrire l'entree dans la vue via une pièce cible (projectId, levelId, roomId) et les règles de fallback si le contexte est incomplet.
+	- Decrire les interactions utilisateur observables pour:
+		- selectionner et editer les elements de la pièce,
+		- manipuler la vue locale du plan de la pièce,
+		- acceder aux actions principales de sauvegarde, export PDF et retour de navigation.
+	- Decrire les etats de la vue (chargement, édition active, sauvegarde, erreur, pièce introuvable).
+	- Decrire les règles metier de niveau vue pour la pièce courante (portee de l'édition, visibilite des données, retour de contexte).
+- Out-of-scope:
+	- Contrat interne des composants graphiques et des panneaux, externalise dans:
+		- [canvas.md](../composants/canvas.md)
+		- [panels.md](../composants/panels.md)
+		- [sections.md](../composants/sections.md)
+		- [transverses.md](../composants/transverses.md)
+	- Invariants geometriques et règles de calcul, externalises dans [geometry.md](../logique/geometry.md).
+	- Synchronisation fine de sélection inter-zones, externalisee dans [edition_2D_synchronisation_selection.md](../logique/edition_2D_synchronisation_selection.md).
+	- Choix d'implementation technique frontend (store, structure de composants, optimisation de rendu).
 
 ## Structure ecran
-- A completer.
+- Layout global:
+	- AppSidebar persistante a gauche.
+	- Zone principale d'édition par pièce a droite.
+- En-tete de la zone principale:
+	- titre de la pièce editee,
+	- contexte projet et niveau de rattachement,
+	- controles d'affichage (affichage/masquage: grille, règles, côtes, angles, notes),
+	- controles de magnetisme (snapping: grille, sommets, intersections, murs, milieux, distance de capture),
+	- boutons icones `Annuler` et `Retablir` places en haut a droite du header principal,
+	- si l'historique correspondant est vide, le bouton associe est grise et non cliquable,
+	- actions primaires: Export PDF, Retour dashboard,
+	- indicateurs d'etat de sauvegarde auto (enregistrement en cours, synchronise, échec).
+	- les informations toujours visibles sont: nom projet, nom niveau, nom pièce.
+	- aucun horodatage de derniere synchronisation n'est affiche.
+- Zone centrale:
+	- canvas centre sur la pièce courante,
+	- rendu de la pièce active en priorite,
+	- rendu des autres pièces du niveau en contexte grise non editable.
+- Panneaux lateraux de travail:
+	- panneau creation/édition avec sections metier (Pièces, Murs, Ouvertures, Côtes, Notes),
+	- dans RoomEditor2DView, la section Niveaux est absente,
+	- dans RoomEditor2DView, aucune action d'ajout de pièce n'est exposee, ni la liste des pièces,
+	- la section Pièces est limitee a la pièce courante (sélection/édition/suppression selon droits de vue),
+	- panneau détail ouvrable a la demande, synchronise avec la sélection active.
+- Etats de remplacement de la zone principale:
+	- etat chargement de la pièce avec spinner global,
+	- etat erreur locale bloquante si la pièce cible est introuvable, avec actions d'édition desactivees,
+	- etat erreur de persistence non bloquant avec possibilite de retry.
 
 ## Interactions utilisateur
-- A completer.
+- Entree dans la vue:
+	- la vue est ouverte avec un contexte explicite `projectId`, `levelId`, `roomId`.
+	- si `roomId` est invalide, supprime ou inaccessible, la vue reste sur place avec un etat erreur local bloquant et desactive toute action d'édition tant que le contexte n'est pas resolu.
+- Édition et sélection:
+	- l'utilisateur selectionne un objet de la pièce (pièce, mur, ouverture, cote, note) depuis le canvas, une liste ou le panneau détail.
+	- la sélection active est synchronisee entre canvas, panneau creation et panneau détail.
+	- l'utilisateur peut utiliser les boutons `Annuler` et `Retablir` du header principal quand l'historique correspondant est disponible.
+	- l'édition d'un mur mitoyen de la pièce courante met a jour la géométrie de la pièce voisine liee a ce mur.
+	- l'utilisateur peut activer/desactiver les options d'affichage (affichage/masquage) grille, règles, côtes, angles et notes comme dans l'éditeur 2D global.
+	- l'utilisateur peut configurer le magnetisme (snapping: sources + distance de capture) comme dans l'éditeur 2D global.
+	- les autres pièces du niveau restent visibles en gris pour garder le contexte, sans édition directe.
+	- le panneau détail affiche l'arbre complet du niveau, y compris les objets hors pièce courante.
+	- les noeuds hors pièce courante sont affiches en gris et restent depliables/repliables.
+	- les noeuds hors pièce courante ne sont pas selectionnables dans RoomEditor2DView.
+	- toute tentative de sélection d'un objet appartenant a une autre pièce visible est ignoree pour l'édition, ne peut pas ouvrir de mode d'édition et ne declenche aucun feedback.
+- Sauvegarde:
+	- les modifications sont en auto-save pendant l'édition.
+	- un feedback d'etat est visible en continu dans l'en-tete (en cours, synchronise, échec).
+	- pour toute édition d'un mur mitoyen, la persistence est transactionnelle entre les deux pièces impactees.
+	- en cas d'échec de persistence d'une édition de mur mitoyen, un rollback complet est applique sur les deux pièces.
+	- en cas d'échec d'auto-save, la vue conserve le contexte, signale l'erreur et permet de relancer la persistence, sans introduire de mode brouillon explicite.
+	- le message d'erreur d'auto-save est persistant jusqu'au succes d'une nouvelle tentative ou fermeture explicite.
+- Export PDF:
+	- l'action Export PDF est disponible depuis l'en-tete de la vue.
+	- l'utilisateur choisit entre deux variantes:
+		- plan simple,
+		- plan + détail.
+	- l'export reprend les options d'affichage actives au moment du declenchement (grille, règles, côtes, angles, notes).
+	- les options de magnetisme (snapping) n'impactent pas le rendu PDF.
+	- la variante plan simple exporte la pièce courante uniquement.
+	- la variante plan + détail exporte la pièce courante et son détail structure v1 (cf. composant PDF).
+	- en cas d'échec d'export, la vue conserve le contexte et affiche une erreur explicite.
+- Navigation:
+	- l'action Retour ramene toujours vers DashboardView.
+	- l'ouverture de l'éditeur 2D global (si exposee depuis la vue) conserve le contexte projet/niveau courant et la pièce precedemment selectionnee.
+	- si un échec d'auto-save est present au moment de quitter la vue (Retour ou changement de vue), une confirmation explicite est demandee avant de sortir.
+- Suppression de la pièce courante:
+	- la suppression de la pièce demande une confirmation explicite.
+	- apres confirmation et succes, la vue effectue un retour automatique vers DashboardView.
+	- en cas d'échec, la vue reste sur place avec message d'erreur et etat cohérent.
+- Confirmations:
+	- la suppression de pièce impose une confirmation explicite.
+	- la sortie de la vue avec un échec d'auto-save actif impose une confirmation explicite.
+- Comportement degrade:
+	- si des données secondaires echouent a se charger, la vue reste utilisable tant que la pièce cible est disponible.
+	- si la pièce cible n'est pas disponible, la vue affiche l'erreur bloquante locale sans navigation forcee.
 
-## Regles metier
-- A completer.
+## Règles metier
+- Portee d'édition:
+	- la vue autorise l'édition strictement de la pièce courante.
+	- les murs, ouvertures, côtes et notes d'autres pièces visibles en contexte grise ne sont pas editables dans RoomEditor2DView.
+	- l'action d'édition `Couper en deux` d'un mur existant reste autorisee dans RoomEditor2DView.
+	- la creation d'un mur est limitee a l'intérieur de la pièce courante ou a son contour; aucun mur ne peut etre créé hors de la pièce courante dans cette vue.
+	- la suppression d'un mur mitoyen n'est pas autorisee dans RoomEditor2DView.
+	- la creation d'un nouveau mur intérieur provoquant la creation d'une nouvelle pièce est refusee dans RoomEditor2DView.
+	- apres édition d'un mur mitoyen, les ouvertures et côtes existantes sont conservees si elles restent geometriquement valides; seules les references devenues invalides sont rejetees avec message explicite.
+	- les options d'affichage (affichage/masquage) et de magnetisme (snapping) sont disponibles comme dans l'éditeur 2D global.
+	- la section Niveaux du panneau creation n'est jamais exposee dans RoomEditor2DView.
+	- l'ajout de pièce n'est jamais disponible depuis RoomEditor2DView.
+	- l'arbre détail peut afficher des objets hors pièce courante, mais ces objets restent non selectionnables dans cette vue.
+	- pour editer une autre pièce, l'utilisateur doit changer de pièce cible (depuis dashboard ou navigation dediee).
+- Exports PDF:
+	- les exports de RoomEditor2DView portent uniquement sur la pièce courante.
+	- la variante `Plan simple` utilise la cle technique `pdf_room_editor_piece_plan_simple`.
+	- la variante `Plan + détail` utilise la cle technique `pdf_room_editor_piece_plan_detail`.
+	- les exports appliquent les options d'affichage (affichage/masquage) actives de la vue au moment de l'export.
+	- les options de magnetisme (snapping) ne modifient pas le contenu PDF exporte.
+	- la structure de détail par defaut suit le template v1 de [pdf.md](../composants/pdf.md).
+
+## Tracabilite d'externalisation
+- Contrat de rendu, navigation visuelle et interactions canvas: [canvas.md](../composants/canvas.md).
+- Contrat des panneaux creation/détail et orchestration accordeons: [panels.md](../composants/panels.md).
+- Contrat metier des sections (Niveaux, Pièces, Murs, Ouvertures, Côtes, Notes): [sections.md](../composants/sections.md).
+- Contrat des composants transverses (sélection synchronisee, sidebar contexte projet, détail tree): [transverses.md](../composants/transverses.md).
+- Contrat commun des exports PDF et nomenclature: [pdf.md](../composants/pdf.md).
+- La vue RoomEditor2DView reste source de verite pour:
+	- le parcours ecran d'édition par pièce,
+	- les transitions de navigation entre dashboard, éditeur global et éditeur par pièce,
+	- les règles d'entree/sortie de la vue selon le contexte projet, niveau et pièce cible,
+	- les etats de fallback de la vue quand le contexte de pièce est incomplet ou obsolete.
 
 ## Etats et feedback
-- A completer.
+- Etat chargement initial:
+	- la vue affiche un spinner global pendant le chargement de la pièce cible.
+	- les zones d'édition restent inactives jusqu'a resolution du chargement.
+- Etat normal:
+	- la vue affiche la pièce courante editable et le contexte grise des autres pièces du niveau.
+	- l'en-tete affiche en continu nom projet, nom niveau et nom pièce.
+	- les boutons `Annuler` et `Retablir` restent visibles en haut a droite du header principal.
+	- chaque bouton est grise et non cliquable si son historique est vide.
+- Etat auto-save en cours:
+	- un indicateur explicite de synchronisation est visible dans l'en-tete.
+- Etat auto-save en échec:
+	- un message d'erreur persistant est affiche.
+	- la vue reste editable tant que la pièce cible est disponible.
+	- la sortie de la vue declenche une confirmation explicite tant que l'échec persiste.
+- Etat export PDF:
+	- l'utilisateur peut choisir `Plan simple` ou `Plan + détail`.
+	- en cas d'échec, un message explicite est affiche sans perdre l'etat courant.
+- Etat pièce introuvable/inaccessible:
+	- erreur locale bloquante dans la vue,
+	- actions d'édition desactivees,
+	- pas de redirection automatique,
+	- action visible Retour dashboard.
+- Etat suppression de pièce reussie:
+	- confirmation de suppression puis retour automatique vers DashboardView.
 
-## Donnees affichees
-- A completer.
+## Données affichees
+- Données de contexte permanentes:
+	- nom projet,
+	- nom niveau,
+	- nom pièce.
+- Données de controle:
+	- etat des options d'affichage (affichage/masquage: grille, règles, côtes, angles, notes),
+	- etat des options de magnetisme (snapping: grille, sommets, intersections, murs, milieux, distance de capture).
+- Données du plan:
+	- géométrie et objets de la pièce courante (pièce, murs, ouvertures, côtes, notes),
+	- autres pièces du niveau en contexte grise non editable.
+- Données de sélection:
+	- objet selectionne de la pièce courante,
+	- etat synchronise entre canvas, panneau creation et panneau détail.
+- Données de persistence:
+	- etat auto-save (en cours, synchronise, échec),
+	- message d'erreur persistant en cas d'échec auto-save.
+	- aucun champ de type date/heure de derniere synchronisation n'est affiche.
+- Données d'export:
+	- variante d'export selectionnee (`Plan simple` ou `Plan + détail`),
+	- cle technique de template PDF utilisee,
+	- périmètre d'export limite a la pièce courante,
+	- options d'affichage appliquees au rendu exporte,
+	- détail structure v1 pour la variante `Plan + détail`.
+- Données dynamiques:
+	- si la pièce est renommee ailleurs pendant l'édition, le nom affiche est mis a jour en live.
 
 ## Cas limites
-- A completer.
+- Pièce cible introuvable au chargement:
+	- la vue reste sur place avec erreur locale bloquante et édition desactivee,
+	- l'utilisateur dispose d'une action visible Retour dashboard.
+- Pièce supprimee ou rendue inaccessible pendant l'édition:
+	- la vue passe en erreur locale bloquante sans redirection forcee.
+- Clic sur un objet d'une autre pièce visible en gris:
+	- le clic est ignore pour l'édition,
+	- aucun feedback n'est affiche.
+- Tentative de suppression d'un mur mitoyen depuis la pièce courante:
+	- l'action est refusee,
+	- la vue conserve la sélection courante,
+	- un message explicite indique que le mur est partage avec une autre pièce.
+- Tentative de creation d'un mur hors de la pièce courante:
+	- la validation est refusee,
+	- aucun mur persistant n'est créé,
+	- un message explicite indique que la creation est limitee a la pièce courante.
+- Tentative de creation d'un nouveau mur intérieur qui creerait une nouvelle pièce:
+	- la validation est refusee,
+	- aucun mur persistant n'est créé,
+	- un message explicite indique que la creation d'une nouvelle pièce par ajout de mur intérieur n'est pas autorisee dans RoomEditor2DView.
+- Édition d'un mur mitoyen avec ouvertures/côtes existantes:
+	- les ouvertures et côtes restent conservees tant qu'elles sont valides apres recalcul,
+	- les ouvertures/côtes invalides sont rejetees de facon explicite sans etat partiellement applique.
+- Clic sur un noeud du panneau détail appartenant a une autre pièce:
+	- le noeud reste visible et peut etre deplie/replie,
+	- la tentative de sélection est ignoree pour l'édition,
+	- aucun mode d'édition n'est ouvert.
+- Échec auto-save persistant puis tentative de sortie:
+	- la vue demande une confirmation explicite avant de quitter.
+- Échec export PDF:
+	- la vue conserve la pièce en cours d'édition,
+	- un message d'erreur explicite est affiche,
+	- aucune perte de sélection ni de contexte.
+- Pièce renommee depuis un autre contexte pendant l'édition:
+	- le titre de la pièce et les references visibles sont mis a jour en live.
+
+## Criteres d'acceptation testables
+- Scenario 1 - Chargement initial:
+	- Given RoomEditor2DView est ouverte avec un contexte valide
+	- When la pièce est en cours de chargement
+	- Then un spinner global est affiche
+	- And les actions d'édition restent inactives jusqu'a la fin du chargement
+- Scenario 2 - Portee d'édition:
+	- Given d'autres pièces du niveau sont visibles en gris
+	- When l'utilisateur tente de selectionner un mur d'une autre pièce
+	- Then la sélection est ignoree pour l'édition
+	- And aucun feedback n'est affiche
+- Scenario 2b - Panneau détail hors pièce:
+	- Given le panneau détail est ouvert avec l'arbre complet du niveau
+	- When l'utilisateur deplie un noeud d'une autre pièce
+	- Then le contenu est visible dans l'arbre
+	- And les noeuds hors pièce courante restent affiches en gris
+	- And ces noeuds ne peuvent pas devenir sélection active
+- Scenario 3 - Auto-save nominal:
+	- Given une modification est effectuee sur la pièce courante
+	- When l'auto-save s'execute
+	- Then l'en-tete affiche un etat en cours puis synchronise
+- Scenario 3b - Édition d'un mur mitoyen:
+	- Given un mur de la pièce courante est partage avec une pièce voisine
+	- When l'utilisateur modifie la géométrie de ce mur
+	- Then la pièce voisine est mise a jour de facon coherente
+	- And la géométrie reste valide des deux côtes du mur
+	- And en cas d'échec de persistence, un rollback complet est applique
+- Scenario 4 - Auto-save en échec:
+	- Given l'auto-save echoue
+	- When la vue reste ouverte
+	- Then un message d'erreur persistant est affiche
+	- And la vue reste editable tant que la pièce cible est disponible
+- Scenario 5 - Sortie avec échec auto-save:
+	- Given un échec auto-save est actif
+	- When l'utilisateur clique Retour ou change de vue
+	- Then une confirmation explicite est demandee avant de sortir
+- Scenario 6 - Pièce introuvable:
+	- Given le roomId est invalide ou la pièce devient inaccessible
+	- When la vue tente d'afficher la pièce
+	- Then la vue affiche une erreur locale bloquante
+	- And les actions d'édition sont desactivees
+	- And une action visible Retour dashboard est disponible
+- Scenario 7 - Suppression de la pièce:
+	- Given la pièce courante est affichee
+	- When l'utilisateur confirme sa suppression
+	- Then la suppression est executee
+	- And la vue retourne automatiquement vers DashboardView
+- Scenario 8 - Contexte d'en-tete:
+	- Given la vue est en etat normal
+	- When l'utilisateur consulte l'en-tete
+	- Then nom projet, nom niveau et nom pièce sont toujours visibles
+	- And aucun horodatage de derniere synchronisation n'est affiche
+- Scenario 9 - Renommage externe:
+	- Given la pièce est renommee depuis un autre contexte
+	- When la mise a jour est recue
+	- Then le titre de la pièce est mis a jour en live dans la vue
+- Scenario 10 - Export pièce plan simple:
+	- Given la vue est en etat normal sur une pièce valide
+	- And certaines options d'affichage sont activees/desactivees
+	- When l'utilisateur choisit Export PDF puis Plan simple
+	- Then la generation utilise la cle `pdf_room_editor_piece_plan_simple`
+	- And le document porte uniquement sur la pièce courante
+	- And le rendu applique les options d'affichage actives
+- Scenario 11 - Export pièce plan + détail:
+	- Given la vue est en etat normal sur une pièce valide
+	- And certaines options d'affichage sont activees/desactivees
+	- When l'utilisateur choisit Export PDF puis Plan + détail
+	- Then la generation utilise la cle `pdf_room_editor_piece_plan_detail`
+	- And le document inclut le plan de la pièce et la structure de détail v1
+	- And le rendu applique les options d'affichage actives
+- Scenario 12 - Controles affichage et magnetisme:
+	- Given RoomEditor2DView est ouverte sur une pièce valide
+	- When l'utilisateur modifie les options d'affichage ou de magnetisme
+	- Then le canvas applique ces options dans le contexte de la pièce courante
+	- And les règles de portee d'édition restent limitees a la pièce courante
+- Scenario 13 - Suppression mur mitoyen interdite:
+	- Given un mur de la pièce courante est mitoyen avec une autre pièce
+	- When l'utilisateur tente de supprimer ce mur
+	- Then la suppression est refusee
+	- And un message explicite est affiche
+- Scenario 14 - Creation mur hors pièce interdite:
+	- Given RoomEditor2DView est ouverte sur la pièce courante
+	- When l'utilisateur tente de valider un mur dont la géométrie sort de la pièce courante
+	- Then aucun mur persistant n'est créé
+	- And un message explicite est affiche
+- Scenario 15 - Creation d'une nouvelle pièce par ajout de mur intérieur interdite:
+	- Given la pièce courante est valide
+	- When l'utilisateur tente d'ajouter un nouveau mur intérieur qui créé une nouvelle pièce
+	- Then aucun mur persistant n'est créé
+	- And un message explicite est affiche
+- Scenario 16 - Conservation des ouvertures et côtes:
+	- Given un mur mitoyen possede des ouvertures et des côtes associees
+	- When sa géométrie est modifiee dans RoomEditor2DView
+	- Then les ouvertures et côtes valides sont conservees apres recalcul
+	- And les references devenues invalides sont rejetees avec message explicite
+	- And aucun etat partiellement applique n'est visible
+
+## Messages UI standardises (proposition)
+- `ROOM_WALL_SHARED_DELETE_FORBIDDEN`: Ce mur est mitoyen. Sa suppression n'est pas autorisee dans cette vue.
+- `ROOM_WALL_OUTSIDE_SCOPE_FORBIDDEN`: Ce mur sort de la pièce courante. Creation impossible dans cette vue.
+- `ROOM_NEW_WALL_ROOM_CREATION_FORBIDDEN`: L'ajout d'un mur intérieur creant une nouvelle pièce n'est pas autorise dans cette vue.
+- `ROOM_SHARED_WALL_TX_FAILED`: Modification annulee. Les deux pièces ont ete restaurees.
+- `ROOM_DEPENDENCY_INVALID_AFTER_EDIT`: Certaines ouvertures ou côtes sont devenues invalides et n'ont pas ete appliquees.
+
+## Recap decisions et hypotheses explicites
+- Decisions validees:
+	- Édition strictement limitee a la pièce courante.
+	- Les autres pièces du niveau restent visibles en contexte grise non editable.
+	- Les clics sur objets hors pièce courante sont ignores sans feedback.
+	- Sauvegarde en auto-save uniquement, sans mode brouillon explicite.
+	- En cas d'échec auto-save lors d'une sortie, confirmation explicite obligatoire.
+	- Retour principal de la vue vers DashboardView.
+	- Suppression de pièce avec confirmation explicite puis retour automatique dashboard.
+	- En cas de pièce introuvable: erreur locale bloquante, édition desactivee, action visible Retour dashboard.
+	- En-tete toujours visible avec nom projet, nom niveau, nom pièce, sans horodatage de synchro.
+	- Renommage externe de la pièce reflechi en live dans la vue.
+- Hypotheses explicites:
+	- La vue est ouverte avec un contexte d'entree cohérent (projectId, levelId, roomId).
+	- Les contrats detailles de canvas, panneaux, sections et synchronisation transverse restent sources dans les documents composants/logique references.
+	- Les choix d'implementation technique (architecture d'etat, mecanisme exact d'auto-save) restent hors périmètre de cette specification de vue.
 
 ## References
 - Referentiel global : [ihm.md](../ihm.md)
+- Composant canvas : [canvas.md](../composants/canvas.md)
+- Composants panneaux : [panels.md](../composants/panels.md)
+- Composants sections : [sections.md](../composants/sections.md)
+- Composants transverses : [transverses.md](../composants/transverses.md)
+- Composant PDF : [pdf.md](../composants/pdf.md)

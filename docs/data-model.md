@@ -8,7 +8,7 @@
 ### `levels`
 - niveaux / étages d'un projet
 
-### `pieces`
+### `pièces`
 - une pièce appartenant à un niveau
 
 ### `piece_vertices`

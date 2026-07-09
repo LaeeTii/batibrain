@@ -90,7 +90,7 @@ export function RoomPreview({ vertices, walls, openings, accentColor }: RoomPrev
         className="room-preview__svg"
         viewBox={`${viewBox.minX} ${viewBox.minY} ${viewBox.width} ${viewBox.height}`}
         role="img"
-        aria-label="Apercu de la piece"
+        aria-label="Aperçu de la pièce"
       >
         <defs>
           <pattern id={patternId} width="16" height="16" patternUnits="userSpaceOnUse">

@@ -12,7 +12,7 @@ Mode d'exécution: projet personnel, sans sprint. On avance par tâches détaill
 
 - Géométrie pièce en vue plan: déplacement de sommets, insertion, suppression avec garde-fous de validité.
 - Snapping horizontal/vertical lors du déplacement des sommets.
-- Edition de la longueur d'un mur depuis le plan.
+- Édition de la longueur d'un mur depuis le plan.
 - Calculs géométriques partagés: surface, périmètre, centroid, angles, génération des murs depuis les sommets.
 - Persistance Supabase des projets, niveaux, pièces, sommets, murs, ouvertures.
 - Initialisation des nouvelles pièces en carré 200 cm x 200 cm avec murs par défaut 10 cm et 250 cm.
@@ -284,12 +284,12 @@ Objectif:
 - Donner une lecture technique directe des dimensions.
 
 Inclut:
-- Cotes de longueur sur plan.
-- Cotes de hauteur et d'épaisseur dans les vues appropriées.
+- Côtes de longueur sur plan.
+- Côtes de hauteur et d'épaisseur dans les vues appropriées.
 
 Critères d'acceptation:
-- Les cotes affichent les bonnes unités.
-- Les cotes restent lisibles aux niveaux de zoom usuels.
+- Les côtes affichent les bonnes unités.
+- Les côtes restent lisibles aux niveaux de zoom usuels.
 
 Prompt Copilot (texte brut):
 Ajoute des lignes de côte pour les longueurs en plan et pour hauteur et épaisseur dans les vues pertinentes. Garantis la cohérence des unités en centimètres et évite les chevauchements visuels majeurs.

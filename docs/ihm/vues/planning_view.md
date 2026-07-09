@@ -3,7 +3,7 @@
 ## Objectif
 - A completer.
 
-## Perimetre
+## Périmètre
 - A completer.
 
 ## Structure ecran
@@ -12,13 +12,13 @@
 ## Interactions utilisateur
 - A completer.
 
-## Regles metier
+## Règles metier
 - A completer.
 
 ## Etats et feedback
 - A completer.
 
-## Donnees affichees
+## Données affichees
 - A completer.
 
 ## Cas limites

@@ -90,7 +90,7 @@ function formatOpeningType(type: 'door' | 'window' | 'other'): string {
     return 'Porte';
   }
   if (type === 'window') {
-    return 'Fenetre';
+    return 'Fenêtre';
   }
   return 'Ouverture';
 }
@@ -510,7 +510,7 @@ export async function exportDetailedLevelPlanPdf({
 
   cursorY += planHeightMm + 8;
 
-  drawSectionTitle('Metriques principales');
+  drawSectionTitle('Métriques principales');
   ensureSpace(20);
   pdf.setFillColor(246, 248, 252);
   pdf.roundedRect(layout.marginMm, cursorY, contentWidthMm, 16, 2, 2, 'F');
@@ -519,13 +519,13 @@ export async function exportDetailedLevelPlanPdf({
   pdf.setFontSize(9.5);
   const metricLine1 = [
     `Surface totale: ${formatArea(metrics.totalAreaM2)}`,
-    `Pieces: ${metrics.roomCount}`,
+    `Pièces: ${metrics.roomCount}`,
     `Murs exterieurs: ${metrics.exteriorWallsCount}`,
   ].join(' | ');
   const metricLine2 = [
     `Ouvertures: ${metrics.openingsCount}`,
     `Portes: ${metrics.doorsCount}`,
-    `Fenetres: ${metrics.windowsCount}`,
+    `Fenêtres: ${metrics.windowsCount}`,
     `H min/max: ${formatOptionalLength(metrics.minHeightCm)} / ${formatOptionalLength(metrics.maxHeightCm)}`,
   ].join(' | ');
   pdf.text(metricLine1, layout.marginMm + 3, cursorY + 6);
@@ -533,14 +533,14 @@ export async function exportDetailedLevelPlanPdf({
   cursorY += 21;
 
   drawTableSection(
-    'Liste des pieces',
+    'Liste des pièces',
     [
-      { label: 'Piece', widthMm: 66 },
+      { label: 'Pièce', widthMm: 66 },
       { label: 'Surface', widthMm: 30, align: 'right' },
       { label: 'Murs', widthMm: 20, align: 'right' },
       { label: 'Ouvertures', widthMm: 26, align: 'right' },
       { label: 'Portes', widthMm: 20, align: 'right' },
-      { label: 'Fenetres', widthMm: 22, align: 'right' },
+      { label: 'Fenêtres', widthMm: 22, align: 'right' },
       { label: 'H min/max', widthMm: 77 },
     ],
     metrics.rooms.map((room) => [
@@ -557,10 +557,10 @@ export async function exportDetailedLevelPlanPdf({
   drawTableSection(
     'Liste des murs',
     [
-      { label: 'Piece', widthMm: 70 },
+      { label: 'Pièce', widthMm: 70 },
       { label: 'Mur', widthMm: 20 },
       { label: 'Longueur', widthMm: 28, align: 'right' },
-      { label: 'Epaisseur', widthMm: 28, align: 'right' },
+      { label: 'Épaisseur', widthMm: 28, align: 'right' },
       { label: 'H gauche', widthMm: 28, align: 'right' },
       { label: 'H droite', widthMm: 28, align: 'right' },
     ],
@@ -570,12 +570,12 @@ export async function exportDetailedLevelPlanPdf({
   drawTableSection(
     'Liste des ouvertures',
     [
-      { label: 'Piece', widthMm: 52 },
+      { label: 'Pièce', widthMm: 52 },
       { label: 'Mur', widthMm: 18 },
       { label: 'Type', widthMm: 24 },
       { label: 'Largeur', widthMm: 24, align: 'right' },
       { label: 'Hauteur', widthMm: 24, align: 'right' },
-      { label: 'Allege', widthMm: 24, align: 'right' },
+      { label: 'Allège', widthMm: 24, align: 'right' },
       { label: 'Position', widthMm: 24, align: 'right' },
       { label: 'ID', widthMm: 33 },
     ],

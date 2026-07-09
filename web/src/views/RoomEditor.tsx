@@ -960,13 +960,13 @@ export function RoomEditor({
     <DashboardLayout>
       <header className="room-editor__header">
         <div>
-          <h2 className="dashboard-pageTitle">Editeur de piece (vue du dessus)</h2>
+          <h2 className="dashboard-pageTitle">Éditeur de pièce (vue du dessus)</h2>
           <p className="room-editor__breadcrumbs">
             {selectedProject?.name || 'Projet'}
             {' > '}
             {selectedLevel?.name || 'Niveau'}
             {' > '}
-            {roomNameInput.trim() || activeRoom?.name || 'Nouvelle piece'}
+            {roomNameInput.trim() || activeRoom?.name || 'Nouvelle pièce'}
           </p>
         </div>
         <div className="room-editor__headerActions">
@@ -984,23 +984,23 @@ export function RoomEditor({
 
       {!supabaseConfigured ? (
         <section className="dashboard-emptyState">
-          <h3>Supabase non configure</h3>
+          <h3>Supabase non configuré</h3>
           <p>
-            Definis VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY dans web/.env.local pour activer
-            la gestion des projets, niveaux et pieces.
+            Définis VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY dans web/.env.local pour activer
+            la gestion des projets, niveaux et pièces.
           </p>
         </section>
       ) : (
         <section className="room-editor__workspace">
           <aside className="room-editor__roomsPanel">
             <div className="room-editor__panelHeader">
-              <h3 className="dashboard-panelTitle">Pieces</h3>
+              <h3 className="dashboard-panelTitle">Pièces</h3>
               <button
                 type="button"
                 className="room-editor__iconAction"
                 onClick={handleCreateRoom}
                 disabled={isBusy || !selectedLevelId}
-                aria-label="Preparer une nouvelle piece"
+                aria-label="Préparer une nouvelle pièce"
               >
                 +
               </button>
@@ -1015,7 +1015,7 @@ export function RoomEditor({
                   disabled={isBusy || availableProjects.length === 0}
                 >
                   <option value="">
-                    {availableProjects.length === 0 ? 'Aucun projet' : 'Selectionner un projet'}
+                    {availableProjects.length === 0 ? 'Aucun projet' : 'Sélectionner un projet'}
                   </option>
                   {availableProjects.map((project) => (
                     <option key={project.id} value={project.id}>
@@ -1033,7 +1033,7 @@ export function RoomEditor({
                   disabled={isBusy || !selectedProjectId || availableLevels.length === 0}
                 >
                   <option value="">
-                    {availableLevels.length === 0 ? 'Aucun niveau' : 'Selectionner un niveau'}
+                    {availableLevels.length === 0 ? 'Aucun niveau' : 'Sélectionner un niveau'}
                   </option>
                   {availableLevels.map((level) => (
                     <option key={level.id} value={level.id}>
@@ -1045,7 +1045,7 @@ export function RoomEditor({
             </div>
 
             <label className="dashboard-field dashboard-field--compact">
-              <span>Nom de la nouvelle piece</span>
+              <span>Nom de la nouvelle pièce</span>
               <input
                 value={newRoomNameInput}
                 onChange={(event) => setNewRoomNameInput(event.target.value)}
@@ -1056,7 +1056,7 @@ export function RoomEditor({
 
             <div className="room-editor__list">
               {availableRooms.length === 0 ? (
-                <p className="room-editor__hint">Aucune piece pour ce niveau.</p>
+                <p className="room-editor__hint">Aucune pièce pour ce niveau.</p>
               ) : (
                 availableRooms.map((room) => {
                   const roomSnapshot = levelRoomSnapshots.find((snapshot) => snapshot.room.id === room.id);
@@ -1083,8 +1083,8 @@ export function RoomEditor({
             <div className="room-editor__toolbar">
               <div className="room-editor__toolGroup">
                 <button type="button" className="room-editor__toolButton is-active">Dessiner</button>
-                <button type="button" className="room-editor__toolButton">Selection</button>
-                <button type="button" className="room-editor__toolButton">Deplacer</button>
+                <button type="button" className="room-editor__toolButton">Sélection</button>
+                <button type="button" className="room-editor__toolButton">Déplacer</button>
                 <button type="button" className="room-editor__toolButton">Mesurer</button>
                 <button type="button" className="room-editor__toolButton">Annoter</button>
               </div>
@@ -1094,7 +1094,7 @@ export function RoomEditor({
                 onClick={handleSaveRoom}
                 disabled={isBusy || !selectedLevelId}
               >
-                {busyAction === 'save' ? 'Enregistrement...' : activeRoom ? 'Enregistrer' : 'Creer la piece'}
+                {busyAction === 'save' ? 'Enregistrement...' : activeRoom ? 'Enregistrer' : 'Créer la pièce'}
               </button>
             </div>
 
@@ -1113,7 +1113,7 @@ export function RoomEditor({
 
           <aside className="room-editor__inspector">
             <div className="room-editor__panelHeader">
-              <h3 className="dashboard-panelTitle">{roomNameInput.trim() || activeRoom?.name || 'Piece'}</h3>
+              <h3 className="dashboard-panelTitle">{roomNameInput.trim() || activeRoom?.name || 'Pièce'}</h3>
             </div>
 
             <div className="room-editor__tabs">
@@ -1122,7 +1122,7 @@ export function RoomEditor({
                 className={`room-editor__tab ${inspectorTab === 'metrics' ? 'is-active' : ''}`}
                 onClick={() => setInspectorTab('metrics')}
               >
-                Metriques
+                Métriques
               </button>
               <button
                 type="button"
@@ -1136,7 +1136,7 @@ export function RoomEditor({
             {inspectorTab === 'metrics' ? (
               <div className="room-editor__statsList">
                 <div className="room-editor__statRow"><span>Surface</span><strong>{formatAreaM2(areaM2)}</strong></div>
-                <div className="room-editor__statRow"><span>Perimetre</span><strong>{formatMeters(perimeterM)}</strong></div>
+                <div className="room-editor__statRow"><span>Périmètre</span><strong>{formatMeters(perimeterM)}</strong></div>
                 <div className="room-editor__statRow">
                   <span>Hauteur sous plafond</span>
                   <strong>{roomHeightM === null ? 'N/A' : formatMeters(roomHeightM)}</strong>
@@ -1199,7 +1199,7 @@ export function RoomEditor({
                           onChange={(event) => handleOpeningDraftChange('type', event.target.value)}
                         >
                           <option value="door">Porte</option>
-                          <option value="window">Fenetre</option>
+                          <option value="window">Fenêtre</option>
                           <option value="other">Autre</option>
                         </select>
                       </label>
@@ -1224,7 +1224,7 @@ export function RoomEditor({
                         />
                       </label>
                       <label className="dashboard-field dashboard-field--compact">
-                        <span>Allege (cm)</span>
+                        <span>Allège (cm)</span>
                         <input
                           type="number"
                           min="0"
@@ -1277,7 +1277,7 @@ export function RoomEditor({
                     )}
                   </div>
                 ) : (
-                  <p className="room-editor__hint">Selectionne un mur dans le plan pour ajouter une ouverture.</p>
+                  <p className="room-editor__hint">Sélectionne un mur dans le plan pour ajouter une ouverture.</p>
                 )}
               </div>
             )}

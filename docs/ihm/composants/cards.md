@@ -1,25 +1,56 @@
 # Composants - Cards
 
 ## Objectif
-- A completer.
+- Definir le contrat fonctionnel des cartes de la vue dashboard, centrees sur la consultation et les actions rapides sur une pièce.
 
 ## Liste des composants
-- A completer.
+- RoomCard
 
 ## Responsabilites
-- A completer.
+- Afficher une synthese exploitable de la pièce (nom, niveau, apercu, informations utiles).
+- Exposer les actions rapides de la pièce via des icones.
+- Permettre l'ouverture de la pièce en édition par clic principal sur la carte.
+- Exposer les actions d'export PDF pièce avec choix de variante.
 
 ## Props et contrat
-- A completer.
+- Données d'entree minimales:
+	- id de pièce,
+	- nom de pièce,
+	- niveau de rattachement,
+	- données d'apercu du plan,
+	- metadonnees de synthese utiles.
+- Etat d'affichage:
+	- pièce active/inactive,
+	- pièce supprimee logiquement (masquee par defaut au niveau vue).
+- Callbacks:
+	- onOpenRoom,
+	- onAddNote,
+	- onSoftDelete,
+	- onExportPdf(mode: plan | détail).
 
 ## Etats et interactions
-- A completer.
+- Le clic sur la surface principale de la carte ouvre l'édition de la pièce.
+- Les actions secondaires sont affichees sous forme d'icones uniquement.
+- L'icone export ouvre un menu a deux choix: plan simple, plan + détail.
+- La suppression logique demande confirmation avant execution.
 
-## Regles metier
-- A completer.
+## Règles metier
+- Le nom de pièce est obligatoire; si vide a la creation, la valeur par defaut est Nouvelle pièce.
+- Les pièces supprimees logiquement ne sont pas affichees par defaut dans la grille dashboard.
+- Les actions de la carte sont executees dans le contexte du projet courant.
 
 ## Cas limites
-- A completer.
+- Pièce non accessible au moment du clic (obsolescence de données): feedback d'erreur controle sans blocage global.
+- Échec export PDF: message d'erreur explicite et conservation du contexte.
+- Nom de pièce manquant dans les données retournees: affichage du nom normalise Nouvelle pièce.
+
+## Criteres d'acceptation testables
+- Given une RoomCard visible, When l'utilisateur clique sur la carte, Then la pièce correspondante s'ouvre en édition.
+- Given l'utilisateur clique sur l'icone export, When le menu s'ouvre, Then les deux choix plan simple et plan + détail sont disponibles.
+- Given l'utilisateur clique sur l'icone suppression, When il confirme, Then la suppression logique est declenchee.
+- Given une pièce sans nom est creee, When la carte est affichee, Then son libelle est Nouvelle pièce.
 
 ## References
 - Referentiel global : [ihm.md](../ihm.md)
+- Vue associee : [dashboard_view.md](../vues/dashboard_view.md)
+- Logique géométrique : [geometry.md](../logique/geometry.md)
