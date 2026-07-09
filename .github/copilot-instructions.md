@@ -34,6 +34,7 @@
 | **Thématique**       | **Fichier**                                  | **Description**                                  |
 |----------------------|--------------------------------------------|------------------------------------------------|
 | **Frontend**         | [frontend.instructions.md](./frontend.instructions.md) | Regles pour les vues, composants et styles web. |
+| **IHM**              | [ihm.instructions.md](./ihm.instructions.md) | Routeur de lecture vers la specification IHM (vues, composants, logique). |
 | **Modèle de données**| [data-model-guidelines.instructions.md](./data-model-guidelines.instructions.md) | Règles métiers et conventions de données. |
 | **Workflow Git**     | [git-workflow.instructions.md](./git-workflow.instructions.md) | Conventional Commit et bonnes pratiques Git. |
 
