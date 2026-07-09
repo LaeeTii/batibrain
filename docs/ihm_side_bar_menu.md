@@ -1,4 +1,4 @@
-# Side bar - description
+# Side bar menu- description
 
 ## Structure (colone de gauche)
 - Logo + nom de l'application

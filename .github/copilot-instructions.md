@@ -33,7 +33,7 @@
 ## Autres Guidelines Spécifiques
 | **Thématique**       | **Fichier**                                  | **Description**                                  |
 |----------------------|--------------------------------------------|------------------------------------------------|
-| **UI**               | [ui-guidelines.instructions.md](./ui-guidelines.instructions.md) | Règles pour les vues, composants et styles.    |
+| **Frontend**         | [frontend.instructions.md](./frontend.instructions.md) | Regles pour les vues, composants et styles web. |
 | **Modèle de données**| [data-model-guidelines.instructions.md](./data-model-guidelines.instructions.md) | Règles métiers et conventions de données. |
 | **Workflow Git**     | [git-workflow.instructions.md](./git-workflow.instructions.md) | Conventional Commit et bonnes pratiques Git. |
 
