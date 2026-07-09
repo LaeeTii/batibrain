@@ -13,7 +13,7 @@ Ce starter pack fournit une base **MVP** pour démarrer rapidement :
 ## Structure
 
 ```
-app-maison/
+bati-brain/
 ├── docs/
 ├── shared/src/
 ├── web/src/components/
@@ -85,7 +85,7 @@ supabase login
 3. Initialiser la configuration locale depuis la racine du projet :
 
 ```bash
-cd /Users/56593p/workspaces/perso/app-maison
+cd /Users/56593p/workspaces/perso/bati-brain
 supabase init
 ```
 
