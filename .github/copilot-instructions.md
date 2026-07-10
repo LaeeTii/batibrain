@@ -52,6 +52,7 @@
 - When a code change modifies documented behavior, update the relevant file in [docs/](../docs/) in the same change.
 - Do not introduce features beyond the current MVP priorities unless the user explicitly asks for them.
 - If the documentation does not fully answer the task, make the smallest assumption consistent with the existing docs and state that assumption clearly.
+- Toujours utiliser les accents en francais lors de la generation de texte (Markdown) et de texte dans le code (commentaires, labels UI, messages, chaines). Ne pas produire de francais sans accents sauf contrainte technique explicite.
 
 ## Autres Guidelines Spécifiques
 | **Thématique**       | **Fichier**                                  | **Description**                                  |

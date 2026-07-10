@@ -1,28 +1,40 @@
 # IHM - PlanningView
 
+## Récupération du legacy
+- Sources legacy utilisées:
+	- `docs/spec.md` (présence d'une vue Planning dans la navigation, sans spécification détaillée),
+	- `docs/product.md` (objectif général de pilotage de travaux).
+- Intention produit historique à conserver:
+	- Offrir une vue de planification dans le contexte du projet courant.
+- Informations legacy explicites disponibles:
+	- Présence de la vue dans la navigation principale.
+- Limites connues du legacy:
+	- Aucun détail legacy explicite sur horizon de planification, granularité temporelle, capacité, jalons, contraintes, dépendances ou synchronisation avec tâches/travaux.
+	- Une spécification IHM complète reste à produire.
+
 ## Objectif
-- A completer.
+- À compléter.
 
 ## Périmètre
-- A completer.
+- À compléter.
 
-## Structure ecran
-- A completer.
+## Structure écran
+- À compléter.
 
 ## Interactions utilisateur
-- A completer.
+- À compléter.
 
-## Règles metier
-- A completer.
+## Règles métier
+- À compléter.
 
-## Etats et feedback
-- A completer.
+## États et feedback
+- À compléter.
 
-## Données affichees
-- A completer.
+## Données affichées
+- À compléter.
 
 ## Cas limites
-- A completer.
+- À compléter.
 
-## References
-- Referentiel global : [ihm.md](../ihm.md)
+## Références
+- Référentiel global : [ihm.md](../ihm.md)

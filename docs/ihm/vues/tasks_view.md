@@ -1,28 +1,45 @@
 # IHM - TasksView
 
+## Récupération du legacy
+- Sources legacy utilisées:
+	- `docs/product.md` (module prioritaire Tâches par pièce / mur / étage),
+	- `docs/spec.md` (Phase 5.1 Tâches).
+
+- Intention produit historique à conserver:
+	- Gérer les actions de travaux rattachées au projet, à la pièce ou au mur.
+- Règles fonctionnelles legacy explicites:
+	- CRUD complet des tâches,
+	- Gestion d'un statut de tâche,
+	- Gestion d'une priorité,
+	- Filtrage des tâches par projet, étage, pièce et mur.
+- Critère d'acceptation legacy explicite:
+	- CRUD complet des tâches avec statut et priorité.
+- Limites connues du legacy:
+	- Aucun détail legacy explicite sur taxonomie de statuts, affectation utilisateur, dates d'échéance, récurrence ou dépendances entre tâches.
+
 ## Objectif
-- A completer.
+- À compléter.
 
 ## Périmètre
-- A completer.
+- À compléter.
 
-## Structure ecran
-- A completer.
+## Structure écran
+- À compléter.
 
 ## Interactions utilisateur
-- A completer.
+- À compléter.
 
-## Règles metier
-- A completer.
+## Règles métier
+- À compléter.
 
-## Etats et feedback
-- A completer.
+## États et feedback
+- À compléter.
 
-## Données affichees
-- A completer.
+## Données affichées
+- À compléter.
 
 ## Cas limites
-- A completer.
+- À compléter.
 
-## References
-- Referentiel global : [ihm.md](../ihm.md)
+## Références
+- Référentiel global : [ihm.md](../ihm.md)

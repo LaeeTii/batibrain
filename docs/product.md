@@ -1,52 +1,75 @@
-# Produit — BatiBrain (obsolète - ne pas concidérer comme source de vérité mais utile pour le contexte historique)
+# Produit — BatiBrain (roadmap active)
 
-## Objectif
-Construire BatiBrain, une application web + mobile pour piloter des travaux de maison, avec un coeur métier centré sur les pièces et les murs.
+Date de mise à jour: 2026-07-10
 
-## MVP
+## Positionnement
+BatiBrain n'est pas un MVP: c'est une vraie application produit, livrée par versions successives.
 
-### Modules prioritaires
-1. Pièces polygonales
-2. Murs et ouvertures
-3. Vue de dessus + vue de face d'un mur
-4. Métriques automatiques
-5. Tâches par pièce / mur
-6. Documents et photos
+## Source de vérité fonctionnelle
+- La description fonctionnelle détaillée des écrans et interactions est portée par `docs/ihm/`.
+- Le backlog consolidé et la priorisation des features sont portés par `docs/spec.md`.
+- Ce fichier formalise le découpage de livraison V1 à V5, avec un jalon intermédiaire V2.1.
 
-## Règles produit
+## Invariants produit
 - Une pièce est définie par une liste ordonnée de sommets `(x, y)`.
-- Un mur correspond à un segment entre deux sommets consécutifs.
+- Un mur est le segment entre deux sommets consécutifs.
 - Les angles sont calculés, pas stockés.
-- Les coordonnées sont globales pour permettre une vue étage.
-- Les modifications géométriques partent de la vue de dessus.
-- La création d’une nouvelle pièce initialise un carré de `200 cm x 200 cm`.
-- Chaque mur créé par défaut démarre avec une épaisseur de `10 cm` et une hauteur de `250 cm`.
-
-## Hors périmètre MVP
-- moteur de contraintes CAO avancé
-- collaboration temps réel complexe
-- moteur 3D complet
-- automatisation LLM sans validation humaine
+- Les coordonnées sont globales au niveau.
+- Les calculs métier sont exprimés en centimètres.
+- Les valeurs par défaut restent: pièce `200 x 200 cm`, mur `10 cm` d'épaisseur, `250 cm` de hauteur.
 
 ## Découpage de livraison
 
-### V1
-- création de projet via un formulaire `nom`, indépendante de la sélection du projet actif
-- création de niveau via un formulaire `projet + nom`, indépendante de la sélection du niveau actif
-- création / édition de pièce polygonale, y compris insertion et suppression de sommet tant que la pièce reste valide
-- préparation de pièce via un formulaire `niveau + nom`, indépendante de la sélection de la pièce affichée
-- création effective d’une pièce uniquement lors du clic sur `Enregistrer` dans la vue d’édition
-- affichage des longueurs de murs
-- sélection d'un mur
-- sélection d’un niveau via une liste déroulante qui charge les pièces de ce niveau
-- sélection d’une pièce via une liste déroulante qui met à jour le canvas
-- ajout d'ouverture simple
-- sauvegarde en base
+### V1 — Socle applicatif métier
+Inclut le socle principal déjà décrit dans `docs/ihm/` (hors modules explicitement reportés en V2 et V3) et les features de la spec prévues pour la V1.
 
-### V1.1
-- murs en pente via `hauteur_gauche` / `hauteur_droite`
-- tâches
-- documents
+Périmètre attendu:
+- Authentification et accès application (LoginView).
+- Dashboard projet et navigation métier.
+- Éditeur 2D global et éditeur 2D par pièce.
+- Géométrie pièce/mur/ouvertures, métriques et exports PDF existants.
+- ProjectMetricsView rattachée à V1 avec:
+	- tableau des métriques projet,
+	- filtres,
+	- exports PDF, Excel et CSV.
+- Vues et composants transverses du socle déjà spécifiés dans `docs/ihm/`.
+- Features spec V1 prioritaires:
+	- collaboration projet asynchrone simple,
+	- verrouillage pour éviter les conflits d'édition (la collaboration temps réel complexe n'est pas prévue),
+	- validation d'adjacence des ouvertures intérieures,
+	- icône de pièce configurable,
+	- vue mur dédiée (vue de face),
+	- profils de hauteur multiples sur un mur.
 
-### V1.2
-- assistant LLM orienté actions avec prévisualisation et validation
+### V2 — Gestion des documents et photos
+Périmètre attendu:
+- DocumentsView (upload, listing, suppression, rattachement métier).
+- PhotosView (gestion des photos de chantier et rattachement métier).
+
+### V2.1 — PWA (mobile web)
+Périmètre attendu:
+- Livraison de l'application en Progressive Web App (PWA).
+- Installation sur terminaux mobiles depuis le navigateur.
+- Expérience responsive renforcée pour les usages chantier.
+- Capacités offline de base pour les parcours critiques.
+
+### V3 — Gestion des tâches, travaux et planning
+Périmètre attendu:
+- TasksView (CRUD, statuts, priorités, filtres).
+- WorksView (gestion et suivi des travaux).
+- PlanningView (planification, jalons, dépendances selon spec détaillée).
+
+### V4 — IA avec validation humaine
+Périmètre attendu:
+- Assistant IA orienté intentions.
+- Prévisualisation obligatoire des actions.
+- Validation explicite utilisateur avant exécution.
+
+### V5 — Moteur 3D complet
+Périmètre attendu:
+- Vue et interactions 3D complètes du projet.
+- Cohérence des données 2D/3D avec le modèle métier.
+
+
+## Hors périmètre actuel
+- Collaboration temps réel complexe.

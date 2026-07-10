@@ -1,28 +1,40 @@
 # IHM - PhotosView
 
+## Récupération du legacy
+- Sources legacy utilisées:
+	- `docs/product.md` (module prioritaire Documents et photos),
+	- `docs/spec.md` (navigation prévue vers une vue Photos, sans détail fonctionnel).
+- Intention produit historique à conserver:
+	- Permettre la gestion des photos de chantier dans le contexte du projet courant.
+- Informations legacy explicites disponibles:
+	- Existence d'une vue Photos dans la navigation principale.
+- Limites connues du legacy:
+	- Aucun détail legacy explicite sur upload, métadonnées, rattachement (projet/pièce/mur), tri, suppression, annotation ou droits d'accès.
+	- Une spécification IHM complète reste à produire, en priorisant la cohérence avec DocumentsView et TasksView.
+
 ## Objectif
-- A completer.
+- À compléter.
 
 ## Périmètre
-- A completer.
+- À compléter.
 
-## Structure ecran
-- A completer.
+## Structure écran
+- À compléter.
 
 ## Interactions utilisateur
-- A completer.
+- À compléter.
 
-## Règles metier
-- A completer.
+## Règles métier
+- À compléter.
 
-## Etats et feedback
-- A completer.
+## États et feedback
+- À compléter.
 
-## Données affichees
-- A completer.
+## Données affichées
+- À compléter.
 
 ## Cas limites
-- A completer.
+- À compléter.
 
-## References
-- Referentiel global : [ihm.md](../ihm.md)
+## Références
+- Référentiel global : [ihm.md](../ihm.md)
