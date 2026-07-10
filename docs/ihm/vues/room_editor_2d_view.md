@@ -94,7 +94,7 @@
 	- l'export reprend les options d'affichage actives au moment du declenchement (grille, règles, côtes, angles, notes).
 	- les options de magnetisme (snapping) n'impactent pas le rendu PDF.
 	- la variante plan simple exporte la pièce courante uniquement.
-	- la variante plan + détail exporte la pièce courante et son détail structure v1 (cf. composant PDF).
+	- la variante plan + détail exporte la pièce courante et sa structure de détail standard (cf. composant PDF).
 	- en cas d'échec d'export, la vue conserve le contexte et affiche une erreur explicite.
 - Navigation:
 	- l'action Retour ramene toujours vers DashboardView.
@@ -131,7 +131,7 @@
 	- la variante `Plan + détail` utilise la cle technique `pdf_room_editor_piece_plan_detail`.
 	- les exports appliquent les options d'affichage (affichage/masquage) actives de la vue au moment de l'export.
 	- les options de magnetisme (snapping) ne modifient pas le contenu PDF exporte.
-	- la structure de détail par defaut suit le template v1 de [pdf.md](../composants/pdf.md).
+	- la structure de détail par defaut suit le template standard de [pdf.md](../composants/pdf.md).
 
 ## Tracabilite d'externalisation
 - Contrat de rendu, navigation visuelle et interactions canvas: [canvas.md](../composants/canvas.md).
@@ -194,7 +194,7 @@
 	- cle technique de template PDF utilisee,
 	- périmètre d'export limite a la pièce courante,
 	- options d'affichage appliquees au rendu exporte,
-	- détail structure v1 pour la variante `Plan + détail`.
+	- détail structure standard pour la variante `Plan + détail`.
 - Données dynamiques:
 	- si la pièce est renommee ailleurs pendant l'édition, le nom affiche est mis a jour en live.
 
@@ -303,7 +303,7 @@
 	- And certaines options d'affichage sont activees/desactivees
 	- When l'utilisateur choisit Export PDF puis Plan + détail
 	- Then la generation utilise la cle `pdf_room_editor_piece_plan_detail`
-	- And le document inclut le plan de la pièce et la structure de détail v1
+	- And le document inclut le plan de la pièce et la structure de détail standard
 	- And le rendu applique les options d'affichage actives
 - Scenario 12 - Controles affichage et magnetisme:
 	- Given RoomEditor2DView est ouverte sur une pièce valide

@@ -131,7 +131,7 @@
   - un document PDF du plan simple de la pièce.
 - Decisions:
   - les options de magnetisme (snapping) ne modifient pas le rendu PDF,
-  - l'en-tete contextuel (projet, niveau, pièce) suit le contrat de structure détail v1 si la vue l'expose.
+  - l'en-tete contextuel (projet, niveau, pièce) suit le contrat de structure détail standard si la vue l'expose.
 
 ### Template PDF 6 - Room editor export pièce plan + détail
 - Id: pdf_room_editor_piece_plan_detail
@@ -151,40 +151,64 @@
 - Sortie attendue:
   - un document PDF du plan de pièce avec détail.
 - Decisions:
-  - la structure de détail suit le template v1,
+  - la structure de détail suit le template standard,
   - les options de magnetisme (snapping) ne modifient pas le rendu PDF,
   - le rendu du plan dans le PDF respecte les options d'affichage (affichage/masquage) actives.
 
-## Structure de détail par defaut (template v1)
+## Structure de détail (template standard)
 - Objectif:
-  - Fournir une base commune de détail pour les variantes `Plan + détail`.
-- Sections proposees:
-  - En-tete document:
+  - Normaliser un format detail metier plus exploitable et testable pour les variantes `Plan + détail`.
+- Ordre impose des sections:
+  - Section 1 - Contexte document
+  - Section 2 - Plan de la pièce
+  - Section 3 - Synthese metrique
+  - Section 4 - Murs
+  - Section 5 - Ouvertures
+  - Section 6 - Côtes et annotations
+  - Section 7 - Notes et observations
+  - Section 8 - Meta export
+- Champs obligatoires par section:
+  - Section 1 - Contexte document:
+    - id projet,
     - nom projet,
+    - id niveau,
     - nom niveau,
-    - nom pièce,
-    - identifiant pièce.
-  - Bloc plan:
-    - vue du plan de la pièce,
-    - echelle et orientation si disponibles.
-  - Bloc métriques geometriques:
+    - id pièce,
+    - nom pièce.
+  - Section 2 - Plan de la pièce:
+    - rendu plan,
+    - echelle.
+  - Section 3 - Synthese metrique:
     - surface,
     - périmètre,
-    - longueurs de murs.
-  - Bloc ouvertures:
-    - liste des portes/fenetres,
-    - dimensions principales,
+    - nombre de murs,
+    - nombre d'ouvertures.
+  - Section 4 - Murs:
+    - liste des murs,
+    - longueur par mur,
+    - type (peripherique/interieur/mitoyen quand disponible).
+  - Section 5 - Ouvertures:
+    - liste portes/fenetres,
+    - dimensions,
     - mur de rattachement.
-  - Bloc côtes et annotations:
-    - côtes visibles,
-    - notes associees a la pièce.
-  - Bloc meta:
-    - variante d'export,
-    - date de generation,
-    - version du template PDF.
-- Règles de fallback:
-  - si une section ne contient aucune donnee, elle est masquee dans le PDF final,
-  - si les métriques sont indisponibles, afficher `non disponible` plutot qu'une valeur vide.
+  - Section 6 - Côtes et annotations:
+    - côtes affichees dans la vue,
+    - annotations associees.
+  - Section 7 - Notes et observations:
+    - notes de la pièce,
+    - commentaire libre de synthese (si fourni).
+  - Section 8 - Meta export:
+    - cle technique template,
+    - variante UI,
+    - date generation,
+    - reference template.
+- Regles de rendu:
+  - Toutes les dimensions sont exprimees en cm.
+  - Les valeurs derivees sont arrondies a 1 decimale pour la lecture humaine.
+  - Les sections sans donnee peuvent etre masqueees sauf `Contexte document`, `Plan de la pièce` et `Meta export` qui restent obligatoires.
+- Regles de fallback:
+  - Si un champ obligatoire est indisponible, afficher `non disponible`.
+  - Si le rendu plan est indisponible, l'export est en echec fonctionnel et doit retourner une erreur explicite.
 
 ## Criteres d'acceptation transverses
 - Given un utilisateur declenche un export PDF valide, When la generation aboutit, Then le fichier est telechargeable et correspond a la variante choisie.
