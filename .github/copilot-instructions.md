@@ -1,42 +1,25 @@
 # Project Guidelines
 
-## Documentation First
+## Point d'entrée documentaire (obligatoire)
 
-- Before writing or changing code, consult the relevant documentation in [docs/](../docs/).
-- Use [docs/product.md](../docs/product.md) for MVP scope, feature priorities, and product rules.
-- Use [docs/architecture.md](../docs/architecture.md) for monorepo boundaries and responsibility split between shared, web, mobile, and Supabase.
-- Use [docs/geometry.md](../docs/geometry.md) for geometric invariants, derived calculations, and unit conventions.
-- Use [docs/data-model.md](../docs/data-model.md) for persistence rules, entities, and relationships.
-- Use [README.md](../README.md) for the recommended development order.
-- If code, request, and documentation conflict, call out the mismatch explicitly and prefer the documented rule unless the user asks to change it.
+- Lire d'abord [docs/projet.md](../docs/projet.md).
+- Utiliser ensuite les sources fiables déclarées dans [docs/projet.md](../docs/projet.md):
+	- [docs/product.md](../docs/product.md)
+	- [docs/architecture.md](../docs/architecture.md)
+	- [docs/spec.md](../docs/spec.md)
+	- [docs/ihm/](../docs/ihm/)
+- La source fonctionnelle principale par défaut est [docs/ihm/](../docs/ihm/).
+- En cas de conflit entre documents, demander un arbitrage explicite à l'utilisateur au cas par cas avant de coder.
 
-## Current Documentation Status (Temporary Rule)
+## Répartition des rôles documentaires
 
-- At this stage, [docs/product.md](../docs/product.md), [docs/spec.md](../docs/spec.md), and [docs/data-model.md](../docs/data-model.md) are considered obsolete.
-- These files remain useful as historical context only and must not be treated as source of truth for new decisions.
-- The active source of truth is the ongoing functional specification rewrite in [docs/ihm/](../docs/ihm/), validated incrementally by the user.
-
-## Specification Rewrite Method (Mandatory)
-
-- Work methodically view by view, then component by component.
-- For each rewritten view/component spec, ensure it includes at least:
-- Objective
-- In-scope / out-of-scope
-- Screen structure
-- User interactions
-- Business rules
-- States and feedback
-- Displayed and edited data
-- Edge cases
-- Testable acceptance criteria
-- Record explicit assumptions and decisions when documentation is incomplete.
-- Do not start feature development from obsolete docs; wait for the rewritten specs and updated data model unless the user explicitly asks otherwise.
-- After the IHM/spec rewrite phase, rebuild [docs/data-model.md](../docs/data-model.md) from validated specs, then start implementation.
+- [docs/projet.md](../docs/projet.md): gouvernance projet (sources fiables, roadmap SemVer, workflow feature, DoD, état de fraîcheur).
+- [.github/copilot-instructions.md](./copilot-instructions.md): règles d'exécution pour l'agent et garde-fous de contribution.
 
 ## Architecture Guardrails
 
 - Keep geometric and shared business logic in [shared/](../shared/).
-- Keep UI behavior and rendering concerns in [web/](../web/) and [mobile/](../mobile/).
+- Keep UI behavior and rendering concerns in [web/](../web/) including the PWA target.
 - Treat Supabase and PostgreSQL as the source of truth for persisted business data.
 - Keep derived values such as angles, metrics, and projections computed from source data unless the documentation is updated first.
 
@@ -50,9 +33,15 @@
 ## Change Discipline
 
 - When a code change modifies documented behavior, update the relevant file in [docs/](../docs/) in the same change.
-- Do not introduce features beyond the current MVP priorities unless the user explicitly asks for them.
+- Do not introduce features beyond the validated target version unless the user explicitly asks for them.
 - If the documentation does not fully answer the task, make the smallest assumption consistent with the existing docs and state that assumption clearly.
 - Toujours utiliser les accents en francais lors de la generation de texte (Markdown) et de texte dans le code (commentaires, labels UI, messages, chaines). Ne pas produire de francais sans accents sauf contrainte technique explicite.
+
+## Statut de fraîcheur (rappel)
+
+- Les artefacts suivants sont actuellement non à jour et ne doivent pas servir de source de vérité fonctionnelle:
+	- [supabase/migrations/20260703_000001_init.sql](../supabase/migrations/20260703_000001_init.sql)
+	- Le code et la documentation sous [web/](../web/)
 
 ## Autres Guidelines Spécifiques
 | **Thématique**       | **Fichier**                                  | **Description**                                  |

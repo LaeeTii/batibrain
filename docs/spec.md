@@ -46,6 +46,23 @@ Date de mise à jour: 2026-07-10
 
 ## Backlog features priorisé (1 = plus prioritaire)
 
+### 0) Paramètres d'application
+- Objectif:
+	- Permettre à l'utilisateur de configurer les préférences de base de l'application depuis la barre latérale.
+- Portée fonctionnelle cible:
+	- Choix des unités de mesure.
+	- Modification du mot de passe.
+	- Choix du thème UI, limité pour l'instant à clair ou foncé.
+- Règles métier minimales:
+	- Les paramètres sont accessibles depuis l'entrée Paramètres de la side bar.
+	- Le changement de mot de passe est proposé dans le contexte du compte authentifié.
+	- Le thème appliqué reste cohérent sur l'interface courante après sélection.
+- Critères d'acceptation:
+	- L'utilisateur peut ouvrir la modale de paramètres depuis la side bar.
+	- L'utilisateur peut modifier l'unité de mesure sans quitter sa session.
+	- L'utilisateur peut choisir un thème clair ou foncé.
+	- L'utilisateur peut lancer le flux de changement de mot de passe depuis les paramètres.
+
 ### 1) Collaboration projet asynchrone simple (legacy #7)
 - Objectif:
 	- Permettre le partage de projet sans temps réel complexe.
