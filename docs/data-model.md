@@ -248,6 +248,20 @@ Règles:
 - La dernière intention explicite gagne.
 - Une sélection invalide est nettoyée.
 
+### UserPreferences
+Préférences persistées de l'utilisateur courant.
+
+Champs minimaux:
+- `userId`
+- `lengthUnit` (`cm`, `m`, `mm`)
+- `surfaceUnit` (`m2`, `cm2`, `mm2`)
+- `theme` (`clair`, `foncé`, `system`)
+
+Règles:
+- Les préférences sont spécifiques à l'utilisateur authentifié.
+- Les valeurs par défaut sont `cm` pour les longueurs et `m2` pour les surfaces.
+- Les préférences sont relues au démarrage de session pour initialiser l'UI.
+
 ## Entités legacy minimales (à compléter)
 
 ### Task
@@ -339,6 +353,7 @@ Points à arbitrer:
 - `Wall` 1..n `Opening`
 - `Level` 1..n `Dimension`
 - `Project` 1..n `Note`
+- `UserSession` 1..1 `UserPreferences`
 - `Project` 1..n `Task` (legacy minimal)
 - `Project` 1..n `Document` (legacy minimal)
 - `Project` 1..n `Photo` (legacy minimal)

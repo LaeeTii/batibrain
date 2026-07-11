@@ -13,7 +13,7 @@
 - "Travaux" (bouton) -> ouvre la vue travaux (désactivé pour le moment)
 - "Tâches" (bouton) -> ouvre la vue tâches (désactivé pour le moment)
 - "planning" (bouton) -> ouvre la vue planning (désactivé pour le moment)
-- "Paramètres" (bouton) ancré en bas de la side bar -> ouvre une modale avec les paramètres de l'application (langue, thème, etc., unité de mesure, etc.)
+- "Paramètres" (bouton) ancré en bas de la side bar -> ouvre la modale SettingsModal du composant transverse avec les paramètres de l'application.
 
 ## Règles métiers
 
@@ -26,6 +26,6 @@
 
 - le projet courant détermine le contexte de l'application, toutes les vues affichent les données du projet courant.
 
-- la modale de paramètres permet de changer la langue de l'application, le thème (clair/sombre) et l'unité de mesure (cm/m/mm). Ces paramètres sont persistés dans la base de données pour l'utilisateur courant. On peut aussi se déconnecter de l'application depuis cette modale. La déconnexion redirige vers la page de login.
+- la modale de paramètres permet de changer le thème (clair/sombre), l'unité de mesure (cm/m/mm, avec cm par défaut) et l'unité de surface (cm2/m2/mm2, avec m2 par défaut). Ces paramètres sont persistés dans la base de données pour l'utilisateur courant. On peut aussi se déconnecter de l'application depuis cette modale. La déconnexion redirige vers la page de login.
 
 

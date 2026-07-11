@@ -51,17 +51,22 @@ Date de mise à jour: 2026-07-10
 	- Permettre à l'utilisateur de configurer les préférences de base de l'application depuis la barre latérale.
 - Portée fonctionnelle cible:
 	- Choix des unités de mesure.
+	- Choix des unités de surface.
 	- Modification du mot de passe.
-	- Choix du thème UI, limité pour l'instant à clair ou foncé.
+	- Choix du thème UI, limité pour l'instant à clair, foncé ou system.
 - Règles métier minimales:
 	- Les paramètres sont accessibles depuis l'entrée Paramètres de la side bar.
 	- Le changement de mot de passe est proposé dans le contexte du compte authentifié.
+	- La déconnexion est accessible depuis la modale de paramètres.
 	- Le thème appliqué reste cohérent sur l'interface courante après sélection.
 - Critères d'acceptation:
 	- L'utilisateur peut ouvrir la modale de paramètres depuis la side bar.
 	- L'utilisateur peut modifier l'unité de mesure sans quitter sa session.
-	- L'utilisateur peut choisir un thème clair ou foncé.
+	- L'utilisateur peut choisir une unité de mesure parmi cm, m ou mm, avec cm par défaut.
+	- L'utilisateur peut choisir une unité de surface parmi cm2, m2 ou mm2, avec m2 par défaut.
+	- L'utilisateur peut choisir un thème clair, foncé ou system, avec system par défaut.
 	- L'utilisateur peut lancer le flux de changement de mot de passe depuis les paramètres.
+	- L'utilisateur peut se déconnecter depuis les paramètres et revenir à l'écran de login.
 
 ### 1) Collaboration projet asynchrone simple (legacy #7)
 - Objectif:

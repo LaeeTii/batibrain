@@ -4,6 +4,7 @@
 - Definir les composants transverses utilises par plusieurs vues et leur contrat de synchronisation avec le contexte projet et la sélection globale.
 
 ## Liste des composants
+- SettingsModal
 - AppSidebar
 - SidebarProjectContext
 - Editor2DHeaderControls
@@ -11,7 +12,50 @@
 - ProjectNotesBubble
 - SelectionSyncBridge
 
+### Contrat SettingsModal
+- Objectif:
+	- Donner accès aux paramètres utilisateur depuis la side bar.
+- Portée:
+	- Modification des préférences de base de l'application.
+	- Déclenchement du flux de changement de mot de passe.
+	- Déconnexion de l'utilisateur connecté.
+- Structure:
+	- Bloc profil courant en en-tête.
+	- Bloc unités de mesure.
+	- Bloc unités de surface.
+	- Bloc thème UI.
+	- Bloc sécurité avec changement de mot de passe.
+	- Action de déconnexion.
+- Contrat de données:
+	- Unités de longueur disponibles:
+		- `cm` (par défaut)
+		- `m`
+		- `mm`
+	- Unités de surface disponibles:
+		- `m2` (par défaut)
+		- `cm2`
+		- `mm2`
+	- Thème disponible:
+		- `clair`
+		- `foncé`
+- Règles métier:
+	- Les préférences sont portées par l'utilisateur courant.
+	- Le changement d'unité prend effet sans quitter la session.
+	- La déconnexion ferme la session et redirige vers LoginView.
+	- Le changement de mot de passe reste dans le contexte du compte authentifié.
+- Etats et feedback:
+	- Chargement initial des préférences.
+	- Sauvegarde en cours.
+	- Erreur de sauvegarde affichée explicitement.
+	- Confirmation visuelle après prise en compte de chaque changement.
+- Criteres d'acceptation testables:
+	- Given la modale est ouverte, When l'utilisateur choisit `mm` comme unité de longueur, Then la préférence est enregistrée avec `mm` comme valeur active.
+	- Given la modale est ouverte, When l'utilisateur choisit `cm2` comme unité de surface, Then la préférence est enregistrée avec `cm2` comme valeur active.
+	- Given la modale est ouverte, When l'utilisateur clique sur Déconnexion, Then il est redirigé vers LoginView.
+
 ## Responsabilites
+- SettingsModal:
+	- Donner accès aux paramètres utilisateur depuis la side bar.
 - AppSidebar:
 	- Afficher navigation principale et acces paramètres.
 - SidebarProjectContext:

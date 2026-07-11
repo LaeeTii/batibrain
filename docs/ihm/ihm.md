@@ -12,6 +12,7 @@
 - PlanningView
 - RoomEditor2DView
 
+
 ## Liste des composants metier
 
 ### Layouts
@@ -43,6 +44,7 @@
 - RoomCard
 
 ### Composants transverses
+- SettingsModal
 - AppSidebar
 - SidebarProjectContext
 - Editor2DHeaderControls

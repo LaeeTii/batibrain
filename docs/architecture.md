@@ -19,6 +19,7 @@
 - l'UI vit dans `web/`, avec adaptation responsive et capacités PWA pour les usages mobiles
 - la spec est la source de vérité pour le produit (docs/ihm/ihm.md)
 - les projections (métriques, angles, vues dérivées) sont calculées
+- les préférences utilisateur (unités, thème, sécurité de session) sont persistées côté Supabase/PostgreSQL et relues à l'ouverture de session pour initialiser l'interface
 
 ## Séquencement
 1. Prototype géométrique web
