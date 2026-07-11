@@ -33,6 +33,9 @@
 ## Règles par type d'objet
 - Pièce : mise en surbrillance dans le canvas, ouverture de l'accordeon "Pièces", affichage du bloc édition si disponible.
 - Mur : mise en surbrillance dans le canvas, ouverture de l'accordeon "Murs", affichage du bloc édition si disponible.
+	- L'action `Ouvrir la vue Mur` conserve ce mur comme sélection active et transmet les contextes projet et niveau à WallEditorView.
+	- RoomEditor2DView transmet aussi sa pièce courante afin de sélectionner la face orientée vers elle; l'éditeur global ne transmet aucune pièce d'origine.
+	- Le changement de face dans WallEditorView conserve le même mur sélectionné.
 - Ouverture : mise en surbrillance dans le canvas, ouverture de l'accordeon "Ouvertures", affichage du bloc édition si disponible.
 - Cote : mise en surbrillance dans le canvas, ouverture de l'accordeon "Côtes", affichage du bloc édition si disponible.
 - Note : mise en surbrillance dans le canvas, synchronisation avec la liste des notes et la bulle des notes projet, affichage de l'infobulle contextuelle et ouverture du bloc édition.

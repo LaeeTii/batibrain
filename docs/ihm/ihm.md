@@ -11,6 +11,7 @@
 - TasksView
 - PlanningView
 - RoomEditor2DView
+- WallEditorView
 
 
 ## Liste des composants metier

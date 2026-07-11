@@ -1,6 +1,6 @@
 # SPEC PRODUIT ET TECHNIQUE — BATIBRAIN (registre features consolidé)
 
-Date de mise à jour: 2026-07-10
+Date de mise à jour: 2026-07-12
 
 ## Statut du document
 - Ce document remplace l'ancien format par phases et tâches.
@@ -143,30 +143,43 @@ Date de mise à jour: 2026-07-10
 	- Les exports PDF respectent ces options d'affichage.
 
 ### 4) Vue Mur dédiée (vue de face) (legacy #10)
+- Version cible validée: V1.
+- Statut: terminée.
 - Objectif:
-	- Fournir un écran dédié à l'édition/lecture d'un mur selon la maquette cible.
+	- Fournir un écran dédié à la lecture et à l'édition d'un mur en vue de face, cohérent avec les autres vues à canvas.
 - Portée fonctionnelle cible:
-	- Navigation vers une vue mur dédiée depuis le flux produit.
-	- Structure et interactions conformes à la maquette de référence.
-	- Affichage/édition des propriétés mur, ouvertures et cotes pertinentes en vue de face.
+	- Navigation depuis l'action `Ouvrir la vue Mur` du bloc d'édition d'un mur dans les éditeurs 2D global et par pièce.
+	- Canvas de face affichant le profil de hauteur, les ouvertures et les mesures pertinentes du côté choisi.
+	- Choix entre les deux faces du mur; chaque face porte un profil de hauteur ordonné indépendant.
+	- Pour un mur mitoyen, chaque face est présentée selon la pièce vers laquelle elle est orientée.
+	- Pour un mur extérieur, les faces intérieure et extérieure restent toutes deux éditables.
+	- À la création d'une pièce ou d'un mur, les deux faces reçoivent un profil uniforme de 250 cm.
 - Règles métier minimales:
-	- La vue mur opère dans le contexte projet/niveau/pièce/mur courant.
+	- La vue mur opère dans le contexte projet/niveau/mur courant et conserve la pièce d'origine lorsqu'elle vient de la vue par pièce.
 	- Les modifications restent cohérentes avec les invariants géométriques partagés.
+	- Le changement de face ne modifie ni le mur sélectionné ni l'autre profil.
+	- Depuis la vue par pièce, la face initiale est celle orientée vers la pièce d'origine.
+	- Sans pièce d'origine, la face initiale est la face intérieure pour un mur extérieur, puis la face gauche dans les autres cas.
+	- Les ouvertures sont validées contre la hauteur disponible sur chacune des deux faces.
 - Critères d'acceptation:
-	- Vue mur disponible et utilisable.
-	- Alignement maquette validé.
+	- L'action d'édition d'un mur ouvre la vue de face en conservant le contexte courant.
+	- L'utilisateur peut afficher et modifier indépendamment le profil de chacune des deux faces.
+	- La face affichée initialement respecte la pièce d'origine, puis le caractère extérieur du mur, puis le choix par défaut de la face gauche.
+	- Un mur nouvellement créé possède deux profils uniformes de 250 cm.
+	- Le propriétaire et le collaborateur en écriture peuvent modifier les profils sous réserve du verrou; le collaborateur en lecture peut les consulter sans les modifier.
+	- Une modification invalide pour une ouverture est refusée avec un message explicite.
 
 ### 5) Profils de hauteur multiples sur un mur (legacy #12)
 - Objectif:
-	- Permettre plus de deux hauteurs sur un même mur via un profil discret.
+	- Permettre plus de deux hauteurs sur chacune des deux faces d'un mur via deux profils discrets indépendants.
 - Portée fonctionnelle cible:
-	- Liste ordonnée de points de hauteur pour un mur.
+	- Liste ordonnée de points de hauteur pour chaque face d'un mur.
 	- Chaque point stocke une distance horizontale depuis le début du mur + hauteur associée.
 - Règles métier minimales:
-	- Distances ordonnées et dans les bornes du mur.
-	- Cohérence du profil avec les validations existantes des ouvertures.
+	- Distances ordonnées et dans les bornes du mur, indépendamment pour chaque face.
+	- Cohérence de chaque profil avec les validations existantes des ouvertures.
 - Critères d'acceptation:
-	- Un mur supporte plus de deux hauteurs.
+	- Chaque face d'un mur supporte plus de deux hauteurs sans modifier l'autre face.
 	- Les profils invalides sont refusés avec erreur explicite.
 
 ### 6) DocumentsView (legacy #1)

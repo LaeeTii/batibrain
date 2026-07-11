@@ -1,6 +1,6 @@
 # Modèle de données BatiBrain
 
-Date de mise à jour: 2026-07-10
+Date de mise à jour: 2026-07-12
 
 ## Objectif
 Ce document décrit le modèle de données métier actuel, reconstruit à partir des spécifications dans `docs/ihm/`.
@@ -18,6 +18,7 @@ Ce document ne remplace pas les sources fonctionnelles principales (`docs/ihm/`)
 - `docs/ihm/vues/dashboard_view.md`
 - `docs/ihm/vues/editeur_2d_global.md`
 - `docs/ihm/vues/room_editor_2d_view.md`
+- `docs/ihm/vues/wall_editor_view.md`
 - `docs/ihm/composants/sections.md`
 - `docs/ihm/composants/transverses.md`
 - `docs/ihm/composants/pdf.md`
@@ -31,7 +32,7 @@ Ce document ne remplace pas les sources fonctionnelles principales (`docs/ihm/`)
 ## Statut de maturité par domaine
 | Domaine | Statut | Commentaire |
 |---|---|---|
-| Projet / niveaux / pièces / murs / ouvertures / côtes / notes | Stabilisé | Contrats IHM détaillés disponibles (vues + logique + composants). |
+| Projet / niveaux / pièces / murs / faces / profils de hauteur / ouvertures / côtes / notes | Stabilisé | Contrats IHM détaillés disponibles (vues + logique + composants). |
 | Authentification / session | Stabilisé | Contrat détaillé disponible dans LoginView. |
 | Collaboration projet | Stabilisé | Propriété, rôles globaux et invitations applicatives définis pour la V1. |
 | Exports PDF plan et plan + détail | Stabilisé | Matrice complète de templates et données minimales définies. |
@@ -173,36 +174,38 @@ Champs minimaux:
 - `startVertexId`
 - `endVertexId`
 - `thicknessCm`
-- `heightProfile` (liste ordonnée de points de hauteur)
 - `material` (optionnel)
 - `insulation` (optionnel)
-
-Structure minimale d'un point de `heightProfile`:
-- `positionCm` (distance horizontale depuis `startVertexId`)
-- `heightCm` (hauteur locale au point)
 
 Règles:
 - La longueur métier de référence est la longueur intérieure.
 - Un mur peut être lié à 0, 1 ou 2 pièces.
 - Mur lié à 1 pièce: extérieur pour cette pièce.
 - Mur lié à 2 pièces: intérieur/mitoyen pour les deux.
+- Un mur possède exactement deux faces stables, `gauche` et `droite`, définies relativement au segment ordonné de `startVertexId` vers `endVertexId`.
+- Chaque face possède son propre profil de hauteur ordonné et indépendant.
+- Lors d'une inversion du segment, les profils sont permutés afin de rester rattachés à la même face physique.
 - Dans RoomEditor2DView, la suppression d'un mur mitoyen est interdite.
-- `heightProfile` doit être ordonné par `positionCm` croissante.
-- `positionCm` doit rester dans l'intervalle `[0, longueurDuMurCm]`.
-- Deux points de `heightProfile` ne peuvent pas partager la même `positionCm`.
-- Si `heightProfile` contient exactement 2 points (début et fin), on couvre le cas de pente simple.
-- Si `heightProfile` contient plus de 2 points, on couvre le cas multi-hauteurs.
 
-### HeightProfilePoint
-Point de profil de hauteur d'un mur.
+### WallFaceHeightProfilePoint
+Point du profil de hauteur d'une face d'un mur.
 
 Champs minimaux:
-- `positionCm` (distance horizontale depuis le début du mur)
-- `heightCm` (distance en hauteur au point)
+- `id`
+- `wallId`
+- `faceSide` (`gauche`, `droite`)
+- `positionCm` (distance horizontale depuis `startVertexId`)
+- `heightCm` (hauteur locale au point)
 
 Règles:
-- Cette structure est embarquée dans `Wall.heightProfile`.
-- Les points sont triés par `positionCm` croissante.
+- Les points sont triés par `positionCm` croissante au sein de chaque couple `wallId`/`faceSide`.
+- Chaque face possède au minimum un point à `0` et un point à la longueur du mur.
+- À la création d'une pièce ou d'un mur, ces deux points valent `250 cm` sur chacune des deux faces.
+- `positionCm` reste dans l'intervalle `[0, longueurDuMurCm]` et deux points d'une même face ne partagent pas la même position.
+- `heightCm` est strictement positive.
+- Deux points couvrent un profil uniforme ou une pente simple; plus de deux points couvrent un profil multi-hauteurs.
+- Pour un mur mitoyen, l'association affichée entre face et pièce est calculée depuis la topologie.
+- Pour un mur extérieur, l'association affichée distingue la face intérieure de la face extérieure; les deux profils restent éditables.
 
 ### Opening
 Ouverture positionnée sur un mur (porte, fenêtre, baie, autre).
@@ -418,7 +421,7 @@ Points à arbitrer:
 - `Level` 1..n `Room`
 - `Room` 1..n `Vertex`
 - `Room` 1..n `Wall` (ou liaison topologique équivalente)
-- `Wall` 1..n `HeightProfilePoint` (point de profil ordonné par position)
+- `Wall` 4..n `WallFaceHeightProfilePoint` (au moins deux points ordonnés sur chacune des deux faces)
 - `Wall` 1..n `Opening`
 - `OpeningTemplate` 1..n `Opening`
 - `Level` 1..n `Dimension`
@@ -439,6 +442,8 @@ Points à arbitrer:
 - Après modification topologique (coupe/intersection), recalculer segments élémentaires et relations mur-pièce.
 - En cas d'édition d'un mur mitoyen, la cohérence des deux pièces doit être conservée.
 - La qualification intérieure ou extérieure d'un mur est dérivée de son nombre de pièces liées et n'est pas persistée comme source primaire.
+- L'orientation d'une face vers une pièce ou vers l'extérieur est dérivée de la topologie; seule sa position stable gauche/droite et son profil sont persistés.
+- Une ouverture doit respecter la hauteur disponible sur les deux faces du mur à toute position qu'elle occupe.
 - Après recalcul topologique, supprimer toute ouverture dont `placementType` est incompatible avec la qualification de son mur support.
 
 ## Persistance et suppression

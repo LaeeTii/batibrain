@@ -1,13 +1,14 @@
 # Composants - Canvas
 
 ## Objectif
-- Definir le comportement des composants de rendu plan, mesures et navigation visuelle de l'éditeur 2D global.
+- Definir le comportement des composants de rendu plan, de rendu mural de face, de mesures et de navigation visuelle des éditeurs à canvas.
 
 ## Liste des composants
 - Canvas2D
 - CanvasOverlayMeasurements
 - CanvasZoomControls
 - CanvasScaleIndicator
+- WallElevationCanvas
 
 ## Responsabilites
 - Canvas2D:
@@ -19,6 +20,10 @@
 	- Fournir zoom, dezoom et reset de zoom.
 - CanvasScaleIndicator:
 	- Afficher une echelle graphique stable et lisible.
+- WallElevationCanvas:
+	- Rendre de face le contour produit par le profil de hauteur de la face sélectionnée.
+	- Afficher les ouvertures du mur et les mesures horizontales et verticales pertinentes.
+	- Permettre l'édition des points du profil dans WallEditorView selon les droits effectifs.
 
 ## Props et contrat
 - Contexte requis:
@@ -76,6 +81,12 @@
 	- un template intérieur affiche sa prévisualisation et ses mesures uniquement sur un mur lié à deux pièces,
 	- un template extérieur affiche sa prévisualisation et ses mesures uniquement sur un mur lié à une pièce,
 	- au survol d'un mur incompatible, aucune prévisualisation ni mesure liée à l'ouverture n'est rendue.
+- Règles de la vue de face:
+	- une seule face du mur est affichée à la fois et le changement de face conserve le zoom et le mur sélectionné,
+	- le contour supérieur relie dans l'ordre les points du profil de la face active,
+	- les deux extrémités du profil et leurs hauteurs sont toujours visibles en mode édition,
+	- les ouvertures sont projetées à leur position sur le mur et leurs largeur, hauteur, allège et distances aux extrémités peuvent être cotées,
+	- le profil de la face opposée n'est jamais modifié indirectement.
 
 ## Cas limites
 - Tentative de creation/édition hors mode actif: aucune modification persistante ne doit etre appliquee.
@@ -93,9 +104,12 @@
 - Given un template d'ouverture est en cours de pose, When un mur incompatible est survolé, Then aucun aperçu ni mesure de positionnement n'est affiché.
 - Given l'utilisateur clique sur un objet visible, When la sélection est appliquee, Then l'objet est surligne dans le canvas et propage vers les autres zones.
 - Given l'utilisateur clique sur reset zoom, When l'action est terminee, Then le niveau de zoom revient a sa valeur initiale.
+- Given WallEditorView affiche une face, When l'utilisateur choisit l'autre face, Then le canvas rend son profil indépendant sans changer le mur sélectionné.
+- Given une ouverture dépasse la hauteur disponible sur une face, When une modification de profil est validée, Then la modification est refusée avec un message explicite.
 
 ## References
 - Referentiel global : [ihm.md](../ihm.md)
 - Vue associee : [editeur_2d_global.md](../vues/editeur_2d_global.md)
+- Vue mur associée : [wall_editor_view.md](../vues/wall_editor_view.md)
 - Logique sélection : [edition_2D_synchronisation_selection.md](../logique/edition_2D_synchronisation_selection.md)
 - Logique géométrique : [geometry.md](../logique/geometry.md)

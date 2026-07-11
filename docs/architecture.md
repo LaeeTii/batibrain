@@ -29,6 +29,8 @@
 - après toute modification topologique, les relations mur-pièce et la compatibilité des ouvertures sont recalculées avant persistance; les ouvertures devenues incompatibles sont supprimées
 - le type de pièce est persisté dans Supabase/PostgreSQL; son icône est une projection frontend produite avec `react-icons` et n'est pas stockée
 - les options d'affichage des surfaces et des icônes de pièces sont persistées avec les autres préférences de vue et appliquées aux canvas comme aux exports PDF
+- chaque mur persiste deux profils de hauteur ordonnés indépendants, un par face stable du segment; l'association visuelle d'une face à une pièce ou à l'extérieur est calculée depuis la topologie
+- les hauteurs intermédiaires, contours de face et mesures affichées dans la vue Mur sont projetés depuis les points persistés et ne sont pas stockés comme valeurs dérivées
 
 ## Séquencement
 1. Prototype géométrique web

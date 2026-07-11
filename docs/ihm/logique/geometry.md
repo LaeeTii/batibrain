@@ -10,6 +10,7 @@
 - Segment : paire ordonnee de points.
 - Pièce : polygone ferme ordonne.
 - Mur : segment support avec epaisseur et proprietes metier attachees.
+- Face de mur : côté stable gauche ou droit relativement au segment ordonné, portant son propre profil de hauteur.
 - Ouverture : intervalle positionne sur un mur support, avec dimensions et orientation.
 - Cote : mesure entre deux references geometriques avec un decalage d'affichage.
 
@@ -26,11 +27,17 @@
 - Un mur peut exister seul ou etre lie a une ou deux pièces.
 - Un mur lie a une seule pièce est extérieur pour cette pièce.
 - Un mur lie a deux pièces differentes est intérieur pour les deux pièces.
+- Chaque mur possède exactement deux faces et deux profils de hauteur indépendants.
+- Chaque profil est une liste de points ordonnée par leur distance depuis le début du segment; sa hauteur par défaut est uniforme à 250 cm.
+- Pour un mur mitoyen, l'orientation de chaque face vers l'une des deux pièces est calculée depuis la topologie.
+- Pour un mur extérieur, les faces intérieure et extérieure sont toutes deux éditables.
+- Si le sens du segment est inversé par une transformation topologique, les profils sont permutés afin de rester attachés à la même face physique.
 - L'édition géométrique d'un mur mitoyen doit impacter de facon coherente les deux pièces liees a ce mur.
 - Un mur n'est supprimable que lorsqu'il n'est plus lie a aucune pièce.
 - Une ouverture doit rester entierement comprise dans son mur support.
 - Les ouvertures d'un meme mur ne doivent pas se chevaucher.
 - La hauteur utile d'une ouverture doit rester compatible avec la hauteur disponible du mur support.
+- La hauteur utile d'une ouverture doit être compatible avec le profil disponible sur chacune des deux faces du mur.
 - Une ouverture intérieure ne peut appartenir qu'a un mur lié à deux pièces.
 - Une ouverture extérieure ne peut appartenir qu'a un mur lié à une seule pièce.
 - Une cote de distance nulle est invalide.
@@ -44,6 +51,8 @@
 - Distances gauche et droite entre une ouverture et les extremites de son mur support.
 - Type intérieur ou extérieur d'un mur selon ses liaisons aux pièces.
 - Compatibilite entre le type intérieur/extérieur d'un template d'ouverture et la qualification calculee du mur support.
+- Orientation calculée de chaque face vers une pièce ou vers l'extérieur.
+- Hauteur disponible à une abscisse du mur par interpolation du profil de la face concernée.
 
 ## Compatibilité des ouvertures avec les murs
 - Le template porte explicitement la caractéristique `intérieur` ou `extérieur`; elle n'est pas déduite du mur au moment de la pose.
@@ -70,6 +79,7 @@
 - Detachement d'un mur de son ancrage.
 - Coupe d'un mur en deux.
 - Placement d'une ouverture sur un mur support.
+- Ajout, déplacement, modification ou suppression d'un point de profil sur une face, sans modifier le profil de l'autre face.
 
 ## Règles de scission et d'intersection
 - Si l'extremite d'un mur est posee sur un mur existant, le mur support est scinde au point d'ancrage et le nouveau mur est lie a ce point.
@@ -82,6 +92,8 @@
 
 ## Cas limites et validations
 - Refuser une ouverture hors du mur support.
+- Refuser un profil sans point aux deux extrémités, non ordonné, hors des bornes du mur ou contenant une hauteur non positive.
+- Refuser une modification de profil qui rend une ouverture existante incompatible avec l'une des deux faces.
 - Refuser deux ouvertures chevauchantes sur un meme mur.
 - Refuser la pose d'un template intérieur sur un mur extérieur et d'un template extérieur sur un mur intérieur.
 - Refuser une cote de longueur nulle.
@@ -101,6 +113,7 @@
 - Verification d'appartenance d'une ouverture a son mur support.
 - Verification de non-chevauchement entre ouvertures d'un meme mur.
 - Verification de compatibilité entre la caractéristique du template d'ouverture et le nombre de pièces liées au mur support.
+- Interpolation de la hauteur disponible entre deux points consécutifs d'un profil de face.
 
 ## Unite metier
 Le centimetre est l'unite metier de reference pour la base, les calculs et les affichages de mesure. Le m2 est l'unite metier de reference pour les surfaces. Les conversions d'unite sont effectuees a l'affichage selon le contexte utilisateur.

@@ -63,6 +63,8 @@
   - L'utilisateur arrive sur la vue avec un projet courant et un niveau editable actif.
   - L'utilisateur peut afficher ou masquer des niveaux dans le sous-header.
   - L'utilisateur peut changer le niveau editable sans quitter la vue.
+  - Lorsqu'un mur est sélectionné, l'action `Ouvrir la vue Mur` de son bloc d'édition ouvre WallEditorView avec les contextes projet, niveau et mur courants, sans pièce d'origine.
+  - La face initiale est la face intérieure pour un mur extérieur, sinon la face gauche.
 - Controles d'affichage:
   - L'utilisateur peut activer ou desactiver les options d'affichage (affichage/masquage) de la grille, des règles, des côtes, des angles, des notes, des surfaces et des icônes de pièces.
   - L'utilisateur peut configurer le magnetisme (snapping) en choisissant ses sources actives et une distance de capture.
@@ -110,6 +112,7 @@
 - Sélection:
   - La sélection active est unique a un instant donne.
   - La sélection est synchronisee entre canvas, panneau creation, panneau détail et bulle des notes projet selon les cas applicables.
+  - L'ouverture de WallEditorView conserve le mur sélectionné; elle ne transmet pas de pièce d'origine depuis l'éditeur global.
 - Panneaux:
   - Les accordeons de premier niveau du panneau creation sont mutuellement exclusifs.
   - Le panneau détail est ferme par defaut.

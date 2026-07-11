@@ -50,7 +50,7 @@
 	- WallsSection:
 		- message d'aide de creation: Cliquez sur le plan et deplacez-vous pour dessiner un mur,
 		- champs de creation/édition: Epaisseur, Materiau (optionnel), Isolation (optionnel),
-		- actions édition: Couper en deux, Detacher, Supprimer,
+		- actions édition: Ouvrir la vue Mur, Couper en deux, Detacher, Supprimer,
 		- liste des murs avec suppression.
 	- OpeningsSection:
 		- message d'aide de creation: Choisissez une ouverture template, survolez un mur puis cliquez pour poser,
@@ -165,6 +165,7 @@
 	- actions d'édition disponibles.
 - Règles d'interaction:
 	- la sélection d'un mur existant ouvre automatiquement le bloc édition correspondant,
+	- l'action Ouvrir la vue Mur ouvre WallEditorView avec les contextes projet, niveau et mur courants; le contexte de pièce est transmis uniquement depuis RoomEditor2DView,
 	- l'action Couper en deux lance un mode de coupe centre sur un point de coupe valide,
 	- l'action Detacher place l'utilisateur dans un mode de choix du point d'ancrage a deplacer,
 	- en scope RoomEditor2DView, la suppression d'un mur mitoyen est refusee,
@@ -248,6 +249,7 @@
 - Given une creation de cote est en cours, When l'utilisateur appuie sur Echap, Then la creation est annulee sans objet persistant créé.
 - Given une cote existante est selectionnee, When l'utilisateur clique sur Repositionner decalage, Then la cote repasse en mode reglage de decalage sans perdre son rattachement metier.
 - Given un mur existant est selectionne, When la section Murs est active, Then le bloc édition mur s'ouvre automatiquement avec les valeurs du mur selectionne.
+- Given un mur existant est sélectionné, When l'utilisateur clique sur Ouvrir la vue Mur, Then WallEditorView s'ouvre en conservant le mur et la pièce courante uniquement si l'action vient de RoomEditor2DView.
 - Given l'utilisateur clique sur Detacher pour un mur, When le mode s'active, Then les points d'ancrage eligibles sont mis en evidence pour permettre le choix du point a deplacer.
 - Given une note est en cours de creation sans objet selectionne, When l'utilisateur valide la note, Then la note est rattachee au projet.
 - Given une note existante est selectionnee, When l'utilisateur clique sur Changer origine, Then la note passe en mode de reassociation sans perdre son texte.

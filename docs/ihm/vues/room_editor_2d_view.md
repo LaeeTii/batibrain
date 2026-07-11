@@ -99,6 +99,8 @@
 - Navigation:
 	- l'action Retour ramene toujours vers DashboardView.
 	- l'ouverture de l'éditeur 2D global (si exposee depuis la vue) conserve le contexte projet/niveau courant et la pièce precedemment selectionnee.
+	- lorsqu'un mur est sélectionné, l'action `Ouvrir la vue Mur` de son bloc d'édition ouvre WallEditorView en conservant les contextes projet, niveau, pièce et mur courants.
+	- WallEditorView affiche initialement la face orientée vers la pièce courante.
 	- si un échec d'auto-save est present au moment de quitter la vue (Retour ou changement de vue), une confirmation explicite est demandee avant de sortir.
 - Suppression de la pièce courante:
 	- la suppression de la pièce demande une confirmation explicite.
@@ -130,6 +132,7 @@
 	- l'ajout de pièce n'est jamais disponible depuis RoomEditor2DView.
 	- l'arbre détail peut afficher des objets hors pièce courante, mais ces objets restent non selectionnables dans cette vue.
 	- pour editer une autre pièce, l'utilisateur doit changer de pièce cible (depuis dashboard ou navigation dediee).
+	- l'ouverture de WallEditorView est autorisée pour un mur de la pièce courante et conserve cette pièce comme orientation initiale lorsque le mur est mitoyen.
 - Exports PDF:
 	- les exports de RoomEditor2DView portent uniquement sur la pièce courante.
 	- la variante `Plan simple` utilise la cle technique `pdf_room_editor_piece_plan_simple`.
