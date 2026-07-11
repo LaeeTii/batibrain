@@ -86,7 +86,8 @@
 	- le contour supérieur relie dans l'ordre les points du profil de la face active,
 	- les deux extrémités du profil et leurs hauteurs sont toujours visibles en mode édition,
 	- les ouvertures sont projetées à leur position sur le mur et leurs largeur, hauteur, allège et distances aux extrémités peuvent être cotées,
-	- le profil de la face opposée n'est jamais modifié indirectement.
+	- lorsque le lien des profils est inactif, le profil de la face opposée n'est jamais modifié indirectement,
+	- lorsque le lien est actif, toute modification graphique du profil courant est répercutée sur le profil opposé dans la même action métier.
 
 ## Cas limites
 - Tentative de creation/édition hors mode actif: aucune modification persistante ne doit etre appliquee.
@@ -104,8 +105,9 @@
 - Given un template d'ouverture est en cours de pose, When un mur incompatible est survolé, Then aucun aperçu ni mesure de positionnement n'est affiché.
 - Given l'utilisateur clique sur un objet visible, When la sélection est appliquee, Then l'objet est surligne dans le canvas et propage vers les autres zones.
 - Given l'utilisateur clique sur reset zoom, When l'action est terminee, Then le niveau de zoom revient a sa valeur initiale.
-- Given WallEditorView affiche une face, When l'utilisateur choisit l'autre face, Then le canvas rend son profil indépendant sans changer le mur sélectionné.
+- Given WallEditorView affiche une face, When l'utilisateur choisit l'autre face, Then le canvas rend le profil propre à cette face sans changer le mur sélectionné.
 - Given une ouverture dépasse la hauteur disponible sur une face, When une modification de profil est validée, Then la modification est refusée avec un message explicite.
+- Given les profils sont liés, When un point est ajouté ou déplacé sur le canvas, Then le point correspondant est ajouté ou déplacé à la même position et hauteur sur l'autre face.
 
 ## References
 - Referentiel global : [ihm.md](../ihm.md)

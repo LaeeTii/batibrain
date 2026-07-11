@@ -41,7 +41,8 @@ create table if not exists walls (
   piece_id uuid not null references pieces(id) on delete cascade,
   start_vertex_id uuid not null references piece_vertices(id) on delete cascade,
   end_vertex_id uuid not null references piece_vertices(id) on delete cascade,
-  thickness_cm numeric(8,2) not null default 10 check (thickness_cm > 0),
+  thickness_cm numeric(8,2) not null,
+  height_profiles_linked boolean not null,
   material text,
   insulation text,
   notes text,
@@ -53,8 +54,8 @@ create table if not exists wall_face_height_profile_points (
   id uuid primary key default gen_random_uuid(),
   wall_id uuid not null references walls(id) on delete cascade,
   face_side text not null check (face_side in ('left', 'right')),
-  position_cm numeric(10,2) not null check (position_cm >= 0),
-  height_cm numeric(8,2) not null default 250 check (height_cm > 0),
+  position_cm numeric(10,2) not null,
+  height_cm numeric(8,2) not null,
   created_at timestamptz not null default now(),
   unique (wall_id, face_side, position_cm)
 );
@@ -97,10 +98,10 @@ execute function initialize_wall_face_height_profiles();
 create table if not exists openings (
   id uuid primary key default gen_random_uuid(),
   wall_id uuid not null references walls(id) on delete cascade,
-  opening_type text not null check (opening_type in ('door', 'window', 'other')),
+  opening_type text not null,
   offset_cm numeric(8,2) not null,
   width_cm numeric(8,2) not null,
-  bottom_cm numeric(8,2) not null default 0,
+  bottom_cm numeric(8,2) not null,
   height_cm numeric(8,2) not null,
   notes text,
   created_at timestamptz not null default now()
@@ -114,7 +115,7 @@ create table if not exists documents (
   document_type text not null,
   storage_path text not null,
   original_file_name text not null,
-  metadata_json jsonb not null default '{}'::jsonb,
+  metadata_json jsonb not null,
   created_at timestamptz not null default now()
 );
 
@@ -125,8 +126,8 @@ create table if not exists tasks (
   wall_id uuid references walls(id) on delete set null,
   title text not null,
   description text,
-  status text not null default 'todo' check (status in ('todo', 'doing', 'done', 'archived')),
-  priority integer not null default 3 check (priority between 1 and 5),
+  status text not null,
+  priority integer not null,
   due_date date,
   created_at timestamptz not null default now()
 );

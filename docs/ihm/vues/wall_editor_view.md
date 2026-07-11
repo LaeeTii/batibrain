@@ -61,6 +61,7 @@
   - remplace le profil affiché et les libellés d'orientation;
   - ne modifie pas le profil de la face quittée;
   - ne crée pas d'action dans l'historique tant qu'aucune donnée métier n'est modifiée.
+- Le contrôle `Lier les hauteurs des deux faces` est visible à proximité du sélecteur et actif par défaut pour un nouveau mur.
 
 ## Canvas de face
 
@@ -83,6 +84,7 @@
   - isolation optionnelle;
   - longueur intérieure calculée, non éditable dans cette vue.
 - Bloc `Profil de hauteur`:
+  - contrôle `Lier les hauteurs des deux faces` et état courant du lien;
   - liste ordonnée des points de la face active;
   - position horizontale et hauteur de chaque point;
   - ajout d'un point intermédiaire;
@@ -99,6 +101,13 @@
 - Un point intermédiaire peut être ajouté depuis le panneau ou sur un emplacement valide du contour supérieur.
 - Un point peut être déplacé sur le canvas ou modifié numériquement dans le panneau.
 - Les points aux deux extrémités sont obligatoires et ne peuvent pas être supprimés.
+- Lorsque le lien est actif, l'ajout, le déplacement, la modification ou la suppression d'un point est reproduit à la même position et hauteur sur l'autre face dans la même action.
+- Désactiver le lien conserve les deux profils dans leur état courant et autorise leurs modifications indépendantes.
+- Réactiver le lien:
+  - ne demande aucune confirmation si les profils sont déjà identiques;
+  - demande une confirmation explicite s'ils diffèrent;
+  - après confirmation, copie le profil de la face affichée vers l'autre face et active le lien;
+  - constitue une seule action annulable dans l'historique.
 - Toute modification valide déclenche l'auto-save et alimente le même historique de 20 actions que les boutons et raccourcis transverses.
 - Une nouvelle action après annulation vide la pile de rétablissement.
 - En cas d'échec d'auto-save, le message reste visible et une nouvelle tentative est proposée.
@@ -106,12 +115,14 @@
 
 ## Règles métier
 
-- Chaque face porte un profil indépendant de l'autre face.
+- Chaque face porte son propre profil; les profils deviennent indépendants lorsque leur lien est désactivé.
+- Le mur porte un état persistant de liaison des profils, actif par défaut.
+- Lorsque le lien est actif, les deux profils contiennent strictement les mêmes positions et hauteurs.
 - À la création d'une pièce ou d'un mur, chaque face possède un profil uniforme de 250 cm, matérialisé par un point à chaque extrémité.
 - Les positions des points sont strictement ordonnées, uniques et comprises entre zéro et la longueur du mur.
 - Les hauteurs sont strictement positives.
 - Une modification de profil ne peut rendre aucune ouverture incompatible avec la hauteur disponible sur l'une des deux faces.
-- Le profil de la face opposée reste inchangé lors de l'édition de la face active.
+- Lorsque le lien est inactif, le profil de la face opposée reste inchangé lors de l'édition de la face active; lorsqu'il est actif, les deux profils sont modifiés atomiquement.
 - Les associations entre faces, pièces et extérieur sont calculées depuis la topologie et ne sont pas éditables dans cette vue.
 
 ## Droits et verrouillage
@@ -137,6 +148,7 @@
 - Lecture seule ou verrou détenu par un tiers: données consultables et édition désactivée.
 - Mur introuvable ou inaccessible: erreur locale bloquante et action de retour visible.
 - Validation refusée: ancienne valeur conservée et message explicite à proximité du contrôle concerné.
+- Remise en liaison de profils différents: confirmation indiquant que le profil de la face affichée remplacera celui de l'autre face.
 
 ## Cas limites
 
@@ -145,6 +157,8 @@
 - Si une pièce voisine est supprimée, les profils existants sont conservés; seuls les libellés intérieur/extérieur sont recalculés.
 - Si une ouverture disparaît pendant son édition, sa sélection est nettoyée et le mur reste affiché.
 - Un point intermédiaire ne peut pas être déplacé au-delà de ses voisins ni sur la même position qu'eux.
+- Si l'enregistrement de l'un des deux profils liés échoue, aucun des deux profils ni l'état du lien n'est modifié.
+- Une remise en liaison annulée dans la confirmation conserve les deux profils indépendants et laisse le lien inactif.
 
 ## Critères d'acceptation testables
 
@@ -154,9 +168,14 @@
 - Given WallEditorView est ouverte sans pièce d'origine sur un mur mitoyen, When le mur est chargé, Then la face gauche est affichée.
 - Given un mur mitoyen relie deux pièces, When le sélecteur de face est affiché, Then chaque choix identifie la pièce vers laquelle la face est orientée.
 - Given un mur extérieur est affiché, When le sélecteur de face est ouvert, Then les faces intérieure et extérieure sont toutes deux disponibles et éditables selon les droits.
-- Given l'utilisateur modifie le profil d'une face, When il affiche l'autre face, Then le profil de cette dernière est inchangé.
+- Given le lien des profils est désactivé et l'utilisateur modifie une face, When il affiche l'autre face, Then le profil de cette dernière est inchangé.
 - Given un mur vient d'être créé, When ses faces sont chargées, Then chacune possède deux points d'extrémité à 250 cm.
+- Given un mur vient d'être créé, When le panneau de profil est affiché, Then le lien des hauteurs est actif.
 - Given un point intermédiaire valide est ajouté, When l'auto-save réussit, Then le contour est mis à jour et l'état devient synchronisé.
+- Given les profils sont liés, When un point est ajouté, déplacé, modifié ou supprimé sur une face, Then les deux profils restent strictement identiques après l'auto-save.
+- Given le lien est désactivé, When une face est modifiée, Then le profil de l'autre face reste inchangé.
+- Given deux profils différents et le lien inactif, When l'utilisateur demande sa réactivation, Then une confirmation annonce que la face affichée sera utilisée comme source.
+- Given la remise en liaison est confirmée, When l'auto-save réussit, Then le profil opposé est remplacé par celui de la face affichée et le lien devient actif dans une seule action annulable.
 - Given une modification ferait dépasser une ouverture du profil disponible, When l'utilisateur la valide, Then elle est refusée et un message explicite est affiché.
 - Given le rôle projet est lecture, When la vue est affichée, Then les deux faces restent consultables et aucune modification n'est possible.
 - Given un échec d'auto-save est actif, When l'utilisateur demande le retour, Then une confirmation explicite est affichée avant la sortie.

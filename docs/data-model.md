@@ -9,8 +9,15 @@ Ce document ne remplace pas les sources fonctionnelles principales (`docs/ihm/`)
 - les entités métier,
 - leurs relations,
 - les invariants transverses,
-- les contraintes de persistance,
+- les règles du domaine et les garanties minimales de persistance,
 - le niveau de maturité de chaque domaine.
+
+## Portée des règles
+- Sauf mention contraire, les règles et valeurs par défaut de ce document sont des règles métier implémentées dans `web/src/domain/`.
+- À la création, le code applicatif fournit explicitement toutes les valeurs par défaut fonctionnelles à Supabase.
+- Ces règles ne deviennent pas automatiquement des clauses `DEFAULT` ou `CHECK` PostgreSQL.
+- La base de données conserve les garanties structurelles durables: clés étrangères, unicité technique, données structurelles obligatoires, RLS et atomicité des écritures liées.
+- Une validation défensive côté base n'est justifiée que si elle protège l'intégrité technique ou la sécurité, indépendamment de l'évolution du produit.
 
 ## Sources utilisées
 - `docs/ihm/logique/geometry.md`
@@ -174,6 +181,7 @@ Champs minimaux:
 - `startVertexId`
 - `endVertexId`
 - `thicknessCm`
+- `heightProfilesLinked` (booléen; initialisé à `true` par le domaine)
 - `material` (optionnel)
 - `insulation` (optionnel)
 
@@ -183,7 +191,11 @@ Règles:
 - Mur lié à 1 pièce: extérieur pour cette pièce.
 - Mur lié à 2 pièces: intérieur/mitoyen pour les deux.
 - Un mur possède exactement deux faces stables, `gauche` et `droite`, définies relativement au segment ordonné de `startVertexId` vers `endVertexId`.
-- Chaque face possède son propre profil de hauteur ordonné et indépendant.
+- Chaque face possède son propre profil de hauteur ordonné; les profils peuvent être liés ou indépendants.
+- `heightProfilesLinked = true` impose des listes de positions et de hauteurs strictement identiques sur les deux faces.
+- Lorsque le lien est actif, toute modification est appliquée aux deux profils dans une même transaction.
+- Désactiver le lien conserve les deux profils sans les modifier.
+- Réactiver le lien après divergence remplace, après confirmation, le profil de la face opposée par celui de la face affichée.
 - Lors d'une inversion du segment, les profils sont permutés afin de rester rattachés à la même face physique.
 - Dans RoomEditor2DView, la suppression d'un mur mitoyen est interdite.
 
@@ -201,6 +213,7 @@ Règles:
 - Les points sont triés par `positionCm` croissante au sein de chaque couple `wallId`/`faceSide`.
 - Chaque face possède au minimum un point à `0` et un point à la longueur du mur.
 - À la création d'une pièce ou d'un mur, ces deux points valent `250 cm` sur chacune des deux faces.
+- À la création, `heightProfilesLinked` vaut `true`.
 - `positionCm` reste dans l'intervalle `[0, longueurDuMurCm]` et deux points d'une même face ne partagent pas la même position.
 - `heightCm` est strictement positive.
 - Deux points couvrent un profil uniforme ou une pente simple; plus de deux points couvrent un profil multi-hauteurs.
@@ -444,10 +457,14 @@ Points à arbitrer:
 - La qualification intérieure ou extérieure d'un mur est dérivée de son nombre de pièces liées et n'est pas persistée comme source primaire.
 - L'orientation d'une face vers une pièce ou vers l'extérieur est dérivée de la topologie; seule sa position stable gauche/droite et son profil sont persistés.
 - Une ouverture doit respecter la hauteur disponible sur les deux faces du mur à toute position qu'elle occupe.
+- Lorsque `heightProfilesLinked` est actif, les deux profils sont enregistrés atomiquement et restent strictement identiques.
 - Après recalcul topologique, supprimer toute ouverture dont `placementType` est incompatible avec la qualification de son mur support.
 
 ## Persistance et suppression
 - Source de vérité persistée: Supabase/PostgreSQL.
+- La source de vérité des règles métier et des valeurs initiales est `web/src/domain/`; PostgreSQL stocke le résultat explicitement fourni par l'application.
+- PostgreSQL ne porte pas de valeur par défaut fonctionnelle ni de validation métier évolutive.
+- Les écritures liées qui ne peuvent pas être partiellement appliquées utilisent une transaction, notamment la mise à jour de deux profils de hauteur liés.
 - Suppression logique explicitement définie pour les pièces dans le dashboard.
 - Les suppressions physiques et politiques d'archivage des autres domaines restent à arbitrer.
 

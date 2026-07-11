@@ -29,8 +29,18 @@
 - après toute modification topologique, les relations mur-pièce et la compatibilité des ouvertures sont recalculées avant persistance; les ouvertures devenues incompatibles sont supprimées
 - le type de pièce est persisté dans Supabase/PostgreSQL; son icône est une projection frontend produite avec `react-icons` et n'est pas stockée
 - les options d'affichage des surfaces et des icônes de pièces sont persistées avec les autres préférences de vue et appliquées aux canvas comme aux exports PDF
-- chaque mur persiste deux profils de hauteur ordonnés indépendants, un par face stable du segment; l'association visuelle d'une face à une pièce ou à l'extérieur est calculée depuis la topologie
+- chaque mur persiste deux profils de hauteur ordonnés, un par face stable du segment; ils sont liés par défaut et peuvent être dissociés, tandis que l'association visuelle d'une face à une pièce ou à l'extérieur est calculée depuis la topologie
+- chaque mur persiste également l'état de liaison de ses profils, actif par défaut; lorsqu'il est actif, les écritures sur les deux profils sont validées et persistées dans une même transaction
 - les hauteurs intermédiaires, contours de face et mesures affichées dans la vue Mur sont projetés depuis les points persistés et ne sont pas stockés comme valeurs dérivées
+
+## Répartition des validations et des valeurs par défaut
+- les valeurs par défaut fonctionnelles sont définies dans `web/src/domain/`, testées avec la logique métier et envoyées explicitement lors de chaque création; elles ne reposent pas sur des clauses `DEFAULT` PostgreSQL
+- les règles métier évolutives sont validées dans `web/src/domain/` avant persistance, notamment les règles géométriques, les compatibilités, les bornes fonctionnelles et les transitions d'état
+- l'interface peut répéter ces validations pour fournir un retour immédiat, mais elle s'appuie sur le domaine pour prendre la décision métier
+- PostgreSQL garantit uniquement l'intégrité technique indispensable: identité, présence des données structurelles, clés étrangères, unicité technique, sécurité RLS et cohérence transactionnelle
+- une contrainte `CHECK` PostgreSQL n'est ajoutée que si elle protège une propriété structurelle durable et indépendante d'une règle produit susceptible d'évoluer
+- les opérations qui doivent rester indivisibles sont persistées dans une même transaction, sans déplacer pour autant leur décision métier dans la base de données
+- toute modification d'une règle ou d'une valeur par défaut fonctionnelle doit pouvoir être réalisée dans le code et ses tests sans nécessiter de migration SQL
 
 ## Séquencement
 1. Prototype géométrique web

@@ -27,8 +27,12 @@
 - Un mur peut exister seul ou etre lie a une ou deux pièces.
 - Un mur lie a une seule pièce est extérieur pour cette pièce.
 - Un mur lie a deux pièces differentes est intérieur pour les deux pièces.
-- Chaque mur possède exactement deux faces et deux profils de hauteur indépendants.
+- Chaque mur possède exactement deux faces et deux profils de hauteur propres, liés par défaut et dissociables.
 - Chaque profil est une liste de points ordonnée par leur distance depuis le début du segment; sa hauteur par défaut est uniforme à 250 cm.
+- Le lien entre profils est actif par défaut; lorsqu'il est actif, les deux profils possèdent exactement les mêmes positions et hauteurs.
+- Toute modification effectuée avec le lien actif est répercutée atomiquement sur les deux faces.
+- La désactivation du lien conserve les profils courants; leur édition devient indépendante.
+- La remise en liaison copie le profil de la face affichée vers l'autre face après confirmation explicite.
 - Pour un mur mitoyen, l'orientation de chaque face vers l'une des deux pièces est calculée depuis la topologie.
 - Pour un mur extérieur, les faces intérieure et extérieure sont toutes deux éditables.
 - Si le sens du segment est inversé par une transformation topologique, les profils sont permutés afin de rester attachés à la même face physique.
@@ -79,7 +83,8 @@
 - Detachement d'un mur de son ancrage.
 - Coupe d'un mur en deux.
 - Placement d'une ouverture sur un mur support.
-- Ajout, déplacement, modification ou suppression d'un point de profil sur une face, sans modifier le profil de l'autre face.
+- Lorsque le lien est inactif, ajout, déplacement, modification ou suppression d'un point de profil sur une face sans modifier le profil de l'autre face.
+- Ajout, déplacement, modification ou suppression simultanée du point correspondant sur les deux faces lorsque leur lien est actif.
 
 ## Règles de scission et d'intersection
 - Si l'extremite d'un mur est posee sur un mur existant, le mur support est scinde au point d'ancrage et le nouveau mur est lie a ce point.
@@ -94,6 +99,7 @@
 - Refuser une ouverture hors du mur support.
 - Refuser un profil sans point aux deux extrémités, non ordonné, hors des bornes du mur ou contenant une hauteur non positive.
 - Refuser une modification de profil qui rend une ouverture existante incompatible avec l'une des deux faces.
+- Refuser toute persistance partielle qui rendrait différents deux profils dont le lien est actif.
 - Refuser deux ouvertures chevauchantes sur un meme mur.
 - Refuser la pose d'un template intérieur sur un mur extérieur et d'un template extérieur sur un mur intérieur.
 - Refuser une cote de longueur nulle.

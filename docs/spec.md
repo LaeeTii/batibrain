@@ -150,14 +150,14 @@ Date de mise à jour: 2026-07-12
 - Portée fonctionnelle cible:
 	- Navigation depuis l'action `Ouvrir la vue Mur` du bloc d'édition d'un mur dans les éditeurs 2D global et par pièce.
 	- Canvas de face affichant le profil de hauteur, les ouvertures et les mesures pertinentes du côté choisi.
-	- Choix entre les deux faces du mur; chaque face porte un profil de hauteur ordonné indépendant.
+	- Choix entre les deux faces du mur; chaque face porte un profil de hauteur ordonné, lié par défaut à celui de l'autre face et dissociable.
 	- Pour un mur mitoyen, chaque face est présentée selon la pièce vers laquelle elle est orientée.
 	- Pour un mur extérieur, les faces intérieure et extérieure restent toutes deux éditables.
 	- À la création d'une pièce ou d'un mur, les deux faces reçoivent un profil uniforme de 250 cm.
 - Règles métier minimales:
 	- La vue mur opère dans le contexte projet/niveau/mur courant et conserve la pièce d'origine lorsqu'elle vient de la vue par pièce.
 	- Les modifications restent cohérentes avec les invariants géométriques partagés.
-	- Le changement de face ne modifie ni le mur sélectionné ni l'autre profil.
+	- Le simple changement de face ne modifie ni le mur sélectionné ni les profils.
 	- Depuis la vue par pièce, la face initiale est celle orientée vers la pièce d'origine.
 	- Sans pièce d'origine, la face initiale est la face intérieure pour un mur extérieur, puis la face gauche dans les autres cas.
 	- Les ouvertures sont validées contre la hauteur disponible sur chacune des deux faces.
@@ -170,16 +170,26 @@ Date de mise à jour: 2026-07-12
 	- Une modification invalide pour une ouverture est refusée avec un message explicite.
 
 ### 5) Profils de hauteur multiples sur un mur (legacy #12)
+- Version cible validée: V1.
+- Statut: terminée.
 - Objectif:
-	- Permettre plus de deux hauteurs sur chacune des deux faces d'un mur via deux profils discrets indépendants.
+	- Permettre plus de deux hauteurs sur chacune des deux faces d'un mur via deux profils discrets, liés par défaut et dissociables.
 - Portée fonctionnelle cible:
 	- Liste ordonnée de points de hauteur pour chaque face d'un mur.
 	- Chaque point stocke une distance horizontale depuis le début du mur + hauteur associée.
+	- Possibilité de lier les deux profils afin de conserver des positions et hauteurs identiques, avec lien actif par défaut.
 - Règles métier minimales:
 	- Distances ordonnées et dans les bornes du mur, indépendamment pour chaque face.
 	- Cohérence de chaque profil avec les validations existantes des ouvertures.
+	- Lorsque le lien est actif, toute modification d'une face est appliquée transactionnellement à l'autre face.
+	- Désactiver le lien conserve les deux profils existants et autorise ensuite leur édition indépendante.
+	- Réactiver le lien lorsque les profils diffèrent demande confirmation, puis remplace le profil opposé par celui de la face affichée.
 - Critères d'acceptation:
-	- Chaque face d'un mur supporte plus de deux hauteurs sans modifier l'autre face.
+	- Chaque face d'un mur supporte plus de deux hauteurs et, lorsque le lien est désactivé, peut être modifiée sans changer l'autre face.
+	- Un nouveau mur possède des profils liés par défaut.
+	- Lorsque les profils sont liés, toute modification produit deux profils strictement identiques.
+	- Après désactivation du lien, chaque face peut être modifiée indépendamment.
+	- La remise en liaison confirmée utilise la face affichée comme source et peut être annulée depuis l'historique.
 	- Les profils invalides sont refusés avec erreur explicite.
 
 ### 6) DocumentsView (legacy #1)
