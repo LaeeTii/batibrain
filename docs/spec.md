@@ -69,21 +69,32 @@ Date de mise à jour: 2026-07-10
 	- L'utilisateur peut se déconnecter depuis les paramètres et revenir à l'écran de login.
 
 ### 1) Collaboration projet asynchrone simple (legacy #7)
+- Version cible validée: V1.
 - Objectif:
 	- Permettre le partage de projet sans temps réel complexe.
 - Portée fonctionnelle cible:
-	- Propriétaire de projet.
-	- Liste de collaborateurs.
-	- Droits minimaux lecture/écriture.
-	- Invitation et gestion des accès.
+	- Un propriétaire unique par projet.
+	- Une liste de collaborateurs et d'invitations en attente.
+	- Deux rôles collaborateurs appliqués à tout le projet et à toutes ses ressources: lecture et écriture.
+	- Invitation par l'adresse e-mail d'un compte BatiBrain existant.
+	- Gestion des accès par le propriétaire: inviter, renvoyer ou annuler une invitation, modifier un rôle et retirer un collaborateur.
+	- Acceptation explicite depuis la liste des notifications de l'application.
 - Règles métier minimales:
 	- Seul le propriétaire gère les collaborateurs.
-	- Un collaborateur en lecture ne modifie pas.
-	- Un collaborateur en écriture peut modifier selon le périmètre autorisé.
+	- Un collaborateur en lecture peut consulter, naviguer et exporter, mais ne peut ni créer, ni modifier, ni supprimer de donnée du projet.
+	- Un collaborateur en écriture dispose des droits d'édition sur tout le projet, mais ne gère ni les collaborateurs ni le projet lui-même.
+	- Le droit d'écriture est vérifié avant le verrouillage d'édition; détenir ce droit ne dispense pas d'obtenir le verrou requis.
+	- Une invitation ne donne accès au projet qu'après son acceptation.
+	- Les invitations n'ont ni action de refus ni date d'expiration.
+	- La collaboration temps réel complexe et le transfert de propriété restent hors périmètre.
 - Critères d'acceptation:
-	- Le propriétaire peut inviter un collaborateur.
-	- Le collaborateur autorisé accède au projet partagé selon son rôle.
-	- Les modifications respectent les droits.
+	- Le propriétaire ouvre la gestion des collaborateurs depuis le contexte du projet dans la sidebar.
+	- Le propriétaire peut inviter l'adresse e-mail d'un compte existant avec un rôle lecture ou écriture.
+	- L'utilisateur invité voit une notification comptabilisée dans le badge de la cloche de l'application.
+	- L'utilisateur invité peut accepter l'invitation depuis le bouton situé sur sa ligne descriptive.
+	- Après acceptation, le projet partagé apparaît parmi ses projets accessibles.
+	- Le propriétaire peut renvoyer ou annuler une invitation en attente, modifier le rôle d'un collaborateur et retirer son accès.
+	- Les consultations, exports et modifications respectent le rôle effectif.
 
 ### 2) Validation d'adjacence pour ouvertures intérieures (legacy #8)
 - Objectif:

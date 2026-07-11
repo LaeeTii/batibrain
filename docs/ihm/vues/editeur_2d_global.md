@@ -90,6 +90,11 @@
   - Les interactions fines propres aux composants restent detaillees dans [panels.md](../composants/panels.md), [canvas.md](../composants/canvas.md), [sections.md](../composants/sections.md) et [transverses.md](../composants/transverses.md).
 
 ## Règles metier
+- Droits projet:
+  - Le propriétaire et le collaborateur en écriture peuvent utiliser les fonctions de création, d'édition et de suppression, sous réserve du verrou d'édition requis.
+  - Le collaborateur en lecture conserve la navigation, la sélection consultative, les options d'affichage, le zoom et les exports.
+  - En lecture seule, les contrôles de création, d'édition, de suppression, d'annulation et de rétablissement d'actions métier sont désactivés ou masqués.
+  - Une tentative d'écriture indirecte est refusée même si un contrôle obsolète reste affiché.
 - Contexte de travail:
   - La vue travaille toujours dans le contexte du projet courant.
   - Un seul niveau est editable a un instant donne.
@@ -121,6 +126,9 @@
   - Les règles fines propres aux composants restent definies dans les fichiers du dossier [../composants](../composants).
 
 ## Etats et feedback
+- Etat lecture seule:
+  - Un indicateur explicite signale que le projet est consultable sans droit d'édition.
+  - Le canvas et les panneaux restent consultables sans rendre les objets manipulables.
 - Etat initial:
   - La vue charge le projet courant, le niveau editable, les niveaux visibles et les objets du plan.
 - Etat normal:
@@ -298,4 +306,3 @@
 - Referentiel global : [ihm.md](../ihm.md)
 - Components : [panels.md](../composants/panels.md), [sections.md](../composants/sections.md), [canvas.md](../composants/canvas.md), [transverses.md](../composants/transverses.md)
 - Logique : [edition_2D_synchronisation_selection.md](../logique/edition_2D_synchronisation_selection.md), [geometry.md](../logique/geometry.md)
-

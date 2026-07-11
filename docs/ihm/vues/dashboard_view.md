@@ -50,6 +50,7 @@
 		- ajouter une photo.
 	- Gestion physique de suppression definitive en base si la regle metier cible est une suppression logique.
 	- Parametrage utilisateur detaille et gestion de session, déjà couverts par d'autres vues/flux.
+	- Gestion des collaborateurs, portée par ProjectCollaborationModal.
 
 ## Structure ecran
 - Layout global:
@@ -128,6 +129,11 @@
 	- Si aucun filtre ne correspond, la grille est remplacee par un etat vide specifique aux filtres actifs.
 
 ## Règles metier
+- Droits projet:
+	- Le rôle lecture conserve la consultation des cartes, la navigation vers les vues et les exports.
+	- Le rôle lecture ne peut pas ajouter de note, supprimer une pièce ni déclencher une autre action créant ou modifiant une donnée.
+	- Le rôle écriture et le propriétaire disposent des actions d'édition; les opérations soumises à verrou nécessitent ensuite la détention du verrou.
+	- Les actions interdites par le rôle sont désactivées ou masquées sans permettre leur déclenchement indirect.
 - Contexte projet:
 	- Le dashboard affiche les données du projet courant selectionne depuis la sidebar.
 	- Si plusieurs projets existent, le projet charge par defaut est le dernier projet modifie.

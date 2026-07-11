@@ -20,6 +20,10 @@
 - la spec est la source de vérité pour le produit (docs/ihm/ihm.md)
 - les projections (métriques, angles, vues dérivées) sont calculées
 - les préférences utilisateur (unités, thème, sécurité de session) sont persistées côté Supabase/PostgreSQL et relues à l'ouverture de session pour initialiser l'interface
+- la propriété des projets, les collaborations et les invitations sont persistées dans Supabase/PostgreSQL
+- l'accès aux données est limité côté backend aux projets possédés par l'utilisateur authentifié ou partagés avec lui après acceptation de l'invitation
+- les autorisations de lecture et d'écriture sont contrôlées côté backend selon le rôle projet; l'interface ne constitue pas la barrière de sécurité
+- le contrôle du droit d'écriture précède l'acquisition du verrou d'édition simple
 
 ## Séquencement
 1. Prototype géométrique web

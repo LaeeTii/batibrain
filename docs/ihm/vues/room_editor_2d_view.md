@@ -112,6 +112,11 @@
 	- si la pièce cible n'est pas disponible, la vue affiche l'erreur bloquante locale sans navigation forcee.
 
 ## Règles metier
+- Droits projet:
+	- Le propriétaire et le collaborateur en écriture peuvent modifier la pièce courante, sous réserve du verrou d'édition requis.
+	- Le collaborateur en lecture conserve la consultation, la navigation, les options d'affichage et les exports PDF.
+	- En lecture seule, l'auto-save n'est pas déclenché et les actions de création, d'édition, de suppression, d'annulation et de rétablissement sont désactivées ou masquées.
+	- Un indicateur explicite signale l'état lecture seule et toute tentative d'écriture indirecte est refusée.
 - Portee d'édition:
 	- la vue autorise l'édition strictement de la pièce courante.
 	- les murs, ouvertures, côtes et notes d'autres pièces visibles en contexte grise ne sont pas editables dans RoomEditor2DView.

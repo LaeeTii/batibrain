@@ -33,6 +33,7 @@ Ce document ne remplace pas les sources fonctionnelles principales (`docs/ihm/`)
 |---|---|---|
 | Projet / niveaux / pièces / murs / ouvertures / côtes / notes | Stabilisé | Contrats IHM détaillés disponibles (vues + logique + composants). |
 | Authentification / session | Stabilisé | Contrat détaillé disponible dans LoginView. |
+| Collaboration projet | Stabilisé | Propriété, rôles globaux et invitations applicatives définis pour la V1. |
 | Exports PDF plan et plan + détail | Stabilisé | Matrice complète de templates et données minimales définies. |
 | Tâches | Legacy minimal | Intention et exigences minimales définies, détail IHM à compléter. |
 | Documents | Legacy minimal | Intention et exigences minimales définies, détail IHM à compléter. |
@@ -65,6 +66,7 @@ Champs minimaux:
 - `id`
 - `name`
 - `description` (optionnel)
+- `ownerUserId`
 - `updatedAt`
 - `isSoftDeleted`
 
@@ -72,6 +74,41 @@ Règles:
 - Le projet courant est le contexte global des vues métier.
 - Si aucun projet n'est explicitement sélectionné, le projet courant par défaut est le dernier projet modifié.
 - Un projet supprimé logiquement est exclu des listes actives par défaut.
+- Un projet possède un propriétaire unique.
+- Un utilisateur accède à un projet s'il en est propriétaire ou si une collaboration acceptée le lui autorise.
+
+### ProjectCollaboration
+Représente l'accès accepté d'un utilisateur à l'ensemble d'un projet.
+
+Champs minimaux:
+- `id`
+- `projectId`
+- `userId`
+- `role` (`lecture`, `écriture`)
+
+Règles:
+- Une collaboration porte sur le projet entier et toutes ses ressources.
+- Le rôle lecture autorise consultation, navigation et exports, sans création, modification ni suppression.
+- Le rôle écriture autorise l'édition, sauf gestion des collaborateurs et modification du projet lui-même.
+- Le droit d'écriture est contrôlé avant le verrou d'édition applicable.
+- Seul le propriétaire peut modifier le rôle ou retirer la collaboration.
+
+### ProjectInvitation
+Représente une invitation en attente adressée à un compte BatiBrain existant.
+
+Champs minimaux:
+- `id`
+- `projectId`
+- `invitedUserId`
+- `invitedEmail`
+- `role` (`lecture`, `écriture`)
+- `status` (`en_attente`, `acceptée`, `annulée`)
+
+Règles:
+- L'adresse invitée doit correspondre à un compte existant.
+- L'acceptation explicite transforme l'accès en collaboration effective.
+- Une invitation en attente peut être renvoyée ou annulée par le propriétaire.
+- Aucune action de refus et aucune expiration ne sont prévues.
 
 ### Level
 Niveau d'un projet.
@@ -346,6 +383,8 @@ Points à arbitrer:
 
 ## Relations
 - `Project` 1..n `Level`
+- `Project` 1..n `ProjectCollaboration`
+- `Project` 1..n `ProjectInvitation`
 - `Level` 1..n `Room`
 - `Room` 1..n `Vertex`
 - `Room` 1..n `Wall` (ou liaison topologique équivalente)
@@ -361,6 +400,8 @@ Points à arbitrer:
 - `Project` 1..n `PlanningItem` (legacy minimal)
 
 ## Invariants transverses
+- Les données accessibles à un utilisateur appartiennent à ses projets ou aux projets dont il a accepté la collaboration.
+- La gestion des collaborateurs est réservée au propriétaire du projet.
 - Unités métier: centimètre pour géométrie et mesures; m2 pour surfaces.
 - Les coordonnées partagent le même repère au sein d'un niveau.
 - Les valeurs dérivées (surface, angle, périmètre, orientation) sont calculées, pas stockées comme source primaire.

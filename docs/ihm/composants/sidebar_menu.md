@@ -4,6 +4,7 @@
 - Logo + nom de l'application
 - Avatar + nom de l'utilisateur connecté
 - Séléction du projet courant (dropdown)
+- Action de gestion des collaborateurs dans le contexte du projet courant, visible uniquement pour son propriétaire, ouvrant ProjectCollaborationModal.
 - "créer un projet" (bouton) -> ouvre une modale.
 - "Tableau de bord" (bouton) -> ouvre la vue tableau de bord
 - "Édition globale" (bouton) -> ouvre la vue édition globale du projet
@@ -26,6 +27,9 @@
 
 - le projet courant détermine le contexte de l'application, toutes les vues affichent les données du projet courant.
 
-- la modale de paramètres permet de changer le thème (clair/sombre), l'unité de mesure (cm/m/mm, avec cm par défaut) et l'unité de surface (cm2/m2/mm2, avec m2 par défaut). Ces paramètres sont persistés dans la base de données pour l'utilisateur courant. On peut aussi se déconnecter de l'application depuis cette modale. La déconnexion redirige vers la page de login.
+- le sélecteur de projet contient les projets possédés par l'utilisateur et les projets partagés dont il a accepté l'invitation.
 
+- un projet faisant l'objet d'une invitation encore en attente n'apparaît pas dans le sélecteur.
+
+- la modale de paramètres permet de changer le thème (clair/sombre), l'unité de mesure (cm/m/mm, avec cm par défaut) et l'unité de surface (cm2/m2/mm2, avec m2 par défaut). Ces paramètres sont persistés dans la base de données pour l'utilisateur courant. On peut aussi se déconnecter de l'application depuis cette modale. La déconnexion redirige vers la page de login.
 

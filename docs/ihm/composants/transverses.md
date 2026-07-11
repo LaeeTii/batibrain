@@ -11,6 +11,57 @@
 - DetailTree
 - ProjectNotesBubble
 - SelectionSyncBridge
+- ProjectCollaborationModal
+- AppNotifications
+
+### Contrat ProjectCollaborationModal
+- Objectif:
+	- Permettre au propriétaire de gérer les accès au projet courant depuis le contexte projet de la sidebar.
+- Accès:
+	- L'action d'ouverture est visible uniquement pour le propriétaire du projet courant.
+- Structure:
+	- Formulaire d'invitation avec adresse e-mail et rôle lecture ou écriture.
+	- Liste des invitations en attente avec rôle et actions Renvoyer et Annuler.
+	- Liste des collaborateurs actifs avec rôle et actions Modifier le rôle et Retirer.
+- Règles métier:
+	- L'adresse e-mail doit correspondre à un compte BatiBrain existant.
+	- Une invitation reste sans accès au projet tant qu'elle n'est pas acceptée.
+	- Seul le propriétaire peut inviter, renvoyer, annuler, modifier un rôle ou retirer un collaborateur.
+	- Les rôles s'appliquent à tout le projet: lecture ou écriture.
+	- Le transfert de propriété n'est pas proposé.
+- Etats et feedback:
+	- Chargement des invitations et collaborateurs.
+	- Confirmation après chaque action réussie.
+	- Erreur explicite si le compte n'existe pas ou si une opération échoue.
+	- Etat vide distinct pour les invitations et les collaborateurs.
+- Critères d'acceptation testables:
+	- Given le propriétaire ouvre la modale, When il invite un compte existant avec un rôle, Then l'invitation apparaît en attente.
+	- Given une invitation est en attente, When le propriétaire la renvoie ou l'annule, Then la liste reflète l'opération.
+	- Given un collaborateur est actif, When le propriétaire modifie son rôle ou le retire, Then ses droits effectifs sont mis à jour.
+
+### Contrat AppNotifications
+- Objectif:
+	- Afficher les notifications de l'utilisateur authentifié et permettre l'acceptation des invitations projet.
+- Structure:
+	- Bouton icône cloche en haut à droite de l'application.
+	- Bulle numérique indiquant le nombre de notifications en attente.
+	- Panneau ouvert au clic, contenant une ligne descriptive par invitation.
+	- Bouton Accepter placé au bout de chaque ligne d'invitation.
+- Règles métier:
+	- Une invitation est visible uniquement par le compte correspondant à l'adresse invitée.
+	- Le badge compte les invitations en attente.
+	- L'acceptation ajoute le projet aux projets accessibles selon le rôle attribué.
+	- Aucune action Refuser n'est proposée et l'invitation n'expire pas automatiquement.
+- Etats et feedback:
+	- Badge absent ou à zéro lorsqu'aucune notification n'est en attente.
+	- Etat de chargement à l'ouverture du panneau.
+	- Etat vide explicite en l'absence de notification.
+	- Bouton Accepter en chargement pendant l'opération, puis retrait de la ligne et décrémentation du badge après succès.
+	- En cas d'échec, la ligne reste affichée et présente une erreur permettant de réessayer.
+- Critères d'acceptation testables:
+	- Given une invitation en attente, When l'utilisateur consulte l'application, Then la cloche affiche un badge qui la comptabilise.
+	- Given le panneau est ouvert, When l'utilisateur clique sur Accepter, Then le projet devient accessible selon le rôle attribué.
+	- Given l'acceptation réussit, When l'état est rafraîchi, Then la ligne disparaît et le badge est décrémenté.
 
 ### Contrat SettingsModal
 - Objectif:

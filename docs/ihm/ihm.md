@@ -51,7 +51,17 @@
 - DetailTree
 - ProjectNotesBubble
 - SelectionSyncBridge
+- ProjectCollaborationModal
+- AppNotifications
 - Note: DetailTree, ProjectNotesBubble et SelectionSyncBridge portent la source de verite de la synchronisation transverse et des interactions communes dans [composants/transverses.md](./composants/transverses.md).
+- Note: ProjectCollaborationModal et AppNotifications portent la gestion des accès projet et l'acceptation des invitations dans [composants/transverses.md](./composants/transverses.md).
+
+## Droits projet transverses
+- Les projets accessibles sont les projets possédés par l'utilisateur ou ceux dont il a accepté l'invitation.
+- Le rôle lecture autorise la consultation, la navigation et les exports, mais interdit toute création, modification ou suppression.
+- Le rôle écriture autorise l'édition de toutes les ressources du projet, sous réserve du verrou d'édition applicable.
+- Seul le propriétaire peut gérer les invitations et collaborateurs ou modifier le projet lui-même.
+- Ces règles s'appliquent à toutes les vues métier, sauf dérogation explicitement documentée.
 
 ## Règles d'implementation frontend
 - Les conventions techniques frontend (stack, composants UI, icones, styles, checklist) sont definies dans [.github/frontend.instructions.md](../.github/frontend.instructions.md).

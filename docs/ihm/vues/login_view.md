@@ -84,7 +84,9 @@
 	- La déconnexion invalide la session locale en cours.
 	- Apres déconnexion, l'utilisateur est redirige vers LoginView et ne peut plus acceder aux vues metier via navigation directe.
 - Données utilisateur:
-	- Les données projet affichees ensuite dans l'application sont scopees a l'utilisateur authentifie (protection minimale attendue cote session et acces aux données).
+	- Les données projet affichees ensuite dans l'application sont limitées aux projets possédés par l'utilisateur authentifié ou auxquels il est autorisé à collaborer.
+	- Une invitation projet ne peut cibler que l'adresse e-mail d'un compte BatiBrain existant.
+	- L'acceptation d'une invitation nécessite une session authentifiée et s'effectue depuis la liste des notifications de l'application.
 
 ## Etats et feedback
 - Etat initial:
