@@ -97,17 +97,25 @@ Date de mise à jour: 2026-07-10
 	- Les consultations, exports et modifications respectent le rôle effectif.
 
 ### 2) Validation d'adjacence pour ouvertures intérieures (legacy #8)
+- Version cible validée: V1.
 - Objectif:
-	- Éviter les incohérences métier de pose d'ouvertures intérieures.
+	- Éviter les incohérences métier de pose d'ouvertures intérieures et extérieures.
 - Portée fonctionnelle cible:
-	- Détection des murs adjacents entre pièces.
-	- Validation de pose conditionnée à l'adjacence admissible.
+	- Caractéristique intérieur/extérieur portée par chaque template d'ouverture, sans déduction automatique lors de la pose.
+	- Qualification calculée du mur à partir du nombre de pièces auxquelles il appartient.
+	- Validation de pose conditionnée à la compatibilité entre le template et le mur support.
 - Règles métier minimales:
-	- Une ouverture intérieure n'est autorisée que sur un mur admissible.
-	- Message explicite quand la règle est violée.
+	- Un mur lié à deux pièces est intérieur; un template intérieur peut y être posé.
+	- Un mur lié à une seule pièce est extérieur; un template extérieur peut y être posé.
+	- Un template intérieur est refusé sur un mur extérieur et un template extérieur est refusé sur un mur intérieur.
+	- Il n'existe pas de détection d'adjacence entre deux murs distincts, de tolérance géométrique ni de recouvrement partiel pour cette règle.
+	- Au survol d'un mur incompatible, aucune prévisualisation de l'ouverture n'est affichée.
+	- Après une modification topologique, toute ouverture devenue incompatible avec la nouvelle qualification de son mur est supprimée.
 - Critères d'acceptation:
-	- Pose refusée sur mur non admissible avec explication.
-	- Pose acceptée sur mur admissible.
+	- Un template intérieur peut être posé sur un mur lié à deux pièces et ne peut pas être posé sur un mur lié à une pièce.
+	- Un template extérieur peut être posé sur un mur lié à une pièce et ne peut pas être posé sur un mur lié à deux pièces.
+	- Aucun aperçu n'est visible lors du survol d'un mur incompatible.
+	- Une ouverture intérieure ou extérieure devenue incompatible après recalcul topologique est supprimée.
 
 ### 3) Icône de pièce configurable (legacy #9)
 - Objectif:

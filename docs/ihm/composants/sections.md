@@ -56,6 +56,7 @@
 		- filtre de templates: porte, fenêtre, baie vitree, autre,
 		- aucun filtre actif par defaut,
 		- la liste des templates affiche au minimum un schema de face et le nom de l'ouverture,
+		- chaque template affiche sa caractéristique intérieur ou extérieur,
 		- au survol d'un mur valide, une previsualisation de l'ouverture suit la souris,
 		- les mesures gauche/droite sont affichees pendant le positionnement,
 		- actions édition: Inverser le sens, Ouvrant gauche/droite si applicable, Supprimer,
@@ -95,8 +96,10 @@
 	- OpeningsSection: pose sur mur valide au clic; si aucun mur valide n'est detecte, le mode se ferme et l'UI revient accordeons fermes.
 	- OpeningsSection:
 		- le choix d'un template est obligatoire avant toute pose,
-		- la pose n'est possible que sur un mur valide,
+		- la pose n'est possible que sur un mur valide et compatible avec la caractéristique intérieur/extérieur du template,
 		- l'ouverture reste en previsualisation tant qu'elle n'est pas validee par clic,
+		- un template intérieur est compatible uniquement avec un mur lié à deux pièces,
+		- un template extérieur est compatible uniquement avec un mur lié à une pièce,
 		- si aucun mur valide n'est detecte, le mode se ferme et l'UI revient accordeons fermes.
 	- DimensionsSection: creation en 3 temps (point 1, point 2, decalage), Echap annule la creation en cours.
 	- DimensionsSection:
@@ -193,10 +196,12 @@
 	- filtre courant,
 	- liste des templates visibles selon filtre,
 	- nom du template selectionne,
+	- caractéristique intérieur ou extérieur du template,
 	- mesures contextuelles pendant le positionnement,
 	- actions d'édition disponibles selon le type d'ouverture.
 - Règles d'interaction:
 	- la sélection d'une ouverture existante ouvre automatiquement le bloc édition correspondant,
+	- au survol d'un mur incompatible avec le template sélectionné, aucune prévisualisation ni mesure de positionnement n'est affichée,
 	- le switch Ouvrant gauche/droite n'est visible que si applicable au type d'ouverture,
 	- l'action Inverser le sens agit sur l'orientation de l'ouverture par rapport au mur support.
 
@@ -232,6 +237,8 @@
 - Given une creation de pièce est en cours, When l'utilisateur deplace la souris apres le premier clic, Then la previsualisation de la pièce et ses dimensions sont visibles en temps reel.
 - Given une pièce existante est selectionnee, When la section Pièces est active, Then le bloc édition pièce s'ouvre automatiquement avec les valeurs de la pièce.
 - Given un template d'ouverture est selectionne, When l'utilisateur survole un mur valide, Then une previsualisation de l'ouverture et ses mesures gauche/droite sont affichees.
+- Given un template intérieur est sélectionné, When l'utilisateur survole un mur lié à une seule pièce, Then aucune prévisualisation ni mesure de positionnement n'est affichée.
+- Given un template extérieur est sélectionné, When l'utilisateur survole un mur lié à deux pièces, Then aucune prévisualisation ni mesure de positionnement n'est affichée.
 - Given aucun mur valide n'est detecte pour une ouverture en cours, When le mode ne peut pas etre poursuivi, Then le mode de creation d'ouverture se ferme et l'interface revient accordeons fermes.
 - Given une creation de cote est en cours, When l'utilisateur appuie sur Echap, Then la creation est annulee sans objet persistant créé.
 - Given une cote existante est selectionnee, When l'utilisateur clique sur Repositionner decalage, Then la cote repasse en mode reglage de decalage sans perdre son rattachement metier.

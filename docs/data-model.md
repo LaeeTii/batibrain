@@ -207,7 +207,9 @@ Ouverture positionnée sur un mur (porte, fenêtre, baie, autre).
 Champs minimaux:
 - `id`
 - `wallId`
+- `templateId`
 - `type`
+- `placementType` (`intérieur`, `extérieur`)
 - `startRatio` ou position équivalente
 - `widthCm`
 - `heightCm`
@@ -218,6 +220,24 @@ Règles:
 - Une ouverture doit rester entièrement comprise dans son mur support.
 - Les ouvertures d'un même mur ne se chevauchent pas.
 - La hauteur utile de l'ouverture doit respecter la hauteur disponible du mur.
+- `placementType` reprend la caractéristique du template utilisé; il n'est pas déduit du mur lors de la pose.
+- Une ouverture intérieure est compatible uniquement avec un mur lié à deux pièces.
+- Une ouverture extérieure est compatible uniquement avec un mur lié à une pièce.
+- Après une modification topologique, une ouverture devenue incompatible avec la qualification calculée du mur est supprimée.
+
+### OpeningTemplate
+Modèle sélectionnable utilisé pour créer une ouverture.
+
+Champs minimaux:
+- `id`
+- `name`
+- `type` (`porte`, `fenêtre`, `baie vitrée`, `autre`)
+- `placementType` (`intérieur`, `extérieur`)
+
+Règles:
+- Chaque template déclare explicitement une caractéristique intérieur ou extérieur.
+- Cette caractéristique détermine les murs admissibles pendant la pose.
+- Le type intérieur/extérieur du template n'est jamais déduit automatiquement du mur survolé.
 
 ### Dimension
 Cote de mesure rattachée au niveau actif.
@@ -390,6 +410,7 @@ Points à arbitrer:
 - `Room` 1..n `Wall` (ou liaison topologique équivalente)
 - `Wall` 1..n `HeightProfilePoint` (point de profil ordonné par position)
 - `Wall` 1..n `Opening`
+- `OpeningTemplate` 1..n `Opening`
 - `Level` 1..n `Dimension`
 - `Project` 1..n `Note`
 - `UserSession` 1..1 `UserPreferences`
@@ -407,6 +428,8 @@ Points à arbitrer:
 - Les valeurs dérivées (surface, angle, périmètre, orientation) sont calculées, pas stockées comme source primaire.
 - Après modification topologique (coupe/intersection), recalculer segments élémentaires et relations mur-pièce.
 - En cas d'édition d'un mur mitoyen, la cohérence des deux pièces doit être conservée.
+- La qualification intérieure ou extérieure d'un mur est dérivée de son nombre de pièces liées et n'est pas persistée comme source primaire.
+- Après recalcul topologique, supprimer toute ouverture dont `placementType` est incompatible avec la qualification de son mur support.
 
 ## Persistance et suppression
 - Source de vérité persistée: Supabase/PostgreSQL.

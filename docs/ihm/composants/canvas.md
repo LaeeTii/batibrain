@@ -67,6 +67,10 @@
 	- les autres mesures restent visibles mais attenuees si l'option globale correspondante reste active,
 	- en édition d'ouverture, les distances gauche/droite restent toujours visibles,
 	- en édition de fenêtre, l'annotation allège/hauteur reste toujours visible.
+- Règles de prévisualisation des ouvertures:
+	- un template intérieur affiche sa prévisualisation et ses mesures uniquement sur un mur lié à deux pièces,
+	- un template extérieur affiche sa prévisualisation et ses mesures uniquement sur un mur lié à une pièce,
+	- au survol d'un mur incompatible, aucune prévisualisation ni mesure liée à l'ouverture n'est rendue.
 
 ## Cas limites
 - Tentative de creation/édition hors mode actif: aucune modification persistante ne doit etre appliquee.
@@ -78,6 +82,7 @@
 ## Criteres d'acceptation testables
 - Given plusieurs niveaux sont coches, When le canvas est affiche, Then seul le niveau actif est editable et les autres restent en contexte visuel.
 - Given une ouverture est en cours d'édition, When les options de côtes sont masquees, Then les distances directement liees a l'ouverture restent visibles.
+- Given un template d'ouverture est en cours de pose, When un mur incompatible est survolé, Then aucun aperçu ni mesure de positionnement n'est affiché.
 - Given l'utilisateur clique sur un objet visible, When la sélection est appliquee, Then l'objet est surligne dans le canvas et propage vers les autres zones.
 - Given l'utilisateur clique sur reset zoom, When l'action est terminee, Then le niveau de zoom revient a sa valeur initiale.
 
