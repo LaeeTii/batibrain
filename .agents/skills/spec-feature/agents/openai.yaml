@@ -1,4 +1,4 @@
 interface:
   display_name: "Spécifier une feature"
   short_description: "Mettre à jour les spécifications d’une feature"
-  default_prompt: "Utilise $spec-feature pour intégrer une fonctionnalité dans la documentation."
+  default_prompt: "Utilise $spec-feature pour documenter une fonctionnalité, puis $cp pour me faire valider uniquement le commit et le push prévus avant de les exécuter."

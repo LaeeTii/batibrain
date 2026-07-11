@@ -1,6 +1,6 @@
 ---
 name: spec-feature
-description: Intégrer une fonctionnalité dans la documentation sans modifier le code, en maintenant la cohérence entre spécification, IHM, architecture et modèle de données. Utiliser pour documenter ou spécifier une nouvelle feature et lorsque l’utilisateur invoque spec-feature.
+description: Intégrer une fonctionnalité dans la documentation sans modifier le code, maintenir la cohérence entre spécification, IHM, architecture et modèle de données, puis préparer le commit et le push avec $cp. Utiliser pour documenter ou spécifier une nouvelle feature et lorsque l’utilisateur invoque spec-feature.
 ---
 
 # Spécifier une fonctionnalité
@@ -15,11 +15,12 @@ description: Intégrer une fonctionnalité dans la documentation sans modifier l
 2. Lire `docs/projet.md` et ses sources.
 3. Recenser les impacts dans la spec, l’IHM, l’architecture et le modèle de données.
 4. Identifier les informations absentes, ambiguës ou contradictoires.
-5. Poser uniquement les questions nécessaires avant l’écriture concernée.
-6. Proposer un plan fichier par fichier et attendre sa validation.
-7. Modifier uniquement les fichiers validés.
-8. Si les data-models sont impactés mettre à jour le script d'initialisation de la base de données dans `supabase/migrations/20260703_000001_init.sql` et documenter les changements dans `docs/data-model.md`.
-9. Déclarer explicitement la fonctionnalité dans `docs/spec.md`.
-10. Vérifier la cohérence des documents modifiés.
-11. Marquer la feature comme terminée dans `docs/spec.md`.
-12. Récapituler fichiers, décisions, questions résolues et hypothèses autorisées.
+5. Poser uniquement les questions bloquantes nécessaires avant l’écriture concernée, sans demander de validation intermédiaire.
+6. Définir le plan fichier par fichier et réaliser directement les modifications dans le périmètre autorisé.
+7. Si les data-models sont impactés mettre à jour le script d'initialisation de la base de données dans `supabase/migrations/20260703_000001_init.sql` et documenter les changements dans `docs/data-model.md`.
+8. Déclarer explicitement la fonctionnalité dans `docs/spec.md`.
+9. Vérifier la cohérence des documents modifiés.
+10. Marquer la feature comme terminée dans `docs/spec.md`.
+11. Invoquer `$cp` pour préparer le message de commit, la liste exacte des fichiers et le push de la branche courante.
+12. Demander une unique validation explicite portant sur le commit et le push préparés par `$cp`. Ne demander aucune autre validation pendant le workflow.
+13. Après validation, laisser `$cp` créer le commit, pousser la branche et afficher son récapitulatif.
