@@ -32,7 +32,9 @@ Procedure obligatoire:
 7. Executer:
 - `git add -A`
 - `git commit -m "<message-final>"`
-- `git push origin <branche-courante>`
+- `git remote get-url batibrain` (doit retourner `https://github.com/LaeeTii/batibrain.git`)
+- si absent, `git remote add batibrain https://github.com/LaeeTii/batibrain.git`
+- `git push batibrain <branche-courante>`
 8. Afficher le resultat:
 - hash du commit
 - message retenu
