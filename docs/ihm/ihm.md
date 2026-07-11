@@ -68,7 +68,7 @@
 
 ## Terminologie commune
 - Magnetisme (snapping): terme fonctionnel unique pour la capture des points/segments pendant l'édition (sources + distance de capture).
-- Options d'affichage (affichage/masquage): terme fonctionnel unique pour les bascules de visibilite (grille, règles, côtes, angles, notes).
+- Options d'affichage (affichage/masquage): terme fonctionnel unique pour les bascules de visibilite (grille, règles, côtes, angles, notes, surfaces, icônes de pièces).
 - Regle documentaire:
 	- utiliser en priorite `magnetisme (snapping)` dans les specifications,
 	- utiliser en priorite `options d'affichage (affichage/masquage)` dans les specifications.

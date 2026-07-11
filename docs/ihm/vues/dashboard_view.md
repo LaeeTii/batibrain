@@ -242,6 +242,8 @@
 	- Ensemble des pièces visibles du projet courant apres application des filtres.
 	- Pour chaque pièce:
 		- nom,
+		- type,
+		- icône dérivée du type, affichée sous le nom et la surface sauf pour `autre`,
 		- niveau de rattachement,
 		- apercu de plan,
 		- informations de synthese utiles au dashboard,
@@ -360,6 +362,10 @@
 	- Given une creation de pièce sans nom saisi
 	- When la pièce est enregistree
 	- Then son nom applique par defaut est Nouvelle pièce
+- Scenario 15 - Icône dérivée du type:
+	- Given une pièce possède un type différent de `autre`
+	- When sa carte est affichée
+	- Then l'icône correspondante est affichée sous son nom et sa surface
 
 ## Recap decisions et hypotheses explicites
 - Decisions validees:

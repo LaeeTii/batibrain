@@ -37,7 +37,7 @@
 - Zone principale:
   - Header principal:
     - titre projet,
-    - controles d'affichage (affichage/masquage: côtes, angles, grille, règles, notes),
+    - controles d'affichage (affichage/masquage: côtes, angles, grille, règles, notes, surfaces, icônes de pièces),
     - controles de magnetisme (snapping: sources + distance de capture),
     - boutons icones `Annuler` et `Retablir` places en haut a droite du header principal,
     - si l'historique correspondant est vide, le bouton associe est grise et non cliquable,
@@ -64,7 +64,7 @@
   - L'utilisateur peut afficher ou masquer des niveaux dans le sous-header.
   - L'utilisateur peut changer le niveau editable sans quitter la vue.
 - Controles d'affichage:
-  - L'utilisateur peut activer ou desactiver les options d'affichage (affichage/masquage) de la grille, des règles, des côtes, des angles et des notes.
+  - L'utilisateur peut activer ou desactiver les options d'affichage (affichage/masquage) de la grille, des règles, des côtes, des angles, des notes, des surfaces et des icônes de pièces.
   - L'utilisateur peut configurer le magnetisme (snapping) en choisissant ses sources actives et une distance de capture.
   - L'utilisateur peut utiliser les boutons `Annuler` et `Retablir` du header principal quand l'historique correspondant est disponible.
 - Panneau creation:
@@ -116,6 +116,7 @@
   - Le repli d'un panneau ne doit pas invalider le contexte courant ni la sélection active.
 - Mesures et affichages:
   - Les options d'affichage pilotent ce qui est visible dans le canvas.
+  - Les icônes de pièces sont visibles par défaut sous le nom et la surface, sauf pour le type `autre`.
   - Certaines mesures contextuelles restent visibles en mode édition meme si leur affichage global est desactive.
 - Export PDF:
   - L'export Plan prend en compte les niveaux visibles et les options d'affichage actives.
@@ -163,6 +164,8 @@
     - côtes,
     - angles,
     - notes.
+    - surfaces.
+    - icônes de pièces.
   - Etat des options de magnetisme (snapping):
     - grille,
     - sommets,

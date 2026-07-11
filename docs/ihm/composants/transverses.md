@@ -130,7 +130,7 @@
 	- sélection globale active.
 - Données d'entree:
 	- structure navigable des objets (DetailTree) avec noeuds types et ids stables,
-	- options d'affichage (affichage/masquage: côtes, angles, grille, règles, notes),
+	- options d'affichage (affichage/masquage: côtes, angles, grille, règles, notes, surfaces, icônes de pièces),
 	- options de magnetisme (snapping: grille, sommets, intersections, murs, milieux, distance de capture),
 	- notes projet.
 - Sorties et callbacks:

@@ -44,7 +44,8 @@
 		- niveau 0 créé automatiquement et non supprimable.
 	- RoomsSection:
 		- message d'aide de creation: Cliquez sur le plan et deplacez-vous pour dessiner une pièce,
-		- champs de creation: Nom (par defaut Nouvelle pièce si vide), Type (optionnel), Couleur du sol (par defaut #E5FFFC), Epaisseur (defaut 10 cm), Hauteur (defaut 250 cm),
+		- champs de creation et d'édition: Nom (par defaut Nouvelle pièce si vide), Type (liste déroulante obligatoire, `autre` par défaut), Couleur du sol (par defaut #E5FFFC), Epaisseur (defaut 10 cm), Hauteur (defaut 250 cm),
+		- types disponibles: cuisine, chambre, salon, salle de bain, toilettes, bureau, garage, hall, salle de jeu, bibliothèque, autre,
 		- liste des pièces selectionnable avec action de suppression.
 	- WallsSection:
 		- message d'aide de creation: Cliquez sur le plan et deplacez-vous pour dessiner un mur,
@@ -137,13 +138,15 @@
 	- etat liste des pièces.
 - Données affichees:
 	- nom de la pièce,
-	- type de pièce si renseigne,
+	- type de pièce obligatoire,
 	- couleur du sol,
 	- epaisseur,
 	- hauteur,
 	- dimensions previsualisees pendant la creation.
 - Règles d'interaction:
 	- la creation d'une pièce commence par un premier point puis un coin oppose,
+	- le type peut être choisi dans la même liste déroulante lors de la création et de l'édition,
+	- en l'absence de choix explicite, le type `autre` est appliqué,
 	- la longueur et la largeur sont visibles en temps reel entre les deux clics,
 	- la sélection d'une pièce existante ouvre automatiquement le bloc édition correspondant,
 	- la suppression retire la pièce du plan selon les validations metier en vigueur.
@@ -236,6 +239,8 @@
 - Given le niveau 0 est affiche dans la liste, When l'utilisateur consulte ses actions disponibles, Then aucune action de suppression n'est proposee.
 - Given une creation de pièce est en cours, When l'utilisateur deplace la souris apres le premier clic, Then la previsualisation de la pièce et ses dimensions sont visibles en temps reel.
 - Given une pièce existante est selectionnee, When la section Pièces est active, Then le bloc édition pièce s'ouvre automatiquement avec les valeurs de la pièce.
+- Given une pièce est créée sans changement du type, When la création est validée, Then le type `autre` est persisté.
+- Given le type d'une pièce est modifié, When la modification est enregistrée, Then l'icône dérivée correspondante est mise à jour.
 - Given un template d'ouverture est selectionne, When l'utilisateur survole un mur valide, Then une previsualisation de l'ouverture et ses mesures gauche/droite sont affichees.
 - Given un template intérieur est sélectionné, When l'utilisateur survole un mur lié à une seule pièce, Then aucune prévisualisation ni mesure de positionnement n'est affichée.
 - Given un template extérieur est sélectionné, When l'utilisateur survole un mur lié à deux pièces, Then aucune prévisualisation ni mesure de positionnement n'est affichée.

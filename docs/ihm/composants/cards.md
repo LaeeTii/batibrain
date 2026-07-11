@@ -16,6 +16,8 @@
 - Données d'entree minimales:
 	- id de pièce,
 	- nom de pièce,
+	- type de pièce,
+	- surface de la pièce,
 	- niveau de rattachement,
 	- données d'apercu du plan,
 	- metadonnees de synthese utiles.
@@ -36,6 +38,8 @@
 
 ## Règles metier
 - Le nom de pièce est obligatoire; si vide a la creation, la valeur par defaut est Nouvelle pièce.
+- L'icône est dérivée du type avec `react-icons` et affichée sous le nom et la surface.
+- Le type `autre` n'affiche aucune icône et ne réserve aucun emplacement vide.
 - Les pièces supprimees logiquement ne sont pas affichees par defaut dans la grille dashboard.
 - Les actions de la carte sont executees dans le contexte du projet courant.
 
@@ -49,6 +53,8 @@
 - Given l'utilisateur clique sur l'icone export, When le menu s'ouvre, Then les deux choix plan simple et plan + détail sont disponibles.
 - Given l'utilisateur clique sur l'icone suppression, When il confirme, Then la suppression logique est declenchee.
 - Given une pièce sans nom est creee, When la carte est affichee, Then son libelle est Nouvelle pièce.
+- Given une pièce possède un type différent de `autre`, When sa RoomCard est affichée, Then l'icône correspondante apparaît sous son nom et sa surface.
+- Given une pièce est de type `autre`, When sa RoomCard est affichée, Then aucune icône de type n'est rendue.
 
 ## References
 - Referentiel global : [ihm.md](../ihm.md)

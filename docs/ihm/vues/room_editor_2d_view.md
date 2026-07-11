@@ -40,7 +40,7 @@
 - En-tete de la zone principale:
 	- titre de la pièce editee,
 	- contexte projet et niveau de rattachement,
-	- controles d'affichage (affichage/masquage: grille, règles, côtes, angles, notes),
+	- controles d'affichage (affichage/masquage: grille, règles, côtes, angles, notes, surfaces, icônes de pièces),
 	- controles de magnetisme (snapping: grille, sommets, intersections, murs, milieux, distance de capture),
 	- boutons icones `Annuler` et `Retablir` places en haut a droite du header principal,
 	- si l'historique correspondant est vide, le bouton associe est grise et non cliquable,
@@ -72,7 +72,7 @@
 	- la sélection active est synchronisee entre canvas, panneau creation et panneau détail.
 	- l'utilisateur peut utiliser les boutons `Annuler` et `Retablir` du header principal quand l'historique correspondant est disponible.
 	- l'édition d'un mur mitoyen de la pièce courante met a jour la géométrie de la pièce voisine liee a ce mur.
-	- l'utilisateur peut activer/desactiver les options d'affichage (affichage/masquage) grille, règles, côtes, angles et notes comme dans l'éditeur 2D global.
+	- l'utilisateur peut activer/desactiver les options d'affichage (affichage/masquage) grille, règles, côtes, angles, notes, surfaces et icônes de pièces comme dans l'éditeur 2D global.
 	- l'utilisateur peut configurer le magnetisme (snapping: sources + distance de capture) comme dans l'éditeur 2D global.
 	- les autres pièces du niveau restent visibles en gris pour garder le contexte, sans édition directe.
 	- le panneau détail affiche l'arbre complet du niveau, y compris les objets hors pièce courante.
@@ -91,7 +91,7 @@
 	- l'utilisateur choisit entre deux variantes:
 		- plan simple,
 		- plan + détail.
-	- l'export reprend les options d'affichage actives au moment du declenchement (grille, règles, côtes, angles, notes).
+	- l'export reprend les options d'affichage actives au moment du declenchement (grille, règles, côtes, angles, notes, surfaces, icônes de pièces).
 	- les options de magnetisme (snapping) n'impactent pas le rendu PDF.
 	- la variante plan simple exporte la pièce courante uniquement.
 	- la variante plan + détail exporte la pièce courante et sa structure de détail standard (cf. composant PDF).
@@ -182,10 +182,11 @@
 	- nom niveau,
 	- nom pièce.
 - Données de controle:
-	- etat des options d'affichage (affichage/masquage: grille, règles, côtes, angles, notes),
+	- etat des options d'affichage (affichage/masquage: grille, règles, côtes, angles, notes, surfaces, icônes de pièces),
 	- etat des options de magnetisme (snapping: grille, sommets, intersections, murs, milieux, distance de capture).
 - Données du plan:
 	- géométrie et objets de la pièce courante (pièce, murs, ouvertures, côtes, notes),
+	- type de la pièce et icône dérivée affichée sous son nom et sa surface lorsque l'option est active et que le type n'est pas `autre`,
 	- autres pièces du niveau en contexte grise non editable.
 - Données de sélection:
 	- objet selectionne de la pièce courante,

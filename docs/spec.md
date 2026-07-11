@@ -47,6 +47,7 @@ Date de mise à jour: 2026-07-10
 ## Backlog features priorisé (1 = plus prioritaire)
 
 ### 0) Paramètres d'application
+- Statut: terminée.
 - Objectif:
 	- Permettre à l'utilisateur de configurer les préférences de base de l'application depuis la barre latérale.
 - Portée fonctionnelle cible:
@@ -70,6 +71,7 @@ Date de mise à jour: 2026-07-10
 
 ### 1) Collaboration projet asynchrone simple (legacy #7)
 - Version cible validée: V1.
+- Statut: terminée.
 - Objectif:
 	- Permettre le partage de projet sans temps réel complexe.
 - Portée fonctionnelle cible:
@@ -98,6 +100,7 @@ Date de mise à jour: 2026-07-10
 
 ### 2) Validation d'adjacence pour ouvertures intérieures (legacy #8)
 - Version cible validée: V1.
+- Statut: terminée.
 - Objectif:
 	- Éviter les incohérences métier de pose d'ouvertures intérieures et extérieures.
 - Portée fonctionnelle cible:
@@ -118,17 +121,26 @@ Date de mise à jour: 2026-07-10
 	- Une ouverture intérieure ou extérieure devenue incompatible après recalcul topologique est supprimée.
 
 ### 3) Icône de pièce configurable (legacy #9)
+- Version cible validée: V1.
+- Statut: terminée.
 - Objectif:
 	- Associer un pictogramme métier à une pièce.
 - Portée fonctionnelle cible:
-	- Champ icône dans le modèle pièce.
-	- Affichage de l'icône en dashboard et vues plan.
-	- Set restreint d'icônes + valeur par défaut neutre.
+	- Type de pièce persistant choisi dans une liste déroulante à la création et à l'édition.
+	- Icône dérivée du type dans le frontend avec `react-icons`, sans champ icône persistant.
+	- Affichage sous le nom et la surface dans le dashboard et les vues plan.
+	- Options d'affichage des icônes et des surfaces actives par défaut sur tous les canvas et appliquées aux exports PDF.
 - Règles métier minimales:
-	- Une pièce sans icône explicite conserve la valeur par défaut.
-	- L'icône persiste et est restituée après rechargement.
+	- Types autorisés: cuisine, chambre, salon, salle de bain, toilettes, bureau, garage, hall, salle de jeu, bibliothèque et autre.
+	- Le type `autre` est appliqué par défaut et n'affiche aucune icône.
+	- Correspondances: toque, lit, sofa, baignoire, WC, bureau, voiture, porte ouverte, pion et livre.
+	- Seul le type est persisté; l'icône est recalculée par le frontend.
 - Critères d'acceptation:
-	- Changement d'icône visible et persistant.
+	- Le type choisi est restitué après rechargement et produit l'icône correspondante.
+	- Une pièce de type `autre` n'affiche aucune icône.
+	- Les icônes peuvent être masquées ou réaffichées sur tous les canvas.
+	- Les surfaces peuvent être masquées ou réaffichées sur tous les canvas.
+	- Les exports PDF respectent ces options d'affichage.
 
 ### 4) Vue Mur dédiée (vue de face) (legacy #10)
 - Objectif:

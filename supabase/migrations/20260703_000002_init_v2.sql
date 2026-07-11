@@ -8,6 +8,19 @@ create type opening_type_enum as enum ('door', 'window', 'glass_door', 'other');
 create type opening_placement_type_enum as enum ('interior', 'exterior');
 create type project_role_enum as enum ('read', 'write');
 create type project_invitation_status_enum as enum ('pending', 'accepted', 'cancelled');
+create type room_type_enum as enum (
+  'cuisine',
+  'chambre',
+  'salon',
+  'salle_de_bain',
+  'toilettes',
+  'bureau',
+  'garage',
+  'hall',
+  'salle_de_jeu',
+  'bibliotheque',
+  'autre'
+);
 create type dimension_type_enum as enum ('point-point', 'wall-wall', 'point-on-wall');
 create type note_origin_type_enum as enum (
   'project',
@@ -127,7 +140,7 @@ create table pieces (
   id uuid primary key default gen_random_uuid(),
   level_id uuid not null references levels(id) on delete cascade,
   name text not null,
-  room_type text,
+  room_type room_type_enum not null default 'autre',
   floor_color text not null default '#E5FFFC',
   wall_thickness_cm numeric(8,2) not null default 10,
   wall_height_cm numeric(8,2) not null default 250,
@@ -346,6 +359,8 @@ create table editor_view_settings (
   show_dimensions boolean not null default true,
   show_angles boolean not null default true,
   show_notes boolean not null default true,
+  show_room_surfaces boolean not null default true,
+  show_room_icons boolean not null default true,
   snap_grid boolean not null default true,
   snap_vertices boolean not null default true,
   snap_intersections boolean not null default true,

@@ -86,7 +86,7 @@
   - id projet courant,
   - niveaux visibles,
   - niveau editable,
-  - options d'affichage (affichage/masquage: grille, règles, côtes, angles, notes).
+  - options d'affichage (affichage/masquage: grille, règles, côtes, angles, notes, surfaces, icônes de pièces).
 - Sortie attendue:
   - un document PDF qui inclut uniquement les niveaux et affichages selectionnes.
 - Points a completer plus tard:
@@ -121,7 +121,7 @@
 - Declencheur: action export PDF dans l'en-tete de RoomEditor2DView, variante Plan simple.
 - Portee de données:
   - plan de la pièce courante,
-  - application des options d'affichage (affichage/masquage) actives de la vue (grille, règles, côtes, angles, notes).
+  - application des options d'affichage (affichage/masquage) actives de la vue (grille, règles, côtes, angles, notes, surfaces, icônes de pièces).
 - Paramètres d'entree minimaux:
   - id projet,
   - id pièce,
@@ -141,7 +141,7 @@
 - Portee de données:
   - plan de la pièce courante,
   - détail de la pièce courante,
-  - application des options d'affichage (affichage/masquage) actives de la vue (grille, règles, côtes, angles, notes).
+  - application des options d'affichage (affichage/masquage) actives de la vue (grille, règles, côtes, angles, notes, surfaces, icônes de pièces).
 - Paramètres d'entree minimaux:
   - id projet,
   - id pièce,
@@ -154,6 +154,8 @@
   - la structure de détail suit le template standard,
   - les options de magnetisme (snapping) ne modifient pas le rendu PDF,
   - le rendu du plan dans le PDF respecte les options d'affichage (affichage/masquage) actives.
+  - les icônes de pièces sont incluses ou exclues selon l'option active au déclenchement de l'export.
+  - les surfaces sont incluses ou exclues selon l'option active au déclenchement de l'export.
 
 ## Structure de détail (template standard)
 - Objectif:

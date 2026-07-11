@@ -28,7 +28,7 @@
 	- mode d'édition courant.
 - Données d'entree:
 	- geometres des objets metier,
-	- options d'affichage (affichage/masquage: grille, règles, côtes, angles, notes),
+	- options d'affichage (affichage/masquage: grille, règles, côtes, angles, notes, surfaces, icônes de pièces),
 	- options de magnetisme (snapping).
 - Sorties et callbacks:
 	- sélection d'objet,
@@ -55,6 +55,11 @@
 - Les unites de mesure affichees sont en cm pour les longueurs et en m2 pour les surfaces.
 - Les longueurs et annotations doivent suivre les règles du contrat géométrique.
 - Les règles de synchronisation de sélection ne sont pas redefinies ici et sont referencees depuis la logique dediee.
+- Les icônes de pièces sont affichées par défaut sur tous les canvas.
+- L'icône est dérivée du type par le frontend avec `react-icons` et n'est pas persistée.
+- Elle est affichée sous le nom et la surface; le type `autre` ne produit aucune icône.
+- L'option Icônes de pièces masque ou réaffiche toutes les icônes du canvas courant.
+- Les surfaces sont affichées par défaut; l'option Surfaces masque ou réaffiche les valeurs de surface sur le canvas courant.
 - Règles d'affichage des mesures:
 	- en mode sans édition, côtes cochees: afficher longueurs exterieures du niveau actif,
 	- en mode sans édition, côtes cochees: afficher longueurs interieures des pièces,
@@ -81,6 +86,9 @@
 
 ## Criteres d'acceptation testables
 - Given plusieurs niveaux sont coches, When le canvas est affiche, Then seul le niveau actif est editable et les autres restent en contexte visuel.
+- Given les icônes de pièces sont activées, When une pièce possède un type différent de `autre`, Then l'icône dérivée est affichée sous son nom et sa surface.
+- Given l'option Icônes de pièces est désactivée, When le canvas est rendu, Then aucune icône de pièce n'est affichée.
+- Given l'option Surfaces est désactivée, When le canvas est rendu, Then aucune valeur de surface de pièce n'est affichée.
 - Given une ouverture est en cours d'édition, When les options de côtes sont masquees, Then les distances directement liees a l'ouverture restent visibles.
 - Given un template d'ouverture est en cours de pose, When un mur incompatible est survolé, Then aucun aperçu ni mesure de positionnement n'est affiché.
 - Given l'utilisateur clique sur un objet visible, When la sélection est appliquee, Then l'objet est surligne dans le canvas et propage vers les autres zones.

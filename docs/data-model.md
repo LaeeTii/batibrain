@@ -136,7 +136,7 @@ Champs minimaux:
 - `projectId`
 - `levelId`
 - `name`
-- `type` (optionnel)
+- `type` (`cuisine`, `chambre`, `salon`, `salle_de_bain`, `toilettes`, `bureau`, `garage`, `hall`, `salle_de_jeu`, `bibliotheque`, `autre`)
 - `floorColor`
 - `wallThicknessCm`
 - `wallHeightCm`
@@ -144,6 +144,9 @@ Champs minimaux:
 
 Règles:
 - Si `name` est vide à la création, la valeur par défaut est `Nouvelle pièce`.
+- `type` est obligatoire et vaut `autre` par défaut.
+- L'icône n'est pas persistée: le frontend la dérive du type avec `react-icons`.
+- Les correspondances sont: toque, lit, sofa, baignoire, WC, bureau, voiture, porte ouverte, pion et livre; `autre` ne produit aucune icône.
 - La suppression dans le dashboard est logique (`isSoftDeleted = true`).
 - Les pièces supprimées logiquement sont masquées par défaut et exclues des exports globaux par défaut.
 
@@ -279,6 +282,13 @@ Champs minimaux:
 - `showDimensions`
 - `showAngles`
 - `showNotes`
+- `showRoomSurfaces`
+- `showRoomIcons`
+
+Règles:
+- `showRoomSurfaces` vaut `true` par défaut.
+- `showRoomIcons` vaut `true` par défaut.
+- Ces options pilotent les surfaces et les icônes sur tous les canvas et dans leurs exports PDF.
 
 ### SnappingOptions
 Options de magnétisme (snapping).
