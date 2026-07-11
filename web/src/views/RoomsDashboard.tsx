@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import type { Level, Project } from '../../../shared/src/types';
+import type { Level, Project } from '../domain/types';
 import { RoomPreview } from '../components/RoomPreview';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { countExteriorWalls, getRoomAreaM2 } from '../lib/roomMetrics';

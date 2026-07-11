@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { formatLengthCm } from '../../../shared/src/geometry';
-import type { Level, Opening, Project } from '../../../shared/src/types';
+import { formatLengthCm } from '../domain/geometry';
+import type { Level, Opening, Project } from '../domain/types';
 import { LevelPlanCanvas } from '../components/LevelPlanCanvas';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { exportDetailedLevelPlanPdf, exportSimpleLevelPlanPdf } from '../lib/levelPlanPdf';

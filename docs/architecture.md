@@ -10,12 +10,12 @@
 
 ## Structure monorepo
 - `docs/` : cadrage produit et technique
-- `shared/` : types + géométrie partagés
+- `web/src/domain/` : types métier + géométrie du frontend
 - `web/` : application web (incluant la cible PWA)
 - `supabase/` : migrations SQL et configuration
 
 ## Principes d'architecture
-- la logique métier géométrique vit dans `shared/`
+- la logique métier géométrique vit dans `web/src/domain/`
 - l'UI vit dans `web/`, avec adaptation responsive et capacités PWA pour les usages mobiles
 - la spec est la source de vérité pour le produit (docs/ihm/ihm.md)
 - les projections (métriques, angles, vues dérivées) sont calculées

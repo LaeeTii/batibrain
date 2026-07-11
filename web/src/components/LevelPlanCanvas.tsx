@@ -1,6 +1,6 @@
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { centroid, formatLengthCm, polygonAreaCm2, wallsFromVertices } from '../../../shared/src/geometry';
-import type { Opening, Vertex } from '../../../shared/src/types';
+import { centroid, formatLengthCm, polygonAreaCm2, wallsFromVertices } from '../domain/geometry';
+import type { Opening, Vertex } from '../domain/types';
 import type { RoomSnapshot } from '../services/rooms';
 
 const PLAN_PADDING_CM = 140;

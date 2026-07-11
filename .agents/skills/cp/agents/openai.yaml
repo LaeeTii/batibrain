@@ -1,0 +1,4 @@
+interface:
+  display_name: "Commit et push"
+  short_description: "Créer un commit conforme puis pousser"
+  default_prompt: "Utilise $cp pour valider, créer et pousser le commit courant."

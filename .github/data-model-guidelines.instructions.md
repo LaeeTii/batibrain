@@ -12,14 +12,14 @@ Ordre de référence à appliquer:
 En cas de conflit documentaire, demander un arbitrage explicite à l'utilisateur avant implémentation.
 
 ## Responsabilités par dossier
-- `shared/src/types.ts`: types partagés entre clients.
-- `shared/src/geometry.ts`: logique géométrique et validations métier de géométrie.
+- `web/src/domain/types.ts`: types métier du frontend.
+- `web/src/domain/geometry.ts`: logique géométrique et validations métier de géométrie.
 - `web/src/services/`: accès et persistance Supabase.
 - `web/src/lib/`: calculs dérivés orientés affichage et synthèse.
 
 ## Règles obligatoires
-- Définir les types partagés dans `shared/src/types.ts`.
-- Éviter toute duplication de type dans `web/`.
+- Définir les types métier dans `web/src/domain/types.ts`.
+- Éviter toute duplication de type dans les vues, composants, services et utilitaires.
 - Conserver l'unité métier en centimètres pour la géométrie et les distances.
 - Conserver les surfaces affichées en m2.
 - Ne pas stocker en source primaire les valeurs dérivées (surface, périmètre, angles, orientation).
@@ -35,7 +35,7 @@ Règle d'implémentation:
 - Ne pas introduire de schéma définitif pour les domaines legacy minimaux sans arbitrage explicite utilisateur.
 
 ## Anti-patterns à éviter
-- Dupliquer des types métier déjà présents dans `shared/src/types.ts`.
+- Dupliquer des types métier déjà présents dans `web/src/domain/types.ts`.
 - Utiliser des unités mixtes sans conversion explicite.
 - Persister des champs calculés sans justification documentaire.
 - Étendre le modèle avec des champs spéculatifs non sourcés par `docs/ihm/`.
@@ -59,5 +59,5 @@ Mettre à jour les fichiers impactés dans le même changement lorsque le modèl
 - `docs/data-model.md`
 - `docs/ihm/logique/geometry.md`
 - `docs/ihm/logique/edition_2D_synchronisation_selection.md`
-- `shared/src/types.ts`
-- `shared/src/geometry.ts`
+- `web/src/domain/types.ts`
+- `web/src/domain/geometry.ts`

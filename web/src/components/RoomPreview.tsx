@@ -1,5 +1,5 @@
 import React, { useId, useMemo } from 'react';
-import type { Opening, Vertex, Wall } from '../../../shared/src/types';
+import type { Opening, Vertex, Wall } from '../domain/types';
 
 const PREVIEW_PADDING_CM = 56;
 

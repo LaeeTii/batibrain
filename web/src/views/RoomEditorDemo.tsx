@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { RoomCanvas } from '../components/RoomCanvas';
 import { DashboardLayout } from '../components/DashboardLayout';
-import type { Level, Opening, Project, Room, Vertex, Wall } from '../../../shared/src/types';
+import type { Level, Opening, Project, Room, Vertex, Wall } from '../domain/types';
 import {
   angleAtVertexDegrees,
   centroid,
@@ -13,7 +13,7 @@ import {
   validateOpeningOnWall,
   validateOpenings,
   wallsFromVertices,
-} from '../../../shared/src/geometry';
+} from '../domain/geometry';
 import { hasSupabaseConfig } from '../lib/supabase';
 import { createLevel, listLevelsByProject } from '../services/levels';
 import { createProject, listProjects } from '../services/projects';

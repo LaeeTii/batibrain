@@ -1,0 +1,4 @@
+interface:
+  display_name: "Prochaine spécification"
+  short_description: "Choisir la prochaine spécification à compléter"
+  default_prompt: "Utilise $spec-next pour choisir et commencer la prochaine spécification IHM."

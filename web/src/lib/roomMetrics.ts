@@ -1,5 +1,5 @@
-import { polygonAreaCm2, syncWallsWithVertices } from '../../../shared/src/geometry';
-import type { Opening, Vertex, Wall } from '../../../shared/src/types';
+import { polygonAreaCm2, syncWallsWithVertices } from '../domain/geometry';
+import type { Opening, Vertex, Wall } from '../domain/types';
 import type { RoomSnapshot } from '../services/rooms';
 
 export interface RoomMetricSummary {

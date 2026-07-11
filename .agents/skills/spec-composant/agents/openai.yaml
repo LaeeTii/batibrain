@@ -1,0 +1,4 @@
+interface:
+  display_name: "Spécifier un composant"
+  short_description: "Rédiger progressivement une spécification IHM"
+  default_prompt: "Utilise $spec-composant pour compléter la spécification d’un composant IHM."

@@ -1,4 +1,4 @@
-import type { Project } from '../../../shared/src/types';
+import type { Project } from '../domain/types';
 import { getSupabaseClient } from '../lib/supabase';
 
 type ProjectRow = {

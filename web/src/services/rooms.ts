@@ -5,8 +5,8 @@ import {
   syncOpeningsWithWalls,
   syncWallsWithVertices,
   validateOpenings,
-} from '../../../shared/src/geometry';
-import type { Opening, Room, Vertex, Wall } from '../../../shared/src/types';
+} from '../domain/geometry';
+import type { Opening, Room, Vertex, Wall } from '../domain/types';
 import { getSupabaseClient } from '../lib/supabase';
 
 type PieceRow = {

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Spécifier une vue"
+  short_description: "Rédiger progressivement une spécification de vue"
+  default_prompt: "Utilise $spec-vue pour compléter la spécification d’une vue IHM."

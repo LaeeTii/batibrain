@@ -16,7 +16,7 @@ Périmètre autorisé:
 - Tout autre fichier documentaire strictement nécessaire dans docs/
 
 Interdictions:
-- Ne pas modifier de fichiers de code (ex: web/, shared/, mobile/, scripts, migrations SQL, etc.).
+- Ne pas modifier de fichiers de code (ex: web/, scripts, migrations SQL, etc.).
 - Ne pas inventer de règles métier, d’écrans, de données ou de comportements.
 
 Règle d’incertitude (obligatoire):

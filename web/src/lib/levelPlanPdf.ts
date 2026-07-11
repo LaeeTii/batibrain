@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import { formatLengthCm, sortVertices, wallsFromVertices } from '../../../shared/src/geometry';
+import { formatLengthCm, sortVertices, wallsFromVertices } from '../domain/geometry';
 import type { LevelMetricSummary } from './roomMetrics';
 import type { RoomSnapshot } from '../services/rooms';
 

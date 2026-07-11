@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { centroid, formatLengthCm, insertVertexBetween, polygonAreaCm2, polygonPerimeterCm, removeVertex, snapPointToNearbyAxes, updateVertexPosition, updateWallLength, wallsFromVertices } from '../../../shared/src/geometry';
-import type { Opening, Room, Vertex, Wall } from '../../../shared/src/types';
+import { centroid, formatLengthCm, insertVertexBetween, polygonAreaCm2, polygonPerimeterCm, removeVertex, snapPointToNearbyAxes, updateVertexPosition, updateWallLength, wallsFromVertices } from '../domain/geometry';
+import type { Opening, Room, Vertex, Wall } from '../domain/types';
 
 const SNAP_THRESHOLD_CM = 12;
 const VIEWBOX_PADDING_CM = 80;

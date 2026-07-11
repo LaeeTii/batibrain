@@ -1,13 +1,13 @@
 # BatiBrain
 
-App web + mobile de gestion de travaux
+Application web de gestion de travaux
 
 Ce starter pack fournit une base **MVP** pour démarrer rapidement :
 
 - cadrage produit
 - architecture cible
 - modèle de données PostgreSQL / Supabase
-- moteur géométrique TypeScript partagé
+- moteur géométrique TypeScript intégré au domaine frontend
 - premier éditeur React interactif pour dessiner une pièce polygonale
 
 ## Structure
@@ -15,7 +15,7 @@ Ce starter pack fournit une base **MVP** pour démarrer rapidement :
 ```
 bati-brain/
 ├── docs/
-├── shared/src/
+├── web/src/domain/
 ├── web/src/components/
 ├── web/src/views/
 └── supabase/migrations/
@@ -25,7 +25,7 @@ bati-brain/
 
 1. Lire `docs/product.md`
 2. Lire `docs/geometry.md`
-3. Parcourir `shared/src/types.ts` et `shared/src/geometry.ts`
+3. Parcourir `web/src/domain/types.ts` et `web/src/domain/geometry.ts`
 4. Ouvrir `web/src/components/RoomCanvas.tsx`
 5. Adapter et exécuter la migration `supabase/migrations/20260703_000001_init.sql`
 

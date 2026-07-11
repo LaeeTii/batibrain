@@ -1,4 +1,4 @@
-import type { Level } from '../../../shared/src/types';
+import type { Level } from '../domain/types';
 import { getSupabaseClient } from '../lib/supabase';
 
 type LevelRow = {

@@ -18,7 +18,7 @@
 
 ## Architecture Guardrails
 
-- Keep geometric and shared business logic in [shared/](../shared/).
+- Keep frontend domain types and geometric business logic in [web/src/domain/](../web/src/domain/).
 - Keep UI behavior and rendering concerns in [web/](../web/) including the PWA target.
 - Treat Supabase and PostgreSQL as the source of truth for persisted business data.
 - Keep derived values such as angles, metrics, and projections computed from source data unless the documentation is updated first.

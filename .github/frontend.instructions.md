@@ -34,7 +34,7 @@ applyTo: web/src/**/*.{ts,tsx,css}
 - Les composants metier vivent dans [web/src/components](../web/src/components).
 - Les services et adaptateurs de donnees vivent dans [web/src/services](../web/src/services).
 - Les utilitaires frontend vivent dans [web/src/lib](../web/src/lib).
-- Les calculs geometriques metier restent dans [shared/](../shared/).
+- Les types et calculs geometriques metier restent dans [web/src/domain/](../web/src/domain/).
 
 ## Regles Mantine
 - Preferer les composants Mantine pour modal, formulaire, accordion, menu, tabs, tooltip, select et multiselect.

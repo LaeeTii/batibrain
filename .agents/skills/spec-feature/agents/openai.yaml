@@ -1,0 +1,4 @@
+interface:
+  display_name: "Spécifier une feature"
+  short_description: "Mettre à jour les spécifications d’une feature"
+  default_prompt: "Utilise $spec-feature pour intégrer une fonctionnalité dans la documentation."
