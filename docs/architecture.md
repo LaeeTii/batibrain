@@ -11,8 +11,13 @@
 ## Structure monorepo
 - `docs/` : cadrage produit et technique
 - `web/src/domain/` : types métier + géométrie du frontend
+- `web/src/data/` : clients techniques et accès aux données persistées
+- `web/src/components/` : composants d'interface réutilisables
+- `web/src/views/` : composition des vues et des routes
 - `web/` : application web (incluant la cible PWA)
 - `supabase/` : migrations SQL et configuration
+
+Le socle de tests frontend repose sur Vitest, Testing Library et jsdom. `npm run check` exécute les tests, le contrôle TypeScript et la compilation de production.
 
 ## Principes d'architecture
 - la logique métier géométrique vit dans `web/src/domain/`
