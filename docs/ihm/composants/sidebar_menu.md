@@ -15,7 +15,6 @@
 - "Travaux" (bouton) -> ouvre la vue travaux (désactivé pour le moment)
 - "Tâches" (bouton) -> ouvre la vue tâches (désactivé pour le moment)
 - "planning" (bouton) -> ouvre la vue planning (désactivé pour le moment)
-- "Paramètres" (bouton) ancré en bas de la side bar -> ouvre la modale SettingsModal du composant transverse avec les paramètres de l'application.
 
 Lorsque la side bar est fermée, elle est masquée et un bouton icône menu reste visible en haut à gauche de l'application pour la rouvrir.
 
@@ -43,8 +42,6 @@ Lorsque la side bar est fermée, elle est masquée et un bouton icône menu rest
 - le sélecteur de projet contient les projets possédés par l'utilisateur et les projets partagés dont il a accepté l'invitation.
 
 - un projet faisant l'objet d'une invitation encore en attente n'apparaît pas dans le sélecteur.
-
-- la modale de paramètres permet de changer le thème (clair/sombre), l'unité de mesure (cm/m/mm, avec cm par défaut) et l'unité de surface (cm2/m2/mm2, avec m2 par défaut). Ces paramètres sont persistés dans la base de données pour l'utilisateur courant. On peut aussi se déconnecter de l'application depuis cette modale. La déconnexion redirige vers la page de login.
 
 ## Critères d'acceptation testables
 

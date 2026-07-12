@@ -65,7 +65,11 @@
 
 ### Contrat SettingsModal
 - Objectif:
-	- Donner accès aux paramètres utilisateur depuis la side bar.
+	- Donner accès aux paramètres utilisateur depuis une action globale de l'application.
+- Accès:
+	- Bouton icône roue crantée situé en haut à droite de l'application.
+	- Le bouton reste disponible indépendamment de l'état ouvert ou fermé de la side bar.
+	- La side bar ne contient pas d'entrée Paramètres.
 - Portée:
 	- Modification des préférences de base de l'application.
 	- Déclenchement du flux de changement de mot de passe.
@@ -100,15 +104,17 @@
 	- Erreur de sauvegarde affichée explicitement.
 	- Confirmation visuelle après prise en compte de chaque changement.
 - Criteres d'acceptation testables:
+	- Given l'application est affichée, When l'utilisateur active le bouton icône roue crantée en haut à droite, Then SettingsModal s'ouvre.
+	- Given la side bar est fermée, When l'utilisateur veut accéder aux paramètres, Then le bouton icône roue crantée reste disponible en haut à droite de l'application.
 	- Given la modale est ouverte, When l'utilisateur choisit `mm` comme unité de longueur, Then la préférence est enregistrée avec `mm` comme valeur active.
 	- Given la modale est ouverte, When l'utilisateur choisit `cm2` comme unité de surface, Then la préférence est enregistrée avec `cm2` comme valeur active.
 	- Given la modale est ouverte, When l'utilisateur clique sur Déconnexion, Then il est redirigé vers LoginView.
 
 ## Responsabilites
 - SettingsModal:
-	- Donner accès aux paramètres utilisateur depuis la side bar.
+	- Donner accès aux paramètres utilisateur depuis le bouton icône roue crantée en haut à droite de l'application.
 - AppSidebar:
-	- Afficher la navigation principale et l'accès aux paramètres.
+	- Afficher la navigation principale sans entrée Paramètres.
 	- Permettre de masquer la side bar et de la rouvrir depuis le bouton icône menu en haut à gauche de l'application.
 	- Conserver son état ouvert ou fermé lors des changements de vue pendant la session applicative courante, sans le persister après rechargement.
 - SidebarProjectContext:

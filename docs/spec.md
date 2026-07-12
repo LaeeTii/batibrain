@@ -67,21 +67,25 @@ Date de mise à jour: 2026-07-12
 	- Un rechargement de l'application rétablit la side bar ouverte par défaut.
 
 ### 0) Paramètres d'application
+- Version cible validée: V1.
 - Statut: terminée.
 - Objectif:
-	- Permettre à l'utilisateur de configurer les préférences de base de l'application depuis la barre latérale.
+	- Permettre à l'utilisateur de configurer les préférences de base de l'application depuis un accès global indépendant de la side bar.
 - Portée fonctionnelle cible:
 	- Choix des unités de mesure.
 	- Choix des unités de surface.
 	- Modification du mot de passe.
 	- Choix du thème UI, limité pour l'instant à clair, foncé ou system.
 - Règles métier minimales:
-	- Les paramètres sont accessibles depuis l'entrée Paramètres de la side bar.
+	- Les paramètres sont accessibles depuis un bouton icône roue crantée situé en haut à droite de l'application.
+	- La side bar ne contient aucune entrée Paramètres.
 	- Le changement de mot de passe est proposé dans le contexte du compte authentifié.
 	- La déconnexion est accessible depuis la modale de paramètres.
 	- Le thème appliqué reste cohérent sur l'interface courante après sélection.
 - Critères d'acceptation:
-	- L'utilisateur peut ouvrir la modale de paramètres depuis la side bar.
+	- L'utilisateur peut ouvrir la modale de paramètres depuis le bouton icône roue crantée situé en haut à droite de l'application.
+	- L'accès aux paramètres reste disponible lorsque la side bar est fermée.
+	- Aucune entrée Paramètres n'est affichée dans la side bar.
 	- L'utilisateur peut modifier l'unité de mesure sans quitter sa session.
 	- L'utilisateur peut choisir une unité de mesure parmi cm, m ou mm, avec cm par défaut.
 	- L'utilisateur peut choisir une unité de surface parmi cm2, m2 ou mm2, avec m2 par défaut.

@@ -57,6 +57,16 @@
 - Note: DetailTree, ProjectNotesBubble et SelectionSyncBridge portent la source de verite de la synchronisation transverse et des interactions communes dans [composants/transverses.md](./composants/transverses.md).
 - Note: ProjectCollaborationModal et AppNotifications portent la gestion des accès projet et l'acceptation des invitations dans [composants/transverses.md](./composants/transverses.md).
 
+## Socle constant des vues métier
+- Toutes les vues métier authentifiées affichent les composants transverses suivants:
+	- AppSidebar, dans son état ouvert ou fermé courant;
+	- le bouton icône cloche d'AppNotifications en haut à droite de l'application;
+	- le bouton icône roue crantée ouvrant SettingsModal en haut à droite de l'application.
+- Ces actions globales restent disponibles lors des changements de vue.
+- Lorsque AppSidebar est fermée, son bouton icône menu reste disponible en haut à gauche et les boutons Notifications et Paramètres restent disponibles en haut à droite.
+- LoginView est exclue de ce socle applicatif authentifié.
+- Les contrats détaillés de ces composants sont définis dans [composants/transverses.md](./composants/transverses.md).
+
 ## Droits projet transverses
 - Les projets accessibles sont les projets possédés par l'utilisateur ou ceux dont il a accepté l'invitation.
 - Le rôle lecture autorise la consultation, la navigation et les exports, mais interdit toute création, modification ou suppression.
