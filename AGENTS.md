@@ -24,10 +24,9 @@
 
 ## État de fraîcheur
 
-Ne pas considérer comme sources de vérité fonctionnelles tant qu’ils ne sont pas remis à jour :
+Ne pas considérer le code et la documentation sous `web/` comme sources de vérité fonctionnelles tant qu’ils ne sont pas remis à jour.
 
-- `supabase/migrations/20260703_000001_init.sql` ;
-- le code et la documentation sous `web/`.
+Toute évolution de persistance doit être portée par `supabase/migrations/20260703_000002_init_v2.sql`, unique script d'initialisation du schéma.
 
 ## Workflow Git
 

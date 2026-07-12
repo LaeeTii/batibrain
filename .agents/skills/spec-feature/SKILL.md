@@ -5,7 +5,7 @@ description: Intégrer une fonctionnalité dans la documentation sans modifier l
 
 # Spécifier une fonctionnalité
 
-- Autoriser uniquement les changements dans `docs/` et `supabase/`.
+- Autoriser uniquement les changements dans `docs/`, `supabase/` et les instructions ou prompts du workflow `spec-feature` lorsqu'une règle de ce workflow évolue explicitement.
 - Ne modifier aucun fichier de code.
 - Ne pas inventer de règle métier, d’écran, de donnée ou de comportement.
 
@@ -17,7 +17,7 @@ description: Intégrer une fonctionnalité dans la documentation sans modifier l
 4. Identifier les informations absentes, ambiguës ou contradictoires.
 5. Poser uniquement les questions bloquantes nécessaires avant l’écriture concernée, sans demander de validation intermédiaire.
 6. Définir le plan fichier par fichier et réaliser directement les modifications dans le périmètre autorisé.
-7. Si les data-models sont impactés mettre à jour le script d'initialisation de la base de données dans `supabase/migrations/20260703_000001_init.sql` et documenter les changements dans `docs/data-model.md`.
+7. Si les data-models sont impactés, mettre à jour l'unique script d'initialisation dans `supabase/migrations/20260703_000002_init_v2.sql` et documenter les changements dans `docs/data-model.md`.
 8. Déclarer explicitement la fonctionnalité dans `docs/spec.md`.
 9. Vérifier la cohérence des documents modifiés.
 10. Marquer la feature comme terminée dans `docs/spec.md`.

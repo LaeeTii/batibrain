@@ -97,6 +97,11 @@
   - Le collaborateur en lecture conserve la navigation, la sélection consultative, les options d'affichage, le zoom et les exports.
   - En lecture seule, les contrôles de création, d'édition, de suppression, d'annulation et de rétablissement d'actions métier sont désactivés ou masqués.
   - Une tentative d'écriture indirecte est refusée même si un contrôle obsolète reste affiché.
+- Verrouillage manuel:
+  - Une pièce, un mur ou une ouverture verrouillé reste sélectionnable et consultable dans le canvas et les panneaux.
+  - Ses modifications, manipulations et sa suppression sont bloquées jusqu'à son déverrouillage.
+  - Le propriétaire et les collaborateurs en écriture peuvent verrouiller ou déverrouiller l'élément sélectionné; le collaborateur en lecture consulte uniquement son état.
+  - Les verrous sont propres à chaque élément et ne se propagent pas entre pièce, mur et ouverture.
 - Contexte de travail:
   - La vue travaille toujours dans le contexte du projet courant.
   - Un seul niveau est editable a un instant donne.
@@ -145,6 +150,9 @@
 - Etat mode édition:
   - La zone d'édition correspondante s'ouvre automatiquement apres sélection d'un objet.
   - Les mesures directement liees a l'objet edite restent visibles en priorite.
+- État élément verrouillé:
+  - L'élément sélectionné reste en surbrillance et son bloc d'édition reste consultable.
+  - Un indicateur explicite signale son verrouillage et les contrôles de modification ou de suppression sont indisponibles.
 - Etat repli panneaux:
   - Le repli du panneau creation ou détail ne supprime ni la sélection ni le contexte de travail.
 - Etat erreur:
@@ -270,6 +278,11 @@
   - When la vue rafraichit son etat
   - Then la sélection est nettoyee
   - And la vue revient a un etat stable
+- Scenario 11 - Élément verrouillé:
+  - Given une pièce, un mur ou une ouverture verrouillé est visible
+  - When l'utilisateur le sélectionne
+  - Then l'élément est mis en surbrillance et ses données restent consultables
+  - And sa modification et sa suppression sont indisponibles jusqu'à son déverrouillage
 
 ## Recap decisions et hypotheses explicites
 - Decisions validees:

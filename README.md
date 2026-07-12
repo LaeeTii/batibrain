@@ -27,7 +27,7 @@ bati-brain/
 2. Lire `docs/geometry.md`
 3. Parcourir `web/src/domain/types.ts` et `web/src/domain/geometry.ts`
 4. Ouvrir `web/src/components/RoomCanvas.tsx`
-5. Adapter et exécuter la migration `supabase/migrations/20260703_000001_init.sql`
+5. Adapter et exécuter la migration `supabase/migrations/20260703_000002_init_v2.sql`
 
 ## Lancer le prototype web
 
@@ -47,14 +47,14 @@ npm run build
 
 ## Configurer Supabase
 
-1. Créer un projet Supabase et appliquer la migration [supabase/migrations/20260703_000001_init.sql](supabase/migrations/20260703_000001_init.sql)
+1. Créer un projet Supabase et appliquer la migration [supabase/migrations/20260703_000002_init_v2.sql](supabase/migrations/20260703_000002_init_v2.sql)
 2. Copier `web/.env.example` vers `web/.env.local`
 3. Renseigner `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY`
 4. Utiliser le client exposé par `web/src/lib/supabase.ts` et les helpers de `web/src/services/rooms.ts`
 
 ### Exécuter la migration
 
-Deux options sont possibles pour appliquer [supabase/migrations/20260703_000001_init.sql](supabase/migrations/20260703_000001_init.sql) sur votre projet Supabase.
+Deux options sont possibles pour appliquer [supabase/migrations/20260703_000002_init_v2.sql](supabase/migrations/20260703_000002_init_v2.sql) sur votre projet Supabase.
 
 #### Option 1 — SQL Editor Supabase
 
@@ -63,7 +63,7 @@ La méthode la plus rapide pour un premier démarrage :
 1. Ouvrir le projet dans le dashboard Supabase
 2. Aller dans **SQL Editor**
 3. Créer une nouvelle requête
-4. Copier le contenu de [supabase/migrations/20260703_000001_init.sql](supabase/migrations/20260703_000001_init.sql)
+4. Copier le contenu de [supabase/migrations/20260703_000002_init_v2.sql](supabase/migrations/20260703_000002_init_v2.sql)
 5. Exécuter la requête
 
 #### Option 2 — Supabase CLI

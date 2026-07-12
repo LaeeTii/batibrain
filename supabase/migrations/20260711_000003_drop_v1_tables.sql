@@ -1,10 +1,10 @@
 -- BatiBrain - suppression schema V1
 --
 -- Objectif:
--- - Supprimer les tables creees par la migration V1 (20260703_000001_init.sql).
+-- - Supprimer les tables de l'ancien schéma lorsqu'elles sont encore présentes.
 --
 -- Securite:
--- - Le script verifie des marqueurs propres a V1 avant suppression.
+-- - Le script vérifie des marqueurs propres à l'ancien schéma avant suppression.
 -- - Si les marqueurs ne sont pas detectes, aucune suppression n'est effectuee.
 
 begin;

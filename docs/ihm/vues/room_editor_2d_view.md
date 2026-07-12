@@ -120,6 +120,8 @@
 	- En lecture seule, l'auto-save n'est pas déclenché et les actions de création, d'édition, de suppression, d'annulation et de rétablissement sont désactivées ou masquées.
 	- Un indicateur explicite signale l'état lecture seule et toute tentative d'écriture indirecte est refusée.
 - Portee d'édition:
+	- une pièce, un mur ou une ouverture verrouillé reste sélectionnable et consultable, mais ne peut être modifié ni supprimé avant son déverrouillage.
+	- le propriétaire et les collaborateurs en écriture peuvent verrouiller ou déverrouiller l'élément; le collaborateur en lecture consulte uniquement son état.
 	- la vue autorise l'édition strictement de la pièce courante.
 	- les murs, ouvertures, côtes et notes d'autres pièces visibles en contexte grise ne sont pas editables dans RoomEditor2DView.
 	- l'action d'édition `Couper en deux` d'un mur existant reste autorisee dans RoomEditor2DView.
@@ -162,6 +164,9 @@
 	- l'en-tete affiche en continu nom projet, nom niveau et nom pièce.
 	- les boutons `Annuler` et `Retablir` restent visibles en haut a droite du header principal.
 	- chaque bouton est grise et non cliquable si son historique est vide.
+- État élément verrouillé:
+	- l'élément reste sélectionnable et ses données restent consultables.
+	- son état verrouillé est explicite et ses contrôles de modification et de suppression sont indisponibles.
 - Etat auto-save en cours:
 	- un indicateur explicite de synchronisation est visible dans l'en-tete.
 - Etat auto-save en échec:
@@ -291,6 +296,11 @@
 	- When l'utilisateur confirme sa suppression
 	- Then la suppression est executee
 	- And la vue retourne automatiquement vers DashboardView
+- Scenario 7b - Élément verrouillé:
+	- Given la pièce courante, l'un de ses murs ou l'une de ses ouvertures est verrouillé
+	- When l'utilisateur sélectionne cet élément
+	- Then ses données restent consultables
+	- And sa modification et sa suppression sont indisponibles jusqu'à son déverrouillage
 - Scenario 8 - Contexte d'en-tete:
 	- Given la vue est en etat normal
 	- When l'utilisateur consulte l'en-tete

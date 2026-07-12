@@ -45,12 +45,14 @@
 	- RoomsSection:
 		- message d'aide de creation: Cliquez sur le plan et deplacez-vous pour dessiner une pièce,
 		- champs de creation et d'édition: Nom (par defaut Nouvelle pièce si vide), Type (liste déroulante obligatoire, `autre` par défaut), Couleur du sol (par defaut #E5FFFC), Epaisseur (defaut 10 cm), Hauteur (defaut 250 cm),
+		- action contextuelle `Verrouiller` ou `Déverrouiller` dans le bloc d'édition de la pièce sélectionnée,
 		- types disponibles: cuisine, chambre, salon, salle de bain, toilettes, bureau, garage, hall, salle de jeu, bibliothèque, autre,
 		- liste des pièces selectionnable avec action de suppression.
 	- WallsSection:
 		- message d'aide de creation: Cliquez sur le plan et deplacez-vous pour dessiner un mur,
 		- champs de creation/édition: Epaisseur, Materiau (optionnel), Isolation (optionnel),
 		- actions édition: Ouvrir la vue Mur, Couper en deux, Detacher, Supprimer,
+		- action contextuelle `Verrouiller` ou `Déverrouiller` dans le bloc d'édition du mur sélectionné,
 		- liste des murs avec suppression.
 	- OpeningsSection:
 		- message d'aide de creation: Choisissez une ouverture template, survolez un mur puis cliquez pour poser,
@@ -207,6 +209,7 @@
 	- la sélection d'une ouverture existante ouvre automatiquement le bloc édition correspondant,
 	- au survol d'un mur incompatible avec le template sélectionné, aucune prévisualisation ni mesure de positionnement n'est affichée,
 	- le switch Ouvrant gauche/droite n'est visible que si applicable au type d'ouverture,
+	- action contextuelle `Verrouiller` ou `Déverrouiller` dans le bloc d'édition de l'ouverture sélectionnée,
 	- l'action Inverser le sens agit sur l'orientation de l'ouverture par rapport au mur support.
 
 ### Focus detaille - DimensionsSection
@@ -229,6 +232,7 @@
 ## Cas limites
 - Creation lancee sans prerequis de contexte (ex: pas de niveau actif): action refusee avec feedback explicite.
 - Objet selectionne disparu avant validation édition: bloc édition ferme et sélection nettoyee.
+- Pièce, mur ou ouverture verrouillé: le bloc reste consultable, ses actions de modification et de suppression sont indisponibles, et l'action `Déverrouiller` reste disponible au propriétaire et aux collaborateurs en écriture.
 - Données de liste volumineuses: la section reste navigable sans perdre la cohérence de sélection.
 
 ## Criteres d'acceptation testables
@@ -253,6 +257,7 @@
 - Given l'utilisateur clique sur Detacher pour un mur, When le mode s'active, Then les points d'ancrage eligibles sont mis en evidence pour permettre le choix du point a deplacer.
 - Given une note est en cours de creation sans objet selectionne, When l'utilisateur valide la note, Then la note est rattachee au projet.
 - Given une note existante est selectionnee, When l'utilisateur clique sur Changer origine, Then la note passe en mode de reassociation sans perdre son texte.
+- Given une pièce, un mur ou une ouverture verrouillé est sélectionné, When son bloc d'édition s'affiche, Then ses données restent consultables et aucune modification ni suppression n'est disponible avant son déverrouillage.
 
 ## References
 - Referentiel global : [ihm.md](../ihm.md)

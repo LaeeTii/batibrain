@@ -22,6 +22,7 @@ Date de mise à jour: 2026-07-12
 - V1:
 	- Collaboration projet asynchrone simple.
 	- Verrouillage d'édition simple pour éviter les conflits d'édition (sans temps réel complexe).
+	- Verrouillage manuel des pièces, murs et ouvertures.
 	- Validation d'adjacence des ouvertures intérieures.
 	- Icône de pièce configurable.
 	- Vue Mur dédiée (vue de face).
@@ -308,6 +309,28 @@ Date de mise à jour: 2026-07-12
 - Critères d'acceptation:
 	- Un utilisateur ne peut pas enregistrer des modifications sur une ressource verrouillée par un autre.
 	- La vue affiche un état explicite de verrouillage et propose une action adaptée.
+
+### Verrouillage manuel des pièces, murs et ouvertures
+- Version cible validée: V1.
+- Statut: terminée.
+- Objectif:
+	- Permettre de protéger volontairement une pièce, un mur ou une ouverture contre les modifications accidentelles, indépendamment du verrou d'édition collaboratif.
+- Portée fonctionnelle cible:
+	- Action `Verrouiller` ou `Déverrouiller` disponible pour la pièce, le mur ou l'ouverture sélectionné.
+	- État de verrouillage persistant propre à chaque pièce, mur et ouverture.
+	- Sélection et consultation maintenues lorsque l'élément est verrouillé.
+- Règles métier minimales:
+	- Le verrouillage manuel d'un élément bloque sa modification et sa suppression, sans bloquer sa sélection ni sa consultation.
+	- Les verrous d'une pièce, d'un mur et d'une ouverture sont indépendants; aucun verrouillage ou déverrouillage en cascade n'est appliqué.
+	- Le propriétaire et les collaborateurs en écriture peuvent verrouiller et déverrouiller un élément.
+	- Le collaborateur en lecture peut consulter l'état du verrou, mais ne peut ni verrouiller ni déverrouiller.
+	- Le contrôle du droit d'écriture précède l'action de verrouillage ou de déverrouillage; le verrou manuel est ensuite contrôlé avant toute autre modification de l'élément.
+	- Le verrou manuel ne remplace pas le verrou d'édition collaboratif requis.
+- Critères d'acceptation:
+	- Une pièce, un mur ou une ouverture verrouillé reste sélectionnable et consultable.
+	- Toute tentative de modification ou de suppression de l'élément verrouillé est refusée avec un retour explicite.
+	- Le propriétaire ou un collaborateur en écriture peut déverrouiller l'élément puis le modifier, sous réserve du verrou d'édition collaboratif applicable.
+	- Un collaborateur en lecture ne peut pas changer l'état de verrouillage.
 
 ### 14) Moteur 3D complet
 - Version cible validée: V5.

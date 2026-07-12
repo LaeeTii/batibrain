@@ -17,6 +17,7 @@
 - La sélection active est unique a un instant donne.
 - L'objet selectionne est mis en surbrillance dans chaque vue qui peut l'afficher.
 - La sélection d'un objet doit afficher son bloc édition quand ce bloc existe.
+- Le verrouillage manuel d'une pièce, d'un mur ou d'une ouverture ne désactive ni sa sélection, ni sa surbrillance, ni l'ouverture consultative de son bloc d'édition.
 
 ## Propagation de la sélection
 - Si un objet est selectionne dans le canvas et que la liste des objets du meme type est ouverte dans le panneau menu creation, l'objet est mis en surbrillance dans cette liste et dans le panneau détail s'il est ouvert.
@@ -40,6 +41,12 @@
 - Cote : mise en surbrillance dans le canvas, ouverture de l'accordeon "Côtes", affichage du bloc édition si disponible.
 - Note : mise en surbrillance dans le canvas, synchronisation avec la liste des notes et la bulle des notes projet, affichage de l'infobulle contextuelle et ouverture du bloc édition.
 - Point : mise en surbrillance dans le canvas et exposition du contexte d'édition associe si le mode actif le permet.
+
+## Effet du verrouillage manuel
+- Une pièce, un mur ou une ouverture verrouillé suit les mêmes règles de propagation de sélection qu'un élément déverrouillé.
+- Son bloc d'édition affiche son état verrouillé et rend indisponibles les modifications et la suppression.
+- Le propriétaire et les collaborateurs en écriture disposent de l'action `Déverrouiller`; le collaborateur en lecture consulte uniquement l'état.
+- Les verrous sont indépendants entre pièce, mur et ouverture et ne produisent aucun changement en cascade.
 
 ## Changement de niveau actif
 - Si un objet est selectionne depuis le panneau détail et qu'il appartient a un autre niveau, ce niveau devient le niveau editable actif.

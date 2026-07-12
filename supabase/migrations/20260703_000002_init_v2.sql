@@ -71,6 +71,7 @@ create table pieces (
   wall_height_cm numeric(8,2) not null,
   notes text,
   is_soft_deleted boolean not null,
+  is_locked boolean not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz
@@ -96,6 +97,7 @@ create table walls (
   material text,
   insulation text,
   notes text,
+  is_locked boolean not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   check (start_vertex_id <> end_vertex_id)
@@ -141,6 +143,7 @@ create table openings (
   bottom_cm numeric(8,2) not null,
   height_cm numeric(8,2) not null,
   notes text,
+  is_locked boolean not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

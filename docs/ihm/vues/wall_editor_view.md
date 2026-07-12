@@ -79,6 +79,7 @@
 ## Panneau d'édition
 
 - Bloc `Mur`:
+  - action contextuelle `Verrouiller` ou `Déverrouiller`;
   - épaisseur;
   - matériau optionnel;
   - isolation optionnelle;
@@ -95,6 +96,7 @@
   - sélection d'une ouverture;
   - propriétés existantes applicables: position, largeur, hauteur, allège et orientation;
   - aucune création d'ouverture depuis WallEditorView.
+  - action contextuelle `Verrouiller` ou `Déverrouiller` pour l'ouverture sélectionnée.
 
 ## Interactions et sauvegarde
 
@@ -131,6 +133,8 @@
 - Le collaborateur en lecture peut changer de face, consulter le canvas et utiliser le zoom, sans modifier de donnée.
 - En lecture seule ou sans verrou, les contrôles d'écriture, d'annulation et de rétablissement sont désactivés ou masqués et un indicateur explicite est affiché.
 - Toute écriture indirecte est contrôlée côté backend selon les droits du projet.
+- Un mur ou une ouverture verrouillé reste sélectionnable et consultable, mais ses modifications sont bloquées jusqu'à son déverrouillage.
+- Le propriétaire et les collaborateurs en écriture peuvent verrouiller ou déverrouiller le mur ou l'ouverture sélectionnée; le collaborateur en lecture consulte uniquement son état.
 
 ## Navigation
 
@@ -146,6 +150,7 @@
 - Auto-save en cours: indicateur visible dans le header.
 - Auto-save en échec: message persistant, action de nouvelle tentative et confirmation avant sortie.
 - Lecture seule ou verrou détenu par un tiers: données consultables et édition désactivée.
+- Verrouillage manuel du mur ou d'une ouverture: élément consultable, état explicite et contrôles de modification indisponibles jusqu'au déverrouillage.
 - Mur introuvable ou inaccessible: erreur locale bloquante et action de retour visible.
 - Validation refusée: ancienne valeur conservée et message explicite à proximité du contrôle concerné.
 - Remise en liaison de profils différents: confirmation indiquant que le profil de la face affichée remplacera celui de l'autre face.
@@ -178,6 +183,7 @@
 - Given la remise en liaison est confirmée, When l'auto-save réussit, Then le profil opposé est remplacé par celui de la face affichée et le lien devient actif dans une seule action annulable.
 - Given une modification ferait dépasser une ouverture du profil disponible, When l'utilisateur la valide, Then elle est refusée et un message explicite est affiché.
 - Given le rôle projet est lecture, When la vue est affichée, Then les deux faces restent consultables et aucune modification n'est possible.
+- Given le mur ou une ouverture est verrouillé, When l'élément est sélectionné, Then ses données restent consultables et aucune modification n'est possible avant son déverrouillage.
 - Given un échec d'auto-save est actif, When l'utilisateur demande le retour, Then une confirmation explicite est affichée avant la sortie.
 
 ## Références

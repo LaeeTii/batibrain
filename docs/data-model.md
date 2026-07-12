@@ -42,6 +42,7 @@ Ce document ne remplace pas les sources fonctionnelles principales (`docs/ihm/`)
 | Projet / niveaux / pièces / murs / faces / profils de hauteur / ouvertures / côtes / notes | Stabilisé | Contrats IHM détaillés disponibles (vues + logique + composants). |
 | Authentification / session | Stabilisé | Contrat détaillé disponible dans LoginView. |
 | Collaboration projet | Stabilisé | Propriété, rôles globaux et invitations applicatives définis pour la V1. |
+| Verrouillage manuel | Stabilisé | État persistant indépendant pour les pièces, murs et ouvertures. |
 | Exports PDF plan et plan + détail | Stabilisé | Matrice complète de templates et données minimales définies. |
 | Tâches | Legacy minimal | Intention et exigences minimales définies, détail IHM à compléter. |
 | Documents | Legacy minimal | Intention et exigences minimales définies, détail IHM à compléter. |
@@ -149,6 +150,7 @@ Champs minimaux:
 - `wallThicknessCm`
 - `wallHeightCm`
 - `isSoftDeleted`
+- `isLocked` (booléen; initialisé à `false` par le domaine)
 
 Règles:
 - Si `name` est vide à la création, la valeur par défaut est `Nouvelle pièce`.
@@ -157,6 +159,7 @@ Règles:
 - Les correspondances sont: toque, lit, sofa, baignoire, WC, bureau, voiture, porte ouverte, pion et livre; `autre` ne produit aucune icône.
 - La suppression dans le dashboard est logique (`isSoftDeleted = true`).
 - Les pièces supprimées logiquement sont masquées par défaut et exclues des exports globaux par défaut.
+- Une pièce verrouillée reste sélectionnable et consultable, mais ne peut être ni modifiée ni supprimée avant son déverrouillage.
 
 ### Vertex
 Sommet 2D d'une pièce dans le repère du niveau.
@@ -184,6 +187,7 @@ Champs minimaux:
 - `heightProfilesLinked` (booléen; initialisé à `true` par le domaine)
 - `material` (optionnel)
 - `insulation` (optionnel)
+- `isLocked` (booléen; initialisé à `false` par le domaine)
 
 Règles:
 - La longueur métier de référence est la longueur intérieure.
@@ -198,6 +202,7 @@ Règles:
 - Réactiver le lien après divergence remplace, après confirmation, le profil de la face opposée par celui de la face affichée.
 - Lors d'une inversion du segment, les profils sont permutés afin de rester rattachés à la même face physique.
 - Dans RoomEditor2DView, la suppression d'un mur mitoyen est interdite.
+- Un mur verrouillé reste sélectionnable et consultable, mais ne peut être ni modifié ni supprimé avant son déverrouillage.
 
 ### WallFaceHeightProfilePoint
 Point du profil de hauteur d'une face d'un mur.
@@ -234,6 +239,7 @@ Champs minimaux:
 - `heightCm`
 - `bottomCm` (allège)
 - `orientation` (si applicable)
+- `isLocked` (booléen; initialisé à `false` par le domaine)
 
 Règles:
 - Une ouverture doit rester entièrement comprise dans son mur support.
@@ -243,6 +249,7 @@ Règles:
 - Une ouverture intérieure est compatible uniquement avec un mur lié à deux pièces.
 - Une ouverture extérieure est compatible uniquement avec un mur lié à une pièce.
 - Après une modification topologique, une ouverture devenue incompatible avec la qualification calculée du mur est supprimée.
+- Une ouverture verrouillée reste sélectionnable et consultable, mais ne peut être ni modifiée ni supprimée avant son déverrouillage.
 
 ### OpeningTemplate
 Modèle sélectionnable utilisé pour créer une ouverture.
@@ -459,6 +466,9 @@ Points à arbitrer:
 - Une ouverture doit respecter la hauteur disponible sur les deux faces du mur à toute position qu'elle occupe.
 - Lorsque `heightProfilesLinked` est actif, les deux profils sont enregistrés atomiquement et restent strictement identiques.
 - Après recalcul topologique, supprimer toute ouverture dont `placementType` est incompatible avec la qualification de son mur support.
+- Les verrous manuels d'une pièce, d'un mur et d'une ouverture sont persistés indépendamment et ne se propagent pas en cascade.
+- Le propriétaire et les collaborateurs en écriture peuvent verrouiller ou déverrouiller ces ressources; un collaborateur en lecture consulte leur état sans pouvoir le modifier.
+- Le contrôle du droit d'écriture précède le changement de verrou manuel; le verrou manuel est contrôlé avant toute autre modification ou suppression de la ressource et ne remplace pas le verrou d'édition collaboratif.
 
 ## Persistance et suppression
 - Source de vérité persistée: Supabase/PostgreSQL.

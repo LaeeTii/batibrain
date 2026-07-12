@@ -36,6 +36,7 @@ Périmètre attendu:
 - Features spec V1 prioritaires:
 	- collaboration projet asynchrone simple,
 	- verrouillage pour éviter les conflits d'édition (la collaboration temps réel complexe n'est pas prévue),
+	- verrouillage manuel des pièces, murs et ouvertures contre les modifications accidentelles,
 	- validation d'adjacence des ouvertures intérieures,
 	- icône de pièce configurable,
 	- vue mur dédiée (vue de face),

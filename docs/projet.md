@@ -78,8 +78,10 @@ Une feature est considérée terminée si:
 ⚠️ Certains artefacts ne sont pas à jour et ne doivent pas être utilisés comme source de vérité pour décider le comportement cible.
 
 Liste des artefacts non à jour:
-- [supabase/migrations/20260703_000001_init.sql](../supabase/migrations/20260703_000001_init.sql)
 - Le code et la documentation sous [web/](../web/)
+
+Règle de persistance:
+- Toute évolution du schéma cible l'unique script d'initialisation [supabase/migrations/20260703_000002_init_v2.sql](../supabase/migrations/20260703_000002_init_v2.sql).
 
 Conséquence pratique:
 - Les éléments ci-dessus peuvent servir de contexte technique, mais pas de référence fonctionnelle finale.
