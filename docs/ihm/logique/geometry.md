@@ -29,7 +29,7 @@
 - Un mur lie a une seule pièce est extérieur pour cette pièce.
 - Un mur lie a deux pièces differentes est intérieur pour les deux pièces.
 - Chaque mur possède exactement deux faces et deux profils de hauteur propres, liés par défaut et dissociables.
-- Chaque profil est une liste de points ordonnée par leur distance depuis le début du segment; sa hauteur par défaut est uniforme à 250 cm.
+- Chaque profil est une liste de points ordonnée par leur distance depuis le début du segment; à la création, sa hauteur est uniforme et provient de la hauteur de mur par défaut de l'utilisateur courant.
 - Le lien entre profils est actif par défaut; lorsqu'il est actif, les deux profils possèdent exactement les mêmes positions et hauteurs.
 - Toute modification effectuée avec le lien actif est répercutée atomiquement sur les deux faces.
 - La désactivation du lien conserve les profils courants; leur édition devient indépendante.
@@ -77,6 +77,8 @@
 ## Transformations et topologie
 - Creation d'une pièce polygonale a partir d'une saisie rectangulaire initiale.
 - Creation d'un mur par deux points.
+	- son épaisseur et les hauteurs d'extrémité de ses deux profils sont initialisées depuis les préférences de mur par défaut de l'utilisateur courant;
+	- en l'absence de préférences enregistrées, les valeurs initiales sont `10 cm` et `250 cm`.
 - Deplacement d'un point, d'un mur, d'une pièce, d'une ouverture ou d'une cote sans rupture des invariants.
 - Creation d'un mur intérieur coupant une pièce en deux avec generation automatique d'une nouvelle pièce.
 	- cette capacite géométrique peut etre restreinte par la vue consommatrice; RoomEditor2DView interdit explicitement ce cas.

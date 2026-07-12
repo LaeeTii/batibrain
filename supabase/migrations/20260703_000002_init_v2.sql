@@ -193,6 +193,17 @@ create table editor_view_settings (
   unique (project_id, user_id)
 );
 
+create table user_preferences (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  length_unit text not null,
+  surface_unit text not null,
+  theme text not null,
+  default_wall_height_cm numeric(8,2) not null,
+  default_wall_thickness_cm numeric(8,2) not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table tasks (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references projects(id) on delete cascade,
@@ -314,6 +325,10 @@ for each row execute procedure set_updated_at();
 
 create trigger trg_editor_view_settings_updated_at
 before update on editor_view_settings
+for each row execute procedure set_updated_at();
+
+create trigger trg_user_preferences_updated_at
+before update on user_preferences
 for each row execute procedure set_updated_at();
 
 create trigger trg_tasks_updated_at

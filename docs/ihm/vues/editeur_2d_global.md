@@ -64,6 +64,7 @@
   - L'utilisateur peut afficher ou masquer des niveaux dans le sous-header.
   - L'utilisateur peut changer le niveau editable sans quitter la vue.
   - Lorsqu'un mur est sélectionné, l'action `Ouvrir la vue Mur` de son bloc d'édition ouvre WallEditorView avec les contextes projet, niveau et mur courants, sans pièce d'origine.
+  - Toute nouvelle pièce et tout nouveau mur utilisent la hauteur et l'épaisseur de mur par défaut de l'utilisateur courant pour préremplir leur création; ces valeurs restent modifiables avant validation.
   - La face initiale est la face intérieure pour un mur extérieur, sinon la face gauche.
 - Controles d'affichage:
   - L'utilisateur peut activer ou desactiver les options d'affichage (affichage/masquage) de la grille, des règles, des côtes, des angles, des notes, des surfaces et des icônes de pièces.

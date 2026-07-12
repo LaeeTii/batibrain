@@ -120,7 +120,7 @@
 - Chaque face porte son propre profil; les profils deviennent indépendants lorsque leur lien est désactivé.
 - Le mur porte un état persistant de liaison des profils, actif par défaut.
 - Lorsque le lien est actif, les deux profils contiennent strictement les mêmes positions et hauteurs.
-- À la création d'une pièce ou d'un mur, chaque face possède un profil uniforme de 250 cm, matérialisé par un point à chaque extrémité.
+- À la création d'une pièce ou d'un mur, chaque face possède un profil uniforme utilisant la hauteur de mur par défaut de l'utilisateur courant, matérialisé par un point à chaque extrémité.
 - Les positions des points sont strictement ordonnées, uniques et comprises entre zéro et la longueur du mur.
 - Les hauteurs sont strictement positives.
 - Une modification de profil ne peut rendre aucune ouverture incompatible avec la hauteur disponible sur l'une des deux faces.
@@ -174,7 +174,7 @@
 - Given un mur mitoyen relie deux pièces, When le sélecteur de face est affiché, Then chaque choix identifie la pièce vers laquelle la face est orientée.
 - Given un mur extérieur est affiché, When le sélecteur de face est ouvert, Then les faces intérieure et extérieure sont toutes deux disponibles et éditables selon les droits.
 - Given le lien des profils est désactivé et l'utilisateur modifie une face, When il affiche l'autre face, Then le profil de cette dernière est inchangé.
-- Given un mur vient d'être créé, When ses faces sont chargées, Then chacune possède deux points d'extrémité à 250 cm.
+- Given un mur vient d'être créé, When ses faces sont chargées, Then chacune possède deux points d'extrémité à la hauteur de mur par défaut active au moment de sa création.
 - Given un mur vient d'être créé, When le panneau de profil est affiché, Then le lien des hauteurs est actif.
 - Given un point intermédiaire valide est ajouté, When l'auto-save réussit, Then le contour est mis à jour et l'état devient synchronisé.
 - Given les profils sont liés, When un point est ajouté, déplacé, modifié ou supprimé sur une face, Then les deux profils restent strictement identiques après l'auto-save.

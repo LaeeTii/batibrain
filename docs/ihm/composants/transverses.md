@@ -65,7 +65,7 @@
 
 ### Contrat SettingsModal
 - Objectif:
-	- Donner accès aux paramètres utilisateur depuis une action globale de l'application.
+	- Donner accès aux préférences utilisateur et aux paramètres de compte depuis une action globale de l'application.
 - Accès:
 	- Bouton icône roue crantée situé en haut à droite de l'application.
 	- Le bouton reste disponible indépendamment de l'état ouvert ou fermé de la side bar.
@@ -76,11 +76,14 @@
 	- Déconnexion de l'utilisateur connecté.
 - Structure:
 	- Bloc profil courant en en-tête.
-	- Bloc unités de mesure.
-	- Bloc unités de surface.
-	- Bloc thème UI.
-	- Bloc sécurité avec changement de mot de passe.
-	- Action de déconnexion.
+	- Section `Préférences utilisateur`:
+		- bloc unités de mesure;
+		- bloc unités de surface;
+		- bloc valeurs de mur par défaut avec les champs `Hauteur` et `Épaisseur`;
+		- bloc thème UI.
+	- Section `Compte`:
+		- bloc sécurité avec changement de mot de passe;
+		- action de déconnexion.
 - Contrat de données:
 	- Unités de longueur disponibles:
 		- `cm` (par défaut)
@@ -93,9 +96,20 @@
 	- Thème disponible:
 		- `clair`
 		- `foncé`
+		- `system` (par défaut)
+	- Hauteur de mur par défaut:
+		- valeur initiale `250 cm`
+		- valeur strictement positive
+	- Épaisseur de mur par défaut:
+		- valeur initiale `10 cm`
+		- valeur strictement positive
 - Règles métier:
+	- Les sections `Préférences utilisateur` et `Compte` sont visuellement distinctes.
+	- Les actions de compte ne sont pas enregistrées ni présentées comme des préférences utilisateur.
 	- Les préférences sont portées par l'utilisateur courant.
 	- Le changement d'unité prend effet sans quitter la session.
+	- La hauteur et l'épaisseur de mur par défaut sont affichées dans l'unité de longueur active et enregistrées en centimètres.
+	- Leur modification préremplit les créations futures de pièces et de murs, sans modifier les murs existants.
 	- La déconnexion ferme la session et redirige vers LoginView.
 	- Le changement de mot de passe reste dans le contexte du compte authentifié.
 - Etats et feedback:
@@ -106,13 +120,16 @@
 - Criteres d'acceptation testables:
 	- Given l'application est affichée, When l'utilisateur active le bouton icône roue crantée en haut à droite, Then SettingsModal s'ouvre.
 	- Given la side bar est fermée, When l'utilisateur veut accéder aux paramètres, Then le bouton icône roue crantée reste disponible en haut à droite de l'application.
+	- Given la modale est ouverte, When son contenu est affiché, Then les unités, le thème et les valeurs de mur sont regroupés sous `Préférences utilisateur`, tandis que le changement de mot de passe et la déconnexion sont regroupés sous `Compte`.
 	- Given la modale est ouverte, When l'utilisateur choisit `mm` comme unité de longueur, Then la préférence est enregistrée avec `mm` comme valeur active.
 	- Given la modale est ouverte, When l'utilisateur choisit `cm2` comme unité de surface, Then la préférence est enregistrée avec `cm2` comme valeur active.
+	- Given la modale est ouverte, When l'utilisateur enregistre une hauteur et une épaisseur de mur strictement positives, Then ces préférences deviennent les valeurs proposées lors des prochaines créations de pièces et de murs.
+	- Given des murs existent déjà, When l'utilisateur modifie la hauteur ou l'épaisseur de mur par défaut, Then les propriétés et profils de ces murs restent inchangés.
 	- Given la modale est ouverte, When l'utilisateur clique sur Déconnexion, Then il est redirigé vers LoginView.
 
 ## Responsabilites
 - SettingsModal:
-	- Donner accès aux paramètres utilisateur depuis le bouton icône roue crantée en haut à droite de l'application.
+	- Donner accès aux préférences utilisateur et aux paramètres de compte depuis le bouton icône roue crantée en haut à droite de l'application.
 - AppSidebar:
 	- Afficher la navigation principale sans entrée Paramètres.
 	- Présenter chaque destination sous forme de lien avec une icône explicite et un libellé visible.

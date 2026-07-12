@@ -44,13 +44,15 @@
 		- niveau 0 créé automatiquement et non supprimable.
 	- RoomsSection:
 		- message d'aide de creation: Cliquez sur le plan et deplacez-vous pour dessiner une pièce,
-		- champs de creation et d'édition: Nom (par defaut Nouvelle pièce si vide), Type (liste déroulante obligatoire, `autre` par défaut), Couleur du sol (par defaut #E5FFFC), Epaisseur (defaut 10 cm), Hauteur (defaut 250 cm),
+		- champs de creation et d'édition: Nom (par defaut Nouvelle pièce si vide), Type (liste déroulante obligatoire, `autre` par défaut), Couleur du sol (par defaut #E5FFFC), Epaisseur et Hauteur,
+		- à l'ouverture du bloc de création, Epaisseur et Hauteur sont préremplies avec les préférences de mur par défaut de l'utilisateur courant; elles restent modifiables avant validation,
 		- action contextuelle `Verrouiller` ou `Déverrouiller` dans le bloc d'édition de la pièce sélectionnée,
 		- types disponibles: cuisine, chambre, salon, salle de bain, toilettes, bureau, garage, hall, salle de jeu, bibliothèque, autre,
 		- liste des pièces selectionnable avec action de suppression.
 	- WallsSection:
 		- message d'aide de creation: Cliquez sur le plan et deplacez-vous pour dessiner un mur,
 		- champs de creation/édition: Epaisseur, Materiau (optionnel), Isolation (optionnel),
+		- à l'ouverture du bloc de création, Epaisseur est préremplie avec la préférence de mur par défaut de l'utilisateur courant; elle reste modifiable avant validation,
 		- actions édition: Ouvrir la vue Mur, Couper en deux, Detacher, Supprimer,
 		- action contextuelle `Verrouiller` ou `Déverrouiller` dans le bloc d'édition du mur sélectionné,
 		- liste des murs avec suppression.
@@ -82,6 +84,8 @@
 - Le niveau 0 est obligatoire et non supprimable.
 - Les champs de longueur/hauteur/epaisseur attendent des valeurs numeriques positives selon le domaine.
 - Les valeurs par defaut metier sont appliquees lors de creation (ex: nom de pièce par defaut si vide).
+- La hauteur et l'épaisseur de mur proposées à la création proviennent des préférences de l'utilisateur courant; en l'absence de préférences enregistrées, elles valent respectivement `250 cm` et `10 cm`.
+- Les préférences sont lues à l'entrée dans un nouveau formulaire de création; leur modification ne change ni un formulaire déjà commencé ni un mur existant.
 - Les règles geometriques et de synchronisation detaillees restent referencees dans le dossier logique.
 - Modes d'édition declenches par section:
 	- LevelsSection:

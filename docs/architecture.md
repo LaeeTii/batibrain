@@ -19,7 +19,7 @@
 - l'UI vit dans `web/`, avec adaptation responsive et capacités PWA pour les usages mobiles
 - la spec est la source de vérité pour le produit (docs/ihm/ihm.md)
 - les projections (métriques, angles, vues dérivées) sont calculées
-- les préférences utilisateur (unités, thème, sécurité de session) sont persistées côté Supabase/PostgreSQL et relues à l'ouverture de session pour initialiser l'interface
+- les préférences utilisateur (unités, thème, hauteur et épaisseur de mur par défaut) sont persistées côté Supabase/PostgreSQL et relues à l'ouverture de session pour initialiser l'interface; les actions de compte telles que le changement de mot de passe et la déconnexion restent distinctes et reposent sur Supabase Auth
 - la propriété des projets, les collaborations et les invitations sont persistées dans Supabase/PostgreSQL
 - l'accès aux données est limité côté backend aux projets possédés par l'utilisateur authentifié ou partagés avec lui après acceptation de l'invitation
 - les autorisations de lecture et d'écriture sont contrôlées côté backend selon le rôle projet; l'interface ne constitue pas la barrière de sécurité
@@ -38,6 +38,7 @@
 
 ## Répartition des validations et des valeurs par défaut
 - les valeurs par défaut fonctionnelles sont définies dans `web/src/domain/`, testées avec la logique métier et envoyées explicitement lors de chaque création; elles ne reposent pas sur des clauses `DEFAULT` PostgreSQL
+- les valeurs personnalisables de hauteur et d'épaisseur de mur sont lues depuis les préférences de l'utilisateur courant; en l'absence de préférences enregistrées, le domaine initialise respectivement `250 cm` et `10 cm`
 - les règles métier évolutives sont validées dans `web/src/domain/` avant persistance, notamment les règles géométriques, les compatibilités, les bornes fonctionnelles et les transitions d'état
 - l'interface peut répéter ces validations pour fournir un retour immédiat, mais elle s'appuie sur le domaine pour prendre la décision métier
 - PostgreSQL garantit uniquement l'intégrité technique indispensable: identité, présence des données structurelles, clés étrangères, unicité technique, sécurité RLS et cohérence transactionnelle

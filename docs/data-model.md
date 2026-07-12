@@ -219,7 +219,7 @@ Champs minimaux:
 Règles:
 - Les points sont triés par `positionCm` croissante au sein de chaque couple `wallId`/`faceSide`.
 - Chaque face possède au minimum un point à `0` et un point à la longueur du mur.
-- À la création d'une pièce ou d'un mur, ces deux points valent `250 cm` sur chacune des deux faces.
+- À la création d'une pièce ou d'un mur, ces deux points utilisent `defaultWallHeightCm` sur chacune des deux faces.
 - À la création, `heightProfilesLinked` vaut `true`.
 - `positionCm` reste dans l'intervalle `[0, longueurDuMurCm]` et deux points d'une même face ne partagent pas la même position.
 - `heightCm` est strictement positive.
@@ -348,10 +348,15 @@ Champs minimaux:
 - `lengthUnit` (`cm`, `m`, `mm`)
 - `surfaceUnit` (`m2`, `cm2`, `mm2`)
 - `theme` (`clair`, `foncé`, `system`)
+- `defaultWallHeightCm`
+- `defaultWallThicknessCm`
 
 Règles:
 - Les préférences sont spécifiques à l'utilisateur authentifié.
 - Les valeurs par défaut sont `cm` pour les longueurs et `m2` pour les surfaces.
+- Les valeurs initiales sont `250 cm` pour `defaultWallHeightCm` et `10 cm` pour `defaultWallThicknessCm`.
+- La hauteur et l'épaisseur de mur par défaut sont strictement positives et persistées en centimètres, quelle que soit l'unité d'affichage.
+- Leur modification s'applique uniquement aux pièces et murs créés ensuite et ne modifie aucune donnée métier existante.
 - Les préférences sont relues au démarrage de session pour initialiser l'UI.
 
 ## Entités legacy minimales (à compléter)

@@ -89,26 +89,38 @@ Date de mise à jour: 2026-07-12
 - Version cible validée: V1.
 - Statut: terminée.
 - Objectif:
-	- Permettre à l'utilisateur de configurer les préférences de base de l'application depuis un accès global indépendant de la side bar.
+	- Permettre à l'utilisateur de configurer ses préférences et de gérer les actions de son compte depuis un accès global indépendant de la side bar.
 - Portée fonctionnelle cible:
+	- Distinction visuelle entre les préférences utilisateur et les paramètres de compte.
 	- Choix des unités de mesure.
 	- Choix des unités de surface.
+	- Choix de la hauteur de mur par défaut.
+	- Choix de l'épaisseur de mur par défaut.
 	- Modification du mot de passe.
 	- Choix du thème UI, limité pour l'instant à clair, foncé ou system.
 - Règles métier minimales:
 	- Les paramètres sont accessibles depuis un bouton icône roue crantée situé en haut à droite de l'application.
 	- La side bar ne contient aucune entrée Paramètres.
+	- Les unités, le thème et les valeurs de mur par défaut sont regroupés sous `Préférences utilisateur`.
+	- Le changement de mot de passe et la déconnexion sont regroupés sous `Compte` et ne sont pas présentés comme des préférences.
 	- Le changement de mot de passe est proposé dans le contexte du compte authentifié.
 	- La déconnexion est accessible depuis la modale de paramètres.
 	- Le thème appliqué reste cohérent sur l'interface courante après sélection.
+	- La hauteur et l'épaisseur de mur par défaut sont des valeurs strictement positives, enregistrées en centimètres et affichées dans l'unité de longueur choisie.
+	- Les valeurs initiales sont `250 cm` pour la hauteur et `10 cm` pour l'épaisseur.
+	- Une modification s'applique aux pièces et murs créés ensuite, sans modifier les murs existants.
 - Critères d'acceptation:
 	- L'utilisateur peut ouvrir la modale de paramètres depuis le bouton icône roue crantée situé en haut à droite de l'application.
 	- L'accès aux paramètres reste disponible lorsque la side bar est fermée.
 	- Aucune entrée Paramètres n'est affichée dans la side bar.
+	- La modale affiche deux sections distinctes intitulées `Préférences utilisateur` et `Compte`.
 	- L'utilisateur peut modifier l'unité de mesure sans quitter sa session.
 	- L'utilisateur peut choisir une unité de mesure parmi cm, m ou mm, avec cm par défaut.
 	- L'utilisateur peut choisir une unité de surface parmi cm2, m2 ou mm2, avec m2 par défaut.
 	- L'utilisateur peut choisir un thème clair, foncé ou system, avec system par défaut.
+	- L'utilisateur peut définir une hauteur et une épaisseur de mur par défaut strictement positives.
+	- La création d'une pièce ou d'un mur préremplit les champs concernés avec les préférences courantes de l'utilisateur.
+	- Modifier ces préférences ne change pas les murs déjà créés.
 	- L'utilisateur peut lancer le flux de changement de mot de passe depuis les paramètres.
 	- L'utilisateur peut se déconnecter depuis les paramètres et revenir à l'écran de login.
 
@@ -216,7 +228,7 @@ Date de mise à jour: 2026-07-12
 	- Choix entre les deux faces du mur; chaque face porte un profil de hauteur ordonné, lié par défaut à celui de l'autre face et dissociable.
 	- Pour un mur mitoyen, chaque face est présentée selon la pièce vers laquelle elle est orientée.
 	- Pour un mur extérieur, les faces intérieure et extérieure restent toutes deux éditables.
-	- À la création d'une pièce ou d'un mur, les deux faces reçoivent un profil uniforme de 250 cm.
+	- À la création d'une pièce ou d'un mur, les deux faces reçoivent un profil uniforme utilisant la hauteur de mur par défaut de l'utilisateur courant.
 - Règles métier minimales:
 	- La vue mur opère dans le contexte projet/niveau/mur courant et conserve la pièce d'origine lorsqu'elle vient de la vue par pièce.
 	- Les modifications restent cohérentes avec les invariants géométriques partagés.
@@ -228,7 +240,7 @@ Date de mise à jour: 2026-07-12
 	- L'action d'édition d'un mur ouvre la vue de face en conservant le contexte courant.
 	- L'utilisateur peut afficher et modifier indépendamment le profil de chacune des deux faces.
 	- La face affichée initialement respecte la pièce d'origine, puis le caractère extérieur du mur, puis le choix par défaut de la face gauche.
-	- Un mur nouvellement créé possède deux profils uniformes de 250 cm.
+	- Un mur nouvellement créé possède deux profils uniformes utilisant la hauteur de mur par défaut courante.
 	- Le propriétaire et le collaborateur en écriture peuvent modifier les profils sous réserve du verrou; le collaborateur en lecture peut les consulter sans les modifier.
 	- Une modification invalide pour une ouverture est refusée avec un message explicite.
 
@@ -415,7 +427,7 @@ Date de mise à jour: 2026-07-12
 	- Édition longueur de mur en plan.
 	- Calculs géométriques partagés (surface, périmètre, centroid, angles, génération des murs).
 	- Persistance Supabase des objets métier principaux.
-	- Valeurs par défaut pièce/mur (200x200, 10 cm, 250 cm).
+	- Valeurs initiales pièce/mur (200x200, 10 cm, 250 cm), avec hauteur et épaisseur de mur par défaut personnalisables dans les paramètres utilisateur.
 	- Gestion des propriétés mur et des ouvertures avec validations de base.
 	- Vue multi-pièces, dashboard, exports PDF plan simple et détail.
 	- Vue RoomEditor2D et contrats transverses de sélection/synchronisation.

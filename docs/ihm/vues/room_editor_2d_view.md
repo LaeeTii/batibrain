@@ -126,6 +126,7 @@
 	- les murs, ouvertures, côtes et notes d'autres pièces visibles en contexte grise ne sont pas editables dans RoomEditor2DView.
 	- l'action d'édition `Couper en deux` d'un mur existant reste autorisee dans RoomEditor2DView.
 	- la creation d'un mur est limitee a l'intérieur de la pièce courante ou a son contour; aucun mur ne peut etre créé hors de la pièce courante dans cette vue.
+	- la création d'un mur préremplit son épaisseur et ses profils uniformes avec les préférences de mur par défaut de l'utilisateur courant; ces valeurs restent modifiables avant validation.
 	- la suppression d'un mur mitoyen n'est pas autorisee dans RoomEditor2DView.
 	- la creation d'un nouveau mur intérieur provoquant la creation d'une nouvelle pièce est refusee dans RoomEditor2DView.
 	- apres édition d'un mur mitoyen, les ouvertures et côtes existantes sont conservees si elles restent geometriquement valides; seules les references devenues invalides sont rejetees avec message explicite.
