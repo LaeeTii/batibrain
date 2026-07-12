@@ -370,17 +370,26 @@ Date de mise à jour: 2026-07-12
 ### 11) ProjectMetricsView (legacy #6)
 - Fichier IHM cible: `docs/ihm/vues/project_metrics_view.md`.
 - Version cible validée: V1.
+- Statut: terminée.
 - Objectif:
 	- Consolider les indicateurs métier du projet courant.
 - Portée fonctionnelle legacy explicite:
 	- Cohabitation avec les calculs métier déjà identifiés: surface, périmètre, centroid, angles, génération des murs depuis les sommets.
 	- Cohérence attendue entre métriques vues, édition et exports.
 - Portée fonctionnelle validée complémentaire:
-	- Affichage des métriques sous forme de tableau.
-	- Filtres sur les métriques affichées.
+	- Affichage de trois tableaux successifs pour le projet courant: pièces, murs, puis ouvertures.
+	- Affichage de toutes les métriques calculables utiles pour chaque objet, notamment les surfaces, longueurs, distances, hauteurs et épaisseurs applicables.
+	- Filtre et tri disponibles sur chaque colonne de chaque tableau.
 	- Exports des métriques en PDF, Excel et CSV.
-- Trous legacy à combler dans la spec IHM détaillée:
-	- Liste finale des KPIs, segmentations, filtres, comparatifs et périodes.
+- Règles métier minimales:
+	- Les tableaux portent uniquement sur le projet courant et respectent les unités choisies par l'utilisateur.
+	- Les métriques sont calculées depuis les données sources et ne sont pas persistées.
+	- Les valeurs affichées restent identiques à celles des vues d'édition et des exports.
+	- Une métrique non applicable à un objet est affichée comme non applicable et non comme zéro.
+- Critères d'acceptation:
+	- Les trois tableaux sont affichés dans l'ordre pièces, murs, ouvertures.
+	- Chaque colonne peut être filtrée et triée selon son type de donnée.
+	- Les exports PDF, Excel et CSV reproduisent les données filtrées et triées avec les unités affichées.
 
 ### 12) Assistant IA orienté intentions avec validation humaine (legacy #11)
 - Objectif:
@@ -395,19 +404,28 @@ Date de mise à jour: 2026-07-12
 
 ### 13) Verrouillage d'édition simple
 - Version cible validée: V1.
+- Statut: terminée.
 - Objectif:
 	- Empêcher des modifications concurrentes conflictuelles sans implémenter de collaboration temps réel complexe.
 - Portée fonctionnelle cible:
-	- Verrouillage au niveau du contexte d'édition (projet/niveau/pièce selon le périmètre retenu).
-	- Acquisition et libération explicites ou automatiques du verrou.
+	- Verrouillage unique au niveau du projet entier.
+	- Acquisition atomique lors de la première modification persistée sur un projet libre.
+	- Renouvellement à chaque modification persistée par le détenteur.
+	- Libération automatique après deux minutes sans modification persistée par le détenteur.
 	- Information visuelle claire lorsqu'un contenu est verrouillé par un autre utilisateur.
 - Règles métier minimales:
-	- Un seul éditeur actif par ressource verrouillée.
-	- Lecture autorisée, écriture bloquée en l'absence de verrou détenu.
-	- Expiration ou reprise contrôlée d'un verrou abandonné.
+	- Un seul utilisateur détient le verrou d'un projet à un instant donné.
+	- Le propriétaire et un collaborateur en écriture peuvent acquérir le verrou; un collaborateur en lecture ne le peut pas.
+	- Le droit d'écriture est contrôlé avant l'acquisition du verrou.
+	- Tant que la dernière modification du détenteur date de moins de deux minutes, les autres utilisateurs peuvent consulter le projet mais ne peuvent modifier aucun de ses objets.
+	- Une tentative de modification par le détenteur renouvelle le verrou uniquement si la modification est effectivement persistée.
+	- Deux minutes après la dernière modification persistée, le verrou est considéré comme expiré sans opération de libération explicite; le prochain utilisateur autorisé qui persiste une modification l'acquiert atomiquement.
+	- Le délai est évalué avec l'heure du serveur afin de ne pas dépendre de l'horloge du navigateur.
 - Critères d'acceptation:
-	- Un utilisateur ne peut pas enregistrer des modifications sur une ressource verrouillée par un autre.
-	- La vue affiche un état explicite de verrouillage et propose une action adaptée.
+	- Un utilisateur ne peut modifier aucun objet d'un projet dont le verrou a été renouvelé par un autre utilisateur depuis moins de deux minutes.
+	- Chaque modification persistée par le détenteur repousse l'expiration de deux minutes.
+	- Après deux minutes sans modification persistée, un autre utilisateur autorisé peut modifier le projet et devient le nouveau détenteur.
+	- Les vues affichent le détenteur du verrou et l'état de lecture seule temporaire.
 
 ### Verrouillage manuel des pièces, murs et ouvertures
 - Version cible validée: V1.

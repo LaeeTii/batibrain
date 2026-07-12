@@ -30,6 +30,8 @@
 - l'accès aux données est limité côté backend aux projets possédés par l'utilisateur authentifié ou partagés avec lui après acceptation de l'invitation
 - les autorisations de lecture et d'écriture sont contrôlées côté backend selon le rôle projet; l'interface ne constitue pas la barrière de sécurité
 - le contrôle du droit d'écriture précède l'acquisition du verrou d'édition simple
+- le verrou d'édition collaboratif porte sur le projet entier; la première modification persistée sur un projet libre l'acquiert atomiquement, chaque modification persistée par son détenteur renouvelle son activité et il expire deux minutes après la dernière modification selon l'heure du serveur
+- l'expiration du verrou collaboratif est évaluée à l'écriture et à la lecture depuis son dernier horodatage d'activité; elle ne nécessite ni tâche planifiée ni libération explicite
 - le verrou manuel persistant d'une pièce, d'un mur ou d'une ouverture est distinct du verrou d'édition collaboratif; il est contrôlé avant toute modification ou suppression de la ressource, sans empêcher sa sélection ni sa consultation
 - les verrous manuels sont indépendants entre pièce, mur et ouverture et ne se propagent pas en cascade
 - la compatibilité intérieur/extérieur entre un template d'ouverture et son mur support est une validation métier géométrique portée par le domaine frontend avant persistance
@@ -41,6 +43,7 @@
 - chaque mur persiste deux profils de hauteur ordonnés, un par face stable du segment; ils sont liés par défaut et peuvent être dissociés, tandis que l'association visuelle d'une face à une pièce ou à l'extérieur est calculée depuis la topologie
 - chaque mur persiste également l'état de liaison de ses profils, actif par défaut; lorsqu'il est actif, les écritures sur les deux profils sont validées et persistées dans une même transaction
 - les hauteurs intermédiaires, contours de face et mesures affichées dans la vue Mur sont projetés depuis les points persistés et ne sont pas stockés comme valeurs dérivées
+- les tableaux de ProjectMetricsView sont des projections calculées du projet courant; leurs surfaces, longueurs, distances, hauteurs et épaisseurs ne sont pas persistées dans une table de métriques
 
 ## Répartition des validations et des valeurs par défaut
 - les valeurs par défaut fonctionnelles sont définies dans `web/src/domain/`, testées avec la logique métier et envoyées explicitement lors de chaque création; elles ne reposent pas sur des clauses `DEFAULT` PostgreSQL

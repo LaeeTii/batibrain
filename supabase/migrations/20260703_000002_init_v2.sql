@@ -21,9 +21,15 @@ create table projects (
   address text,
   description text,
   is_soft_deleted boolean not null,
+  editing_lock_user_id uuid references auth.users(id) on delete set null,
+  editing_lock_last_activity_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  deleted_at timestamptz
+  deleted_at timestamptz,
+  check (
+    (editing_lock_user_id is null and editing_lock_last_activity_at is null)
+    or (editing_lock_user_id is not null and editing_lock_last_activity_at is not null)
+  )
 );
 
 create table project_collaborations (

@@ -15,6 +15,29 @@
 - ProjectCollaborationModal
 - AppNotifications
 
+### Contrat du verrou d'édition collaboratif
+- Portée:
+	- Un verrou unique couvre le projet courant et tous ses objets.
+	- Le verrou est distinct des verrous manuels des pièces, murs et ouvertures.
+- Acquisition et renouvellement:
+	- La première modification effectivement persistée sur un projet libre acquiert atomiquement le verrou pour son auteur.
+	- Seul le propriétaire ou un collaborateur en écriture peut l'acquérir.
+	- Chaque modification effectivement persistée par le détenteur repousse son expiration de deux minutes.
+	- Une modification invalide ou refusée ne renouvelle pas le verrou.
+- Expiration:
+	- Le verrou expire deux minutes après la dernière modification persistée par son détenteur.
+	- L'expiration utilise l'heure du serveur et ne nécessite aucune action manuelle.
+	- Après expiration, le prochain utilisateur autorisé qui persiste une modification acquiert le verrou.
+- Etats et feedback:
+	- Le détenteur peut modifier tous les objets du projet sous réserve de ses droits et des verrous manuels.
+	- Pour les autres utilisateurs, toutes les vues du projet restent consultables mais leurs commandes d'écriture sont indisponibles.
+	- L'état verrouillé indique explicitement l'utilisateur détenteur et le caractère temporaire de la lecture seule.
+- Critères d'acceptation testables:
+	- Deux utilisateurs ne peuvent pas persister simultanément des modifications sur le même projet.
+	- Une modification du détenteur renouvelle la période de deux minutes.
+	- Après deux minutes sans modification persistée, un autre utilisateur autorisé peut modifier le projet et devient détenteur.
+	- Un collaborateur en lecture ne peut jamais acquérir le verrou.
+
 ### Contrat ProjectCollaborationModal
 - Objectif:
 	- Permettre au propriétaire de gérer les accès au projet courant depuis le contexte projet de la sidebar.

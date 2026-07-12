@@ -76,6 +76,8 @@ Champs minimaux:
 - `name`
 - `description` (optionnel)
 - `ownerUserId`
+- `editingLockUserId` (optionnel)
+- `editingLockLastActivityAt` (optionnel)
 - `updatedAt`
 - `isSoftDeleted`
 
@@ -85,6 +87,11 @@ Règles:
 - Un projet supprimé logiquement est exclu des listes actives par défaut.
 - Un projet possède un propriétaire unique.
 - Un utilisateur accède à un projet s'il en est propriétaire ou si une collaboration acceptée le lui autorise.
+- Le verrou d'édition collaboratif porte sur le projet entier et n'est actif que si `editingLockUserId` est renseigné et si `editingLockLastActivityAt` date de moins de deux minutes selon l'heure du serveur.
+- La première modification persistée sur un projet libre ou dont le verrou a expiré attribue atomiquement le verrou à son auteur autorisé.
+- Chaque modification effectivement persistée par le détenteur met à jour `editingLockLastActivityAt`; une tentative refusée ou invalide ne le renouvelle pas.
+- Pendant les deux minutes suivant la dernière modification, les autres utilisateurs conservent la lecture mais aucune écriture sur les objets du projet.
+- Après deux minutes sans modification, le verrou est considéré comme libre sans remise à zéro préalable des deux champs; l'acquisition suivante les remplace atomiquement.
 
 ### UserProfile
 Représente les informations applicatives du compte, distinctes des identifiants gérés par Supabase Auth.
@@ -475,17 +482,17 @@ Points à arbitrer:
 - Horizon, granularité temporelle, jalons, contraintes, dépendances.
 
 ### ProjectKpi
-Intention minimale: métriques consolidées cohérentes avec édition et export.
+ProjectMetricsView ne correspond pas à une entité persistée. Elle projette les données du projet courant dans trois tableaux ordonnés:
+- pièces;
+- murs;
+- ouvertures.
 
-Champs minimaux connus:
-- `projectId`
-- `surfaceM2` (dérivée)
-- `perimeterCm` (dérivée)
-- `centroid` (dérivée)
+Les colonnes exposent les propriétés sources utiles à l'identification et toutes les métriques calculables applicables, notamment:
+- pour une pièce: niveau, nom, type, surface, périmètre, centroïde, nombre de sommets, nombre de murs et hauteurs ou épaisseurs de référence applicables;
+- pour un mur: niveau, pièces liées, longueur intérieure, épaisseur, qualification intérieure ou extérieure, profils liés et hauteurs de ses deux faces;
+- pour une ouverture: niveau, pièce ou pièces adjacentes, mur support, template, type, distance depuis le début du mur, largeur, hauteur, altitude et surfaces calculables.
 
-Points à arbitrer:
-- Liste finale des KPIs.
-- Segmentation projet/niveau/pièce/mur.
+Chaque colonne est filtrable et triable selon son type. Une valeur sans objet est non applicable, jamais assimilée à zéro. Les valeurs suivent les unités choisies par l'utilisateur et restent calculées depuis les entités sources.
 
 ## Relations
 - `Project` 1..n `Level`

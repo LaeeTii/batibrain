@@ -1,40 +1,104 @@
-# IHM - ProjectMetricsView
-
-## Recuperation du legacy
-- Sources legacy utilisees:
-	- `docs/product.md` (module prioritaire Metriques automatiques),
-	- `docs/spec.md` (presence d'une vue Metriques dans la navigation et de calculs metier deja identifies).
-- Intention produit historique a conserver:
-	- Fournir une lecture consolidee des indicateurs metier du projet courant.
-- Informations legacy explicites a conserver:
-	- Calculs metier cites dans le legacy: surface, perimetre, centroid, angles, generation des murs depuis les sommets.
-	- Les metriques globales doivent rester coherentes avec les valeurs affichees dans les vues d'edition et d'export.
-- Limites connues du legacy:
-	- Aucun contrat legacy detaille sur la liste definitive des KPIs, leur segmentation (projet/niveau/pièce/mur), la periode observee, ni les interactions de filtrage comparees.
+# IHM — ProjectMetricsView
 
 ## Objectif
-- A completer.
+
+Fournir une lecture tabulaire exhaustive des pièces, murs et ouvertures du projet courant, avec leurs propriétés sources et toutes les métriques qui peuvent en être calculées.
 
 ## Périmètre
-- A completer.
 
-## Structure ecran
-- A completer.
+- Consultation du projet courant uniquement.
+- Trois tableaux affichés dans l'ordre: pièces, murs, ouvertures.
+- Filtre et tri sur chaque colonne.
+- Export du résultat en PDF, Excel et CSV.
+- Aucun comparatif entre projets et aucune période temporelle en V1.
+
+## Structure écran
+
+- Socle applicatif authentifié défini dans `ihm.md`.
+- Header avec le nom du projet courant et les actions d'export PDF, Excel et CSV.
+- Sections `Pièces`, `Murs` et `Ouvertures`, dans cet ordre.
+- Chaque en-tête de colonne porte ses commandes de filtre et de tri.
 
 ## Interactions utilisateur
-- A completer.
 
-## Règles metier
-- A completer.
+- Trier une colonne en ordre ascendant ou descendant, puis annuler son tri.
+- Filtrer chaque colonne selon son type: recherche textuelle, sélection de valeurs ou intervalle numérique.
+- Combiner les filtres de plusieurs colonnes d'un même tableau.
+- Réinitialiser séparément les filtres et tris de chaque tableau.
+- Exporter les lignes actuellement filtrées et triées.
+- Un changement de projet recharge les tableaux et réinitialise filtres et tris.
 
-## Etats et feedback
-- A completer.
+## Règles métier
 
-## Données affichees
-- A completer.
+- Seuls les objets actifs du projet courant sont affichés.
+- Les valeurs dérivées utilisent les fonctions partagées de `web/src/domain/` et ne sont pas persistées.
+- Les unités suivent les préférences utilisateur.
+- Une métrique non applicable est affichée `Non applicable`, jamais zéro.
+- Les valeurs sont identiques à celles des éditeurs et des exports.
+- Le rôle lecture peut consulter, filtrer, trier et exporter.
+- Aucun tableau ne permet de modifier les données métier.
+
+## Données affichées
+
+### Tableau Pièces
+
+- niveau;
+- nom et type;
+- surface et périmètre;
+- coordonnées du centroïde;
+- nombres de sommets et de murs;
+- épaisseur et hauteur de mur de référence.
+
+### Tableau Murs
+
+- niveau et pièces liées;
+- longueur intérieure et épaisseur;
+- qualification intérieure ou extérieure;
+- état lié ou dissocié des profils;
+- hauteurs minimale et maximale de chaque face;
+- nombre d'ouvertures.
+
+### Tableau Ouvertures
+
+- niveau, pièces adjacentes et mur support;
+- template et type intérieur ou extérieur;
+- distance depuis le début du mur;
+- largeur, hauteur et altitude;
+- surface de l'ouverture.
+
+Toute autre propriété source ou métrique calculable ajoutée au domaine doit rejoindre le tableau correspondant lorsqu'elle apporte une information distincte et compréhensible.
+
+## États et feedback
+
+- Chargement: squelette par tableau.
+- Tableau vide: message explicite.
+- Filtres sans résultat: message et action de réinitialisation.
+- Erreur: message et action `Réessayer`.
+- Export en cours: action désactivée avec progression visible.
+- Échec d'export: message sans perte des filtres ni des tris.
 
 ## Cas limites
-- A completer.
 
-## References
-- Referentiel global : [ihm.md](../ihm.md)
+- Projet sans pièce.
+- Donnée invalide héritée empêchant une métrique: valeur indisponible sans bloquer les autres lignes.
+- Mur lié à zéro, une ou deux pièces.
+- Profils de mur dissociés.
+- Valeur non applicable ou absente lors d'un filtre numérique.
+
+## Critères d'acceptation testables
+
+- Trois tableaux apparaissent dans l'ordre pièces, murs, ouvertures.
+- Chaque colonne est filtrable et triable selon son type.
+- Les filtres d'un tableau se combinent et se réinitialisent sans affecter les autres.
+- Les métriques correspondent au domaine et aux unités choisies.
+- Les objets supprimés logiquement sont absents.
+- Le rôle lecture peut filtrer, trier et exporter sans modifier les données.
+- Les exports reproduisent lignes, ordre, unités et valeurs de la vue filtrée.
+- Une valeur non applicable est distinguée de zéro.
+
+## Références
+
+- Référentiel global: [ihm.md](../ihm.md)
+- Géométrie: [geometry.md](../logique/geometry.md)
+- Préférences et droits: [transverses.md](../composants/transverses.md)
+- Registre produit: [spec.md](../../spec.md)
