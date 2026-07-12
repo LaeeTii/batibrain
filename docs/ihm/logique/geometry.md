@@ -8,6 +8,7 @@
 ## Objets geometriques
 - Point : coordonnees 2D dans le plan d'un niveau.
 - Segment : paire ordonnee de points.
+- Polygone : liste ordonnée de points avec fermeture implicite entre le dernier et le premier.
 - Pièce : polygone ferme ordonne.
 - Mur : segment support avec epaisseur et proprietes metier attachees.
 - Face de mur : côté stable gauche ou droit relativement au segment ordonné, portant son propre profil de hauteur.
@@ -127,6 +128,14 @@
 - Verification de non-chevauchement entre ouvertures d'un meme mur.
 - Verification de compatibilité entre la caractéristique du template d'ouverture et le nombre de pièces liées au mur support.
 - Interpolation de la hauteur disponible entre deux points consécutifs d'un profil de face.
+
+## Conventions des primitives V1
+- La projection d'un point sur un segment est bornée aux deux extrémités; pour un segment de longueur nulle, elle retourne son point unique.
+- L'orientation d'un polygone utilise le repère cartésien: aire signée positive pour le sens antihoraire, négative pour le sens horaire et nulle pour un polygone dégénéré.
+- L'orientation d'un segment est exprimée en degrés dans l'intervalle `[0, 360[` depuis l'axe horizontal positif; elle est indéfinie pour un segment de longueur nulle.
+- Le centroïde d'un polygone non dégénéré est son centroïde surfacique; pour un polygone dégénéré, le barycentre de ses sommets est utilisé.
+- Les angles intérieurs tiennent compte de la concavité et sont compris entre `0` et `360` degrés; ils valent `0` lorsque le polygone est dégénéré.
+- La longueur intérieure ne peut pas être négative après déduction des épaisseurs des murs liés aux deux extrémités.
 
 ## Unite metier
 Le centimetre est l'unite metier de reference pour la base, les calculs et les affichages de mesure. Le m2 est l'unite metier de reference pour les surfaces. Les conversions d'unite sont effectuees a l'affichage selon le contexte utilisateur.

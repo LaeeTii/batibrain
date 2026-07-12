@@ -1,11 +1,28 @@
 export type Id = string;
 
-export interface Point2D {
+export interface Point {
   x: number;
   y: number;
 }
 
-export interface Vertex extends Point2D {
+/** Alias conservé pendant la remise à niveau du prototype frontend. */
+export type Point2D = Point;
+
+export interface Segment {
+  start: Point;
+  end: Point;
+}
+
+export interface Polygon {
+  vertices: Point[];
+}
+
+export interface Vector2D {
+  x: number;
+  y: number;
+}
+
+export interface Vertex extends Point {
   id: Id;
   pieceId: Id;
   order: number;

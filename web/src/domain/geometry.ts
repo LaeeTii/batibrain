@@ -1,4 +1,14 @@
-import type { DerivedWall, Opening, Point2D, Vertex, Wall } from './types';
+import type {
+  DerivedWall,
+  Opening,
+  Point,
+  Point2D,
+  Polygon,
+  Segment,
+  Vector2D,
+  Vertex,
+  Wall,
+} from './types';
 
 const EPSILON = 1e-9;
 
@@ -25,21 +35,79 @@ export function distance(a: Point2D, b: Point2D): number {
   return Math.hypot(b.x - a.x, b.y - a.y);
 }
 
+export function vector(from: Point, to: Point): Vector2D {
+  return { x: to.x - from.x, y: to.y - from.y };
+}
+
+export function projectPointOnSegment(point: Point, segment: Segment): Point {
+  const direction = vector(segment.start, segment.end);
+  const lengthSquared = direction.x ** 2 + direction.y ** 2;
+
+  if (lengthSquared <= EPSILON ** 2) {
+    return { ...segment.start };
+  }
+
+  const fromStart = vector(segment.start, point);
+  const ratio = Math.max(
+    0,
+    Math.min(1, (fromStart.x * direction.x + fromStart.y * direction.y) / lengthSquared),
+  );
+
+  return {
+    x: segment.start.x + ratio * direction.x,
+    y: segment.start.y + ratio * direction.y,
+  };
+}
+
 export function segmentLengthCm(a: Point2D, b: Point2D): number {
   return distance(a, b);
 }
 
-export function polygonAreaCm2(points: Point2D[]): number {
+export function interiorSegmentLengthCm(
+  segment: Segment,
+  startWallThicknessCm = 0,
+  endWallThicknessCm = 0,
+): number {
+  const startDeduction = Number.isFinite(startWallThicknessCm)
+    ? Math.max(0, startWallThicknessCm)
+    : 0;
+  const endDeduction = Number.isFinite(endWallThicknessCm)
+    ? Math.max(0, endWallThicknessCm)
+    : 0;
+  return Math.max(0, distance(segment.start, segment.end) - startDeduction - endDeduction);
+}
+
+export function signedPolygonAreaCm2(points: readonly Point[]): number {
   if (points.length < 3) return 0;
 
-  let sum = 0;
-  for (let i = 0; i < points.length; i += 1) {
-    const current = points[i];
-    const next = points[(i + 1) % points.length];
-    sum += current.x * next.y - next.x * current.y;
+  let doubleArea = 0;
+  for (let index = 0; index < points.length; index += 1) {
+    const current = points[index];
+    const next = points[(index + 1) % points.length];
+    doubleArea += current.x * next.y - next.x * current.y;
   }
 
-  return Math.abs(sum) / 2;
+  return doubleArea / 2;
+}
+
+export function polygonAreaCm2(points: Point2D[]): number {
+  return Math.abs(signedPolygonAreaCm2(points));
+}
+
+export type PolygonOrientation = 'clockwise' | 'counterclockwise' | 'degenerate';
+
+export function polygonOrientation(points: readonly Point[]): PolygonOrientation {
+  const signedArea = signedPolygonAreaCm2(points);
+  if (Math.abs(signedArea) <= EPSILON) return 'degenerate';
+  return signedArea > 0 ? 'counterclockwise' : 'clockwise';
+}
+
+export function segmentOrientationDegrees(segment: Segment): number | null {
+  const direction = vector(segment.start, segment.end);
+  if (Math.hypot(direction.x, direction.y) <= EPSILON) return null;
+
+  const angle = Math.atan2(direction.y, direction.x) * (180 / Math.PI);
+  return (angle + 360) % 360;
 }
 
 export function polygonPerimeterCm(points: Point2D[]): number {
@@ -78,7 +146,16 @@ export function centroid(points: Point2D[]): Point2D {
   }
 
   const divisor = factorSum * 3;
-  return { x: cx / divisor, y: cy / divisor };
+  const centroidX = cx / divisor;
+  const centroidY = cy / divisor;
+  return {
+    x: Math.abs(centroidX) <= EPSILON ? 0 : centroidX,
+    y: Math.abs(centroidY) <= EPSILON ? 0 : centroidY,
+  };
+}
+
+export function polygonCentroid(polygon: Polygon): Point {
+  return centroid(polygon.vertices);
 }
 
 export function angleAtVertexDegrees(prev: Point2D, current: Point2D, next: Point2D): number {
@@ -91,6 +168,26 @@ export function angleAtVertexDegrees(prev: Point2D, current: Point2D, next: Poin
   if (norm1 < EPSILON || norm2 < EPSILON) return 0;
   const ratio = Math.min(1, Math.max(-1, dot / (norm1 * norm2)));
   return Math.acos(ratio) * (180 / Math.PI);
+}
+
+export function polygonInteriorAnglesDegrees(points: readonly Point[]): number[] {
+  const orientation = polygonOrientation(points);
+  if (points.length < 3 || orientation === 'degenerate') {
+    return points.map(() => 0);
+  }
+
+  const orientationSign = orientation === 'counterclockwise' ? 1 : -1;
+
+  return points.map((current, index) => {
+    const previous = points[(index - 1 + points.length) % points.length];
+    const next = points[(index + 1) % points.length];
+    const previousVector = vector(current, previous);
+    const nextVector = vector(current, next);
+    const baseAngle = angleAtVertexDegrees(previous, current, next);
+    const cross = previousVector.x * nextVector.y - previousVector.y * nextVector.x;
+
+    return orientationSign * cross > EPSILON ? 360 - baseAngle : baseAngle;
+  });
 }
 
 export function sortVertices(vertices: Vertex[]): Vertex[] {
