@@ -63,6 +63,7 @@
 	- le bouton icône cloche d'AppNotifications en haut à droite de l'application;
 	- le bouton icône roue crantée ouvrant SettingsModal en haut à droite de l'application.
 - Ces actions globales restent disponibles lors des changements de vue.
+- La navigation principale d'AppSidebar présente chaque destination sous forme de lien avec une icône explicite et un libellé visible; elle distingue la vue active et n'active pas les destinations indisponibles.
 - Lorsque AppSidebar est fermée, son bouton icône menu reste disponible en haut à gauche et les boutons Notifications et Paramètres restent disponibles en haut à droite.
 - LoginView est exclue de ce socle applicatif authentifié.
 - Les contrats détaillés de ces composants sont définis dans [composants/transverses.md](./composants/transverses.md).

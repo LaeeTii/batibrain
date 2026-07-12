@@ -47,6 +47,25 @@ Date de mise à jour: 2026-07-12
 
 ## Backlog features priorisé (1 = plus prioritaire)
 
+### Navigation de la side bar par liens avec icônes
+- Version cible validée: V1.
+- Statut: terminée.
+- Objectif:
+	- Présenter les destinations de la navigation principale comme des liens reconnaissables, accompagnés d'icônes explicites.
+- Portée fonctionnelle cible:
+	- Remplacement des boutons de navigation de la side bar par des liens conservant les destinations existantes.
+	- Affichage d'une icône explicite et d'un libellé visible pour chaque lien.
+	- Identification du lien correspondant à la vue active.
+- Règles minimales:
+	- Les actions qui ne changent pas de vue, notamment la création de projet et l'ouverture ou la fermeture de la side bar, restent des boutons.
+	- Les destinations indisponibles restent non activables et leur état est identifiable visuellement et par les technologies d'assistance.
+	- Le changement de présentation n'ajoute ni destination ni règle métier.
+- Critères d'acceptation:
+	- Chaque destination de la side bar est présentée sous forme de lien avec une icône explicite et un libellé visible.
+	- Le lien de la vue active est identifiable visuellement et par les technologies d'assistance.
+	- Un lien vers une destination indisponible ne déclenche aucune navigation et expose son état indisponible.
+	- Les commandes de création de projet et d'ouverture ou fermeture de la side bar conservent une sémantique de bouton.
+
 ### Fermeture de la side bar
 - Version cible validée: V1.
 - Statut: terminée.

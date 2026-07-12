@@ -7,14 +7,15 @@
 - Séléction du projet courant (dropdown)
 - Action de gestion des collaborateurs dans le contexte du projet courant, visible uniquement pour son propriétaire, ouvrant ProjectCollaborationModal.
 - "créer un projet" (bouton) -> ouvre une modale.
-- "Tableau de bord" (bouton) -> ouvre la vue tableau de bord
-- "Édition globale" (bouton) -> ouvre la vue édition globale du projet
-- "Métriques" (bouton) -> ouvre la vue métriques
-- "Photos" (bouton) -> ouvre la vue photos (désactivé pour le moment)
-- "Documents" (bouton) -> ouvre la vue documents (désactivé pour le moment)
-- "Travaux" (bouton) -> ouvre la vue travaux (désactivé pour le moment)
-- "Tâches" (bouton) -> ouvre la vue tâches (désactivé pour le moment)
-- "planning" (bouton) -> ouvre la vue planning (désactivé pour le moment)
+- Liens de navigation avec une icône explicite et un libellé visible :
+    - "Tableau de bord" -> ouvre la vue tableau de bord.
+    - "Édition globale" -> ouvre la vue édition globale du projet.
+    - "Métriques" -> ouvre la vue métriques.
+    - "Photos" -> ouvre la vue photos (lien non activable pour le moment).
+    - "Documents" -> ouvre la vue documents (lien non activable pour le moment).
+    - "Travaux" -> ouvre la vue travaux (lien non activable pour le moment).
+    - "Tâches" -> ouvre la vue tâches (lien non activable pour le moment).
+    - "Planning" -> ouvre la vue planning (lien non activable pour le moment).
 
 Lorsque la side bar est fermée, elle est masquée et un bouton icône menu reste visible en haut à gauche de l'application pour la rouvrir.
 
@@ -25,6 +26,12 @@ Lorsque la side bar est fermée, elle est masquée et un bouton icône menu rest
 - La fermeture masque uniquement la side bar et ne modifie ni le projet courant, ni la vue active, ni les données affichées.
 
 - Le bouton icône menu situé en haut à gauche de l'application permet de rouvrir la side bar.
+
+- Chaque entrée de navigation de la side bar est un lien associant une icône explicite à son libellé visible.
+
+- Le lien correspondant à la vue active est identifiable visuellement et expose son état actif aux technologies d'assistance.
+
+- Une destination indisponible reste non activable et son état indisponible est identifiable visuellement et par les technologies d'assistance.
 
 - L'état ouvert ou fermé est conservé lors des changements de vue pendant la session applicative courante.
 
@@ -49,3 +56,6 @@ Lorsque la side bar est fermée, elle est masquée et un bouton icône menu rest
 - Given la side bar est fermée, When l'utilisateur active le bouton icône menu en haut à gauche de l'application, Then la side bar est rouverte.
 - Given la side bar est fermée, When l'utilisateur change de vue, Then la nouvelle vue conserve la side bar fermée et le bouton icône menu reste disponible.
 - Given la side bar est fermée, When l'application est rechargée, Then la side bar retrouve son état ouvert par défaut.
+- Given la side bar est ouverte, When la navigation principale est affichée, Then chaque destination est présentée sous forme de lien avec une icône explicite et un libellé visible.
+- Given une vue est active, When la side bar est affichée, Then son lien de navigation est identifiable visuellement et expose son état actif aux technologies d'assistance.
+- Given une destination est indisponible, When la side bar est affichée, Then son lien est identifiable comme indisponible et ne déclenche aucune navigation.

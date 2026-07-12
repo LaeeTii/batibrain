@@ -115,6 +115,8 @@
 	- Donner accès aux paramètres utilisateur depuis le bouton icône roue crantée en haut à droite de l'application.
 - AppSidebar:
 	- Afficher la navigation principale sans entrée Paramètres.
+	- Présenter chaque destination sous forme de lien avec une icône explicite et un libellé visible.
+	- Identifier le lien de la vue active et rendre les destinations indisponibles non activables.
 	- Permettre de masquer la side bar et de la rouvrir depuis le bouton icône menu en haut à gauche de l'application.
 	- Conserver son état ouvert ou fermé lors des changements de vue pendant la session applicative courante, sans le persister après rechargement.
 - SidebarProjectContext:
@@ -204,6 +206,8 @@
 
 ## Etats et interactions
 - AppSidebar peut être ouverte ou fermée; sa fermeture masque uniquement la side bar et laisse la zone principale utilisable.
+- La navigation principale d'AppSidebar utilise des liens avec icône et libellé; le lien de la vue active est identifiable visuellement et par les technologies d'assistance.
+- Les liens vers des destinations indisponibles sont identifiables comme tels et ne déclenchent aucune navigation.
 - Lorsque AppSidebar est fermée, le bouton icône menu en haut à gauche de l'application reste visible et permet de la rouvrir.
 - Changement de projet via SidebarProjectContext met a jour le contexte global de la vue active.
 - DetailTree et ProjectNotesBubble peuvent declencher une sélection synchronisee avec le canvas.
@@ -236,6 +240,9 @@
 - Given AppSidebar est ouverte, When l'utilisateur la ferme, Then elle est masquée sans modifier le projet courant ni la vue active.
 - Given AppSidebar est fermée, When l'utilisateur active le bouton icône menu en haut à gauche de l'application, Then elle est rouverte.
 - Given AppSidebar est fermée, When l'utilisateur change de vue, Then son état fermé est conservé pendant la session applicative courante.
+- Given AppSidebar est ouverte, When la navigation principale est affichée, Then chaque destination est un lien avec une icône explicite et un libellé visible.
+- Given une vue est active, When AppSidebar est affichée, Then son lien expose un état actif identifiable visuellement et par les technologies d'assistance.
+- Given une destination est indisponible, When AppSidebar est affichée, Then son lien est identifiable comme indisponible et ne déclenche aucune navigation.
 - Given un objet est selectionne dans DetailTree, When la synchronisation est appliquee, Then l'objet correspondant est selectionne dans le canvas si visible.
 - Given une note projet est selectionnee dans ProjectNotesBubble, When la sélection est propagee, Then la note est active dans les zones capables de l'afficher.
 - Given un changement de projet est effectue depuis SidebarProjectContext, When la vue est rechargee, Then le contexte precedent est purge et seules les données du nouveau projet sont utilisees.
