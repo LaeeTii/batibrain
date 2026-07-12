@@ -36,6 +36,13 @@
 - L'icone export ouvre un menu a deux choix: plan simple, plan + détail.
 - La suppression logique demande confirmation avant execution.
 
+## Iconographie
+- Ajouter une note: `LuMessageSquarePlus`, icône seule.
+- Exporter la pièce: `LuFileDown`, icône seule; les variantes du menu conservent un libellé visible.
+- Supprimer la pièce: `LuTrash2`, icône seule avec confirmation.
+- L'ouverture de la pièce reste portée par le clic principal sur la carte et n'ajoute pas de bouton iconographique concurrent.
+- Le pictogramme de type de pièce est décoratif en complément du nom et de la surface; sa correspondance métier reste définie par le type de pièce.
+
 ## Règles metier
 - Le nom de pièce est obligatoire; si vide a la creation, la valeur par defaut est Nouvelle pièce.
 - L'icône est dérivée du type avec `react-icons` et affichée sous le nom et la surface.

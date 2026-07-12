@@ -179,6 +179,36 @@
 	- Given un administrateur cible son propre compte, When il tente de le rétrograder ou de le supprimer, Then l'action est refusée explicitement.
 	- Given un utilisateur propriétaire de projets, When un administrateur confirme sa suppression après l'alerte, Then le compte, ses projets et toutes leurs données dépendantes sont supprimés.
 
+## Iconographie
+- Actions globales, sous forme d'icônes seules:
+	- ouvrir les notifications: `LuBell`;
+	- ouvrir les paramètres: `LuSettings`.
+- ProjectCollaborationModal, avec icône + texte:
+	- inviter: `LuUserPlus`;
+	- renvoyer une invitation: `LuSend`;
+	- annuler une invitation: `LuX`;
+	- modifier le rôle: `LuShield`;
+	- retirer un collaborateur: `LuUserMinus`.
+- AppNotifications:
+	- invitation projet: `LuFolderInput`, icône décorative accompagnant le texte;
+	- demande de compte: `LuUserRoundCheck`, icône décorative accompagnant le texte;
+	- accepter: `LuCheck`, icône + texte;
+	- ouvrir l'administration: `LuArrowUpRight`, icône + texte;
+	- aucune notification: `LuBellOff`, icône décorative accompagnant le message vide.
+- SettingsModal:
+	- Préférences utilisateur: `LuSlidersHorizontal`, icône + titre;
+	- Compte et profil: `LuUserRound`, icône + titre;
+	- sécurité et changement de mot de passe: `LuKeyRound`, icône + texte;
+	- déconnexion: `LuLogOut`, icône + texte.
+- AdminModal, avec icône + texte:
+	- approuver une demande: `LuUserCheck`;
+	- modifier un rôle: `LuShield`;
+	- supprimer un compte: `LuUserRoundX`.
+- Editor2DHeaderControls:
+	- exporter en PDF: `LuFileDown`, icône + texte;
+	- les options d'affichage et de magnétisme reprennent les icônes définies dans [canvas.md](./canvas.md).
+- DetailTree utilise `LuChevronRight` et `LuChevronDown` sous forme d'icônes seules pour replier ou déplier un nœud.
+
 ## Responsabilites
 - SettingsModal:
 	- Donner accès aux préférences utilisateur et aux paramètres de compte depuis le bouton icône roue crantée en haut à droite de l'application.

@@ -46,6 +46,21 @@
 - La sélection utilisateur dans le canvas est synchronisee vers panneaux et détail tree.
 - Les mesures en focus restent visibles en édition meme si l'option globale correspondante est decochee.
 - Les controles de zoom restent disponibles en permanence dans la zone canvas.
+
+## Iconographie
+- Zoom avant: `LuZoomIn`, icône seule.
+- Zoom arrière: `LuZoomOut`, icône seule.
+- Réinitialiser le zoom: `LuScan`, icône seule.
+- Les options d'affichage conservent un libellé visible dans leur liste ou leur menu:
+	- grille: `LuGrid3X3`;
+	- règles: `LuRuler`;
+	- côtes: `LuBetweenHorizontalStart`;
+	- angles: `LuDraftingCompass`;
+	- notes: `LuStickyNote`;
+	- surfaces: `LuScan`;
+	- icônes de pièces: `LuShapes`.
+- Magnétisme (snapping): `LuMagnet`, icône + texte dans les options de l'éditeur.
+- Une option masquée utilise `LuEyeOff` en complément de son libellé et de son état accessible.
 - Rendu multi-niveaux:
 	- les niveaux inferieurs et superieurs coches sont visibles mais non editables,
 	- les niveaux inferieurs utilisent une teinte gris/rose,

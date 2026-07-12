@@ -49,6 +49,16 @@
 
 ## Sélecteur de face
 
+### Iconographie propre à la vue
+- Retour vers la vue d'origine: `LuArrowLeft`, icône + texte.
+- Changer de face: `LuFlipHorizontal2`, icône + texte avec le nom de la face cible.
+- Lier ou dissocier les profils: `LuLink` ou `LuUnlink`, icône + texte.
+- Ajouter un point intermédiaire: `LuPlus`, icône + texte.
+- Supprimer un point intermédiaire: `LuTrash2`, icône seule dans la liste répétitive.
+- Verrouiller ou déverrouiller le mur ou une ouverture: `LuLock` ou `LuLockOpen`, icône + texte.
+- États d'auto-sauvegarde, toujours accompagnés d'un texte visible: `LuLoaderCircle`, `LuCircleCheck` et `LuCloudAlert`.
+- Les contrôles de zoom et les actions d'historique reprennent les contrats transverses du canvas et du référentiel IHM.
+
 - Tout mur expose exactement deux choix correspondant à ses faces stables gauche et droite.
 - Pour un mur mitoyen, chaque choix est libellé avec la pièce vers laquelle la face est orientée.
 - Pour un mur extérieur, les choix sont libellés `Face intérieure` et `Face extérieure`.

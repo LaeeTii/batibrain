@@ -53,6 +53,14 @@
 	- zone notes projet: liste des notes rattachees au projet.
 	- Le contrat de structure, de libelles et de sélection du tree est source dans [transverses.md](../composants/transverses.md).
 
+## Iconographie
+- Retour au choix des sections: `LuArrowLeft`, icône + texte `Retour`.
+- Replier le panneau de création: `LuPanelLeftClose`, icône seule.
+- Rouvrir le panneau de création: `LuPanelLeftOpen`, icône seule.
+- Ouvrir le panneau de détail: `LuListTree`, icône seule.
+- Fermer le panneau de détail: `LuPanelRightClose`, icône seule.
+- Les symboles textuels `-`, `+` et `!` ne sont pas utilisés comme substituts aux icônes de panneau.
+
 ## Règles metier
 - Les règles de synchronisation de sélection sont sourcees dans le document logique dedie.
 - Les règles geometriques et validations metier des objets ne sont pas redefinies dans ce document.

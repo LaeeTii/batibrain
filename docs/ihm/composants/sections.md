@@ -80,6 +80,32 @@
 		- actions édition: Modifier texte, Changer origine, Supprimer,
 		- format d'origine affiche dans la liste: nom_niveau-nom_piece-id_mur ou nom_niveau-nom_piece ou nom_projet-01.
 
+## Iconographie
+- En-têtes de section, icône + texte:
+	- Niveaux: `LuLayers3`;
+	- Pièces: `LuSquareDashed`;
+	- Murs: `LuBrickWall`;
+	- Ouvertures: `LuDoorOpen`;
+	- Côtes: `LuRuler`;
+	- Notes: `LuStickyNote`.
+- Actions communes:
+	- créer: `LuPlus`, icône + texte;
+	- modifier ou renommer: `LuPencil`, icône + texte;
+	- supprimer dans une liste répétitive: `LuTrash2`, icône seule avec confirmation lorsque l'action est destructive;
+	- verrouiller et déverrouiller: `LuLock` et `LuLockOpen`, icône + texte.
+- Actions métier de WallsSection, toutes avec icône + texte:
+	- Ouvrir la vue Mur: `LuArrowUpRight`;
+	- Couper en deux: `LuSplit`;
+	- Détacher: `LuUnlink`.
+- Actions métier de OpeningsSection, toutes avec icône + texte:
+	- Inverser le sens: `LuFlipHorizontal2`;
+	- Ouvrant gauche ou droit: `LuPanelLeftOpen` ou `LuPanelRightOpen` selon le choix.
+- Action métier de DimensionsSection, avec icône + texte:
+	- Repositionner le décalage: `LuMove`.
+- Actions métier de NotesSection, toutes avec icône + texte:
+	- Modifier le texte: `LuPencil`;
+	- Changer l'origine: `LuCrosshair`.
+
 ## Règles metier
 - Le niveau 0 est obligatoire et non supprimable.
 - Les champs de longueur/hauteur/epaisseur attendent des valeurs numeriques positives selon le domaine.

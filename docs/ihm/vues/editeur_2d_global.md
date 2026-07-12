@@ -58,6 +58,11 @@
   - Le panneau creation peut etre ferme via un bouton de repli.
   - Quand il est ferme, un bouton de reouverture reste visible.
 
+### Iconographie propre à la vue
+- Export PDF: `LuFileDown`, icône + texte; les variantes `Plan` et `Détail` conservent leur libellé visible.
+- L'état d'un élément verrouillé utilise `LuLock`, accompagné d'un texte d'état visible.
+- Les actions d'historique, de panneaux, de sections et de canvas reprennent respectivement les contrats de [ihm.md](../ihm.md), [panels.md](../composants/panels.md), [sections.md](../composants/sections.md) et [canvas.md](../composants/canvas.md).
+
 ## Interactions utilisateur
 - Navigation et contexte:
   - L'utilisateur arrive sur la vue avec un projet courant et un niveau editable actif.

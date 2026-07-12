@@ -63,6 +63,17 @@
 	- etat erreur locale bloquante si la pièce cible est introuvable, avec actions d'édition desactivees,
 	- etat erreur de persistence non bloquant avec possibilite de retry.
 
+### Iconographie propre à la vue
+- Retour dashboard: `LuArrowLeft`, icône + texte.
+- Export PDF: `LuFileDown`, icône + texte; les variantes `Plan simple` et `Plan + détail` conservent leur libellé visible.
+- États d'auto-sauvegarde, toujours accompagnés d'un texte visible:
+	- enregistrement en cours: `LuLoaderCircle`;
+	- synchronisé: `LuCircleCheck`;
+	- échec: `LuCloudAlert`.
+- Lecture seule: `LuEye`, accompagnée d'un texte d'état visible.
+- Élément verrouillé: `LuLock`, accompagné d'un texte d'état visible.
+- Les actions d'historique, de panneaux, de sections et de canvas reprennent les contrats transverses correspondants.
+
 ## Interactions utilisateur
 - Entree dans la vue:
 	- la vue est ouverte avec un contexte explicite `projectId`, `levelId`, `roomId`.

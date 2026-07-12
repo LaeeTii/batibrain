@@ -58,6 +58,11 @@
 - Note: DetailTree, ProjectNotesBubble et SelectionSyncBridge portent la source de verite de la synchronisation transverse et des interactions communes dans [composants/transverses.md](./composants/transverses.md).
 - Note: ProjectCollaborationModal et AppNotifications portent la gestion des accès projet et l'acceptation des invitations dans [composants/transverses.md](./composants/transverses.md).
 
+### Icônes
+- Le contrat iconographique défini dans [composants/icones.md](./composants/icones.md) est obligatoire pour toutes les vues et tous les composants IHM.
+- Chaque spécification locale indique, pour les actions qu'elle définit, l'icône retenue et si elle est affichée seule ou avec un libellé visible, sans répéter les règles transverses.
+- Toute dérogation au contrat transverse doit être explicitement indiquée et justifiée dans la spécification concernée.
+
 ## Socle constant des vues métier
 - Toutes les vues métier authentifiées affichent les composants transverses suivants:
 	- AppSidebar, dans son état ouvert ou fermé courant;
@@ -106,7 +111,7 @@
 	- Exception autorisee uniquement si la vue mentionne explicitement une derogation dans sa specification.
 - Positionnement:
 	- Les boutons `Annuler` et `Retablir` sont affiches dans le header principal, en haut a droite.
-	- Les boutons sont presentes sous forme de petites icones explicites (undo/redo).
+	- Les boutons sont présentés sous forme d'icônes seules: `LuUndo2` pour `Annuler` et `LuRedo2` pour `Rétablir`.
 - Disponibilite:
 	- Bouton `Annuler` actif uniquement si au moins une action est disponible dans l'historique d'annulation.
 	- Bouton `Retablir` actif uniquement si au moins une action est disponible dans l'historique de retablissement.

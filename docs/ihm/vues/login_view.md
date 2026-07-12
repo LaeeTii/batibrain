@@ -43,6 +43,15 @@
 	- Affichage mobile: carte en largeur fluide avec marges laterales, sans perte de lisibilite.
 
 ## Interactions utilisateur
+
+### Iconographie
+- Champ e-mail: `LuMail`, icône décorative accompagnant le libellé visible.
+- Champ mot de passe: `LuLockKeyhole`, icône décorative accompagnant le libellé visible.
+- Afficher ou masquer le mot de passe: `LuEye` ou `LuEyeOff`, icône seule.
+- Se connecter: `LuLogIn`, icône + texte.
+- Mot de passe oublié: `LuKeyRound`, icône + texte.
+- Créer un compte: `LuUserRoundPlus`, icône + texte.
+- Les états de chargement, d'erreur et de succès utilisent respectivement `LuLoaderCircle`, `LuCircleAlert` et `LuCircleCheck`, toujours accompagnés d'un texte visible.
 - Saisie email:
 	- L'utilisateur renseigne son adresse email.
 	- La validation de format peut se faire au blur et au submit.

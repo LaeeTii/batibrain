@@ -86,6 +86,14 @@
 	- Export PDF via une seule icone ouvrant deux choix:
 		- plan simple,
 		- plan + détail.
+### Iconographie propre à la vue
+- Accès principal à l'Éditeur 2D global: `LuPencilRuler`, icône + texte.
+- Recherche par nom de pièce: `LuSearch`, icône décorative dans le champ dont le libellé reste accessible.
+- Filtre de niveau: `LuLayers3`, icône décorative accompagnant le contrôle libellé.
+- Export PDF global: `LuFileDown`, icône + texte; les deux variantes du menu conservent leur libellé visible.
+- Créer le premier projet: `LuFolderPlus`, icône + texte.
+- Les actions des cartes sont définies dans [cards.md](../composants/cards.md) et ne sont pas redéfinies par la vue.
+
 - Zone de synthese:
 	- Indicateurs agreges calcules sur les pièces visibles apres application des filtres.
 - Etats alternatifs dans la zone de contenu:

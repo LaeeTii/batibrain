@@ -20,6 +20,23 @@
 
 Lorsque la side bar est fermée, elle est masquée et un bouton icône menu reste visible en haut à gauche de l'application pour la rouvrir.
 
+## Iconographie
+- Fermer la side bar: `LuPanelLeftClose`, icône seule.
+- Rouvrir la side bar: `LuMenu`, icône seule.
+- Créer un projet: `LuFolderPlus`, icône + texte.
+- Gérer les collaborateurs: `LuUsers`, icône + texte.
+- Navigation principale, toujours avec icône + texte:
+    - Dashboard: `LuLayoutDashboard`;
+    - Édition globale: `LuPencilRuler`;
+    - Métriques: `LuChartNoAxesCombined`;
+    - Photos: `LuImages`;
+    - Documents: `LuFileText`;
+    - Travaux: `LuHammer`;
+    - Tâches: `LuListChecks`;
+    - Planning: `LuCalendarDays`;
+    - Administration: `LuShieldCheck`.
+- Une destination indisponible conserve son icône et son libellé, avec l'état indisponible défini par le contrat transverse.
+
 ## Règles métiers
 
 - L'utilisateur peut fermer la side bar depuis son bouton icône de fermeture.

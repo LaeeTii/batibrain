@@ -47,6 +47,26 @@ Date de mise à jour: 2026-07-12
 
 ## Backlog features priorisé (1 = plus prioritaire)
 
+### Contrat iconographique transverse
+- Version cible validée: V1.
+- Statut: terminée.
+- Objectif:
+	- Uniformiser les icônes des vues et composants afin d'améliorer la lisibilité de l'application.
+- Portée fonctionnelle cible:
+	- Contrat transverse obligatoire définissant la bibliothèque, l'accessibilité et les règles `icône seule` ou `icône + texte`.
+	- Choix iconographiques déclarés dans la spécification de chaque vue ou composant concerné.
+	- Réutilisation d'une même icône pour une même action ou un même concept.
+- Règles minimales:
+	- Les icônes applicatives utilisent `react-icons`, avec le pack `react-icons/lu` par défaut pour les actions, la navigation et les états transverses.
+	- Une action principale ou métier ambiguë conserve un libellé visible.
+	- Un bouton uniquement iconé possède un nom accessible et une infobulle.
+	- Un état ne dépend jamais uniquement d'une icône ou d'une couleur.
+	- Les vues V2 et V3 encore incomplètes ne reçoivent pas de choix iconographiques anticipant leurs futurs comportements.
+- Critères d'acceptation:
+	- Les vues et composants déjà spécifiés indiquent l'icône et le mode d'affichage de leurs actions concernées.
+	- Les actions transverses utilisent les mêmes icônes dans toutes leurs occurrences.
+	- Les choix locaux référencent le contrat iconographique sans dupliquer ses règles communes.
+
 ### Navigation de la side bar par liens avec icônes
 - Version cible validée: V1.
 - Statut: terminée.
