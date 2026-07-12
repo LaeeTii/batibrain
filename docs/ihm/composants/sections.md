@@ -169,6 +169,7 @@
 	- la sélection d'un mur existant ouvre automatiquement le bloc édition correspondant,
 	- l'action Ouvrir la vue Mur ouvre WallEditorView avec les contextes projet, niveau et mur courants; le contexte de pièce est transmis uniquement depuis RoomEditor2DView,
 	- l'action Couper en deux lance un mode de coupe centre sur un point de coupe valide,
+	- lorsqu'un mur créé rejoint l'intérieur d'un mur existant à la jonction d'une troisième pièce, le mur existant est automatiquement scindé au nouveau sommet afin d'obtenir trois murs distincts, chacun lié à deux pièces au maximum,
 	- l'action Detacher place l'utilisateur dans un mode de choix du point d'ancrage a deplacer,
 	- en scope RoomEditor2DView, la suppression d'un mur mitoyen est refusee,
 	- en scope RoomEditor2DView, la creation d'un mur est refusee si sa géométrie sort de la pièce courante,

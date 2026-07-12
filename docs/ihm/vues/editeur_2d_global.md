@@ -126,6 +126,9 @@
   - Les options d'affichage pilotent ce qui est visible dans le canvas.
   - Les icônes de pièces sont visibles par défaut sous le nom et la surface, sauf pour le type `autre`.
   - Certaines mesures contextuelles restent visibles en mode édition meme si leur affichage global est desactive.
+- Topologie des murs:
+  - Un mur peut être lié à deux pièces au maximum.
+  - Lorsqu'une troisième pièce rejoint l'intérieur d'un mur existant, la vue crée un sommet au point de jonction, scinde le mur existant en deux et conserve le mur aboutissant: trois murs distincts se rencontrent alors au sommet.
 - Export PDF:
   - L'export Plan prend en compte les niveaux visibles et les options d'affichage actives.
   - L'export Détail ajoute un niveau de détail structure en plus du plan exporte.
@@ -283,6 +286,13 @@
   - When l'utilisateur le sélectionne
   - Then l'élément est mis en surbrillance et ses données restent consultables
   - And sa modification et sa suppression sont indisponibles jusqu'à son déverrouillage
+- Scenario 12 - Jonction d'une troisième pièce sur un mur:
+  - Given un mur existant est déjà une frontière entre des pièces
+  - When le mur d'une troisième pièce rejoint l'intérieur de ce mur
+  - Then un sommet partagé est créé au point de jonction
+  - And le mur existant est remplacé par deux murs partageant ce sommet
+  - And le mur aboutissant forme avec eux une jonction de trois murs distincts
+  - And aucun des murs résultants n'est lié à plus de deux pièces
 
 ## Recap decisions et hypotheses explicites
 - Decisions validees:

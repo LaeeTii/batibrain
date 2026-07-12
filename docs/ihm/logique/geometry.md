@@ -25,6 +25,7 @@
 ## Invariants
 - L'ordre des sommets d'une pièce doit rester stable afin de permettre le calcul fiable des murs, angles, surfaces et perimetres.
 - Un mur peut exister seul ou etre lie a une ou deux pièces.
+- Un mur ne peut jamais être lié à trois pièces.
 - Un mur lie a une seule pièce est extérieur pour cette pièce.
 - Un mur lie a deux pièces differentes est intérieur pour les deux pièces.
 - Chaque mur possède exactement deux faces et deux profils de hauteur propres, liés par défaut et dissociables.
@@ -88,6 +89,8 @@
 
 ## Règles de scission et d'intersection
 - Si l'extremite d'un mur est posee sur un mur existant, le mur support est scinde au point d'ancrage et le nouveau mur est lie a ce point.
+- Si le mur d'une troisième pièce rejoint l'intérieur d'un mur existant, le point de jonction devient un sommet partagé, le mur existant est scindé en deux murs et le mur aboutissant constitue le troisième mur autour de ce sommet.
+- Une telle jonction est toujours représentée par trois murs distincts; elle ne doit jamais produire un mur unique lié à trois pièces.
 - L'operation "Couper en deux" créé deux segments colineaires partageant le point de coupe. Le mur de gauche garde le focus fonctionnel, le mur de droite reprend les memes proprietes.
 - Si des murs se croisent sur un meme niveau, ils doivent etre scindes au point d'intersection pour produire des segments elementaires.
 - Si des pièces se chevauchent sur un meme niveau, les murs concernes sont scindes aux intersections necessaires et la zone de chevauchement devient une nouvelle pièce.
@@ -106,6 +109,7 @@
 - Refuser la suppression d'un mur tant qu'il reste lie a au moins une pièce.
 - Recalculer les segments elementaires apres toute coupe, intersection ou creation d'ancrage sur mur.
 - Recalculer les relations mur-pièce apres toute modification topologique.
+- Refuser toute topologie qui lierait un même mur à trois pièces; appliquer la scission au point de jonction avant persistance.
 - Supprimer les ouvertures devenues incompatibles après le recalcul des relations mur-pièce.
 
 ## Algorithmes attendus
@@ -113,6 +117,7 @@
 - Projection d'un point sur un segment.
 - Detection d'intersection entre segments.
 - Decoupe d'un segment par un point d'intersection ou de coupe.
+- Normalisation d'une jonction en T par création d'un sommet partagé et de trois segments élémentaires.
 - Surface de polygone par formule du shoelace.
 - Périmètre de polygone.
 - Angle entre trois points.

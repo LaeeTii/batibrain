@@ -192,6 +192,8 @@ Champs minimaux:
 Règles:
 - La longueur métier de référence est la longueur intérieure.
 - Un mur peut être lié à 0, 1 ou 2 pièces.
+- Un mur ne peut jamais être lié à 3 pièces.
+- Lorsqu'une troisième pièce rejoint l'intérieur d'un mur existant, un sommet est créé au point de jonction: le mur existant est remplacé par deux murs partageant ce sommet et le mur aboutissant de la troisième pièce constitue le troisième mur de la jonction.
 - Mur lié à 1 pièce: extérieur pour cette pièce.
 - Mur lié à 2 pièces: intérieur/mitoyen pour les deux.
 - Un mur possède exactement deux faces stables, `gauche` et `droite`, définies relativement au segment ordonné de `startVertexId` vers `endVertexId`.
@@ -460,6 +462,7 @@ Points à arbitrer:
 - Les coordonnées partagent le même repère au sein d'un niveau.
 - Les valeurs dérivées (surface, angle, périmètre, orientation) sont calculées, pas stockées comme source primaire.
 - Après modification topologique (coupe/intersection), recalculer segments élémentaires et relations mur-pièce.
+- Une jonction entre trois pièces est représentée par trois murs distincts autour d'un sommet partagé; elle ne crée jamais une troisième liaison sur un même mur.
 - En cas d'édition d'un mur mitoyen, la cohérence des deux pièces doit être conservée.
 - La qualification intérieure ou extérieure d'un mur est dérivée de son nombre de pièces liées et n'est pas persistée comme source primaire.
 - L'orientation d'une face vers une pièce ou vers l'extérieur est dérivée de la topologie; seule sa position stable gauche/droite et son profil sont persistés.

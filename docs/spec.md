@@ -163,6 +163,26 @@ Date de mise à jour: 2026-07-12
 	- Aucun aperçu n'est visible lors du survol d'un mur incompatible.
 	- Une ouverture intérieure ou extérieure devenue incompatible après recalcul topologique est supprimée.
 
+### Topologie d'une jonction entre trois pièces
+- Version cible validée: V1.
+- Statut: terminée.
+- Objectif:
+	- Garantir qu'un mur représente toujours la frontière d'au plus deux pièces, y compris lorsqu'une troisième pièce rejoint un mur existant.
+- Portée fonctionnelle cible:
+	- Détection d'une jonction située à l'intérieur d'un mur existant.
+	- Ajout d'un sommet au point de jonction.
+	- Scission du mur existant en deux segments élémentaires.
+- Règles métier minimales:
+	- Un même mur ne peut être lié à trois pièces.
+	- Lorsqu'une troisième pièce rejoint l'intérieur d'un mur existant, le point de jonction devient un sommet partagé.
+	- Le mur existant est scindé en deux murs et le mur de la troisième pièce aboutit sur ce sommet: la topologie comporte alors trois murs distincts autour du point de jonction.
+	- Après la scission, chacun des trois murs reste lié à zéro, une ou deux pièces au maximum.
+- Critères d'acceptation:
+	- La jonction d'une troisième pièce à l'intérieur d'un mur crée un sommet au point de rencontre.
+	- Le segment initial n'existe plus comme mur unique et est remplacé par deux murs partageant ce sommet.
+	- Avec le mur aboutissant de la troisième pièce, trois murs distincts se rencontrent au sommet de jonction.
+	- Aucun mur résultant n'est lié à plus de deux pièces.
+
 ### 3) Icône de pièce configurable (legacy #9)
 - Version cible validée: V1.
 - Statut: terminée.

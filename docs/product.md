@@ -13,6 +13,7 @@ BatiBrain n'est pas un MVP: c'est une vraie application produit, livrée par ver
 ## Invariants produit
 - Une pièce est définie par une liste ordonnée de sommets `(x, y)`.
 - Un mur est le segment entre deux sommets consécutifs.
+- Un mur peut être lié à deux pièces au maximum; lorsqu'une troisième pièce rejoint l'intérieur d'un mur, un sommet de jonction scinde ce mur en deux afin de former trois murs distincts autour de ce sommet.
 - Les angles sont calculés, pas stockés.
 - Les coordonnées sont globales au niveau.
 - Les calculs métier sont exprimés en centimètres.
