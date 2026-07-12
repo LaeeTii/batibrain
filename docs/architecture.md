@@ -19,7 +19,13 @@
 - l'UI vit dans `web/`, avec adaptation responsive et capacités PWA pour les usages mobiles
 - la spec est la source de vérité pour le produit (docs/ihm/ihm.md)
 - les projections (métriques, angles, vues dérivées) sont calculées
-- les préférences utilisateur (unités, thème, hauteur et épaisseur de mur par défaut) sont persistées côté Supabase/PostgreSQL et relues à l'ouverture de session pour initialiser l'interface; les actions de compte telles que le changement de mot de passe et la déconnexion restent distinctes et reposent sur Supabase Auth
+- les préférences utilisateur (unités, thème, hauteur et épaisseur de mur par défaut) sont persistées côté Supabase/PostgreSQL et relues à l'ouverture de session pour initialiser l'interface
+- le profil applicatif (nom d'affichage unique, prénom, nom et chemin d'avatar) est persisté dans une table publique liée à `auth.users`; l'image d'avatar est téléversée dans un bucket Supabase Storage privé propre à cet usage
+- l'adresse e-mail, le mot de passe, la confirmation du changement d'e-mail et la déconnexion restent gérés par Supabase Auth; la nouvelle adresse ne devient active qu'après confirmation
+- les rôles applicatifs `user` et `admin` sont persistés dans le profil public et contrôlés côté backend; ils ne sont jamais modifiables depuis les paramètres personnels ni depuis les métadonnées éditables par l'utilisateur
+- une demande de compte est persistée sans mot de passe avant tout utilisateur Supabase Auth; son approbation passe par une fonction serveur utilisant l'API Auth Admin pour créer l'utilisateur de rôle `user` et lui envoyer une invitation
+- les opérations d'administration Auth, notamment la création et la suppression d'un utilisateur, s'exécutent uniquement dans un environnement serveur sécurisé; aucune clé secrète Supabase n'est exposée au frontend
+- le premier rôle `admin` est attribué manuellement au compte initial depuis l'interface d'administration de la base Supabase
 - la propriété des projets, les collaborations et les invitations sont persistées dans Supabase/PostgreSQL
 - l'accès aux données est limité côté backend aux projets possédés par l'utilisateur authentifié ou partagés avec lui après acceptation de l'invitation
 - les autorisations de lecture et d'écriture sont contrôlées côté backend selon le rôle projet; l'interface ne constitue pas la barrière de sécurité

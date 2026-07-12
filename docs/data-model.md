@@ -40,7 +40,7 @@ Ce document ne remplace pas les sources fonctionnelles principales (`docs/ihm/`)
 | Domaine | Statut | Commentaire |
 |---|---|---|
 | Projet / niveaux / pièces / murs / faces / profils de hauteur / ouvertures / côtes / notes | Stabilisé | Contrats IHM détaillés disponibles (vues + logique + composants). |
-| Authentification / session | Stabilisé | Contrat détaillé disponible dans LoginView. |
+| Authentification / session / profil | Stabilisé | Contrats détaillés disponibles dans LoginView et SettingsModal. |
 | Collaboration projet | Stabilisé | Propriété, rôles globaux et invitations applicatives définis pour la V1. |
 | Verrouillage manuel | Stabilisé | État persistant indépendant pour les pièces, murs et ouvertures. |
 | Exports PDF plan et plan + détail | Stabilisé | Matrice complète de templates et données minimales définies. |
@@ -85,6 +85,52 @@ Règles:
 - Un projet supprimé logiquement est exclu des listes actives par défaut.
 - Un projet possède un propriétaire unique.
 - Un utilisateur accède à un projet s'il en est propriétaire ou si une collaboration acceptée le lui autorise.
+
+### UserProfile
+Représente les informations applicatives du compte, distinctes des identifiants gérés par Supabase Auth.
+
+Champs minimaux:
+- `userId`
+- `displayName`
+- `firstName`
+- `lastName`
+- `avatarStoragePath` (optionnel)
+- `role` (`user`, `admin`)
+
+Règles:
+- Un profil appartient à un unique utilisateur Supabase Auth et partage son identifiant.
+- `displayName` est obligatoire et unique parmi les profils BatiBrain.
+- Le prénom et le nom sont persistés séparément.
+- L'avatar est stocké dans un bucket Supabase Storage privé; seul son chemin est persisté dans le profil.
+- L'utilisateur authentifié peut créer, lire et modifier uniquement son propre profil.
+- Tout nouveau compte approuvé reçoit le rôle `user`.
+- Le rôle est modifiable uniquement par un administrateur et n'est jamais accepté depuis une mise à jour de profil personnelle.
+- Le premier administrateur est promu manuellement dans Supabase après la création de son compte.
+- Un administrateur ne peut ni rétrograder ni supprimer son propre compte.
+- Toute modification de rôle ou suppression de compte doit conserver au moins un administrateur.
+- L'adresse e-mail et le mot de passe ne sont pas dupliqués dans le profil: ils restent gérés par Supabase Auth.
+- Une nouvelle adresse e-mail devient l'adresse active uniquement après confirmation du flux Supabase Auth.
+
+### AccountCreationRequest
+Représente une demande de compte déposée avant la création de l'utilisateur Supabase Auth.
+
+Champs minimaux:
+- `id`
+- `email`
+- `displayName`
+- `firstName`
+- `lastName`
+- `status` (`en_attente`, `approuvée`)
+- `approvedByUserId` (optionnel)
+- `approvedAt` (optionnel)
+- `createdAt`
+
+Règles:
+- La demande ne contient aucun mot de passe et n'accorde aucun accès à l'application.
+- Une seule demande en attente peut exister pour une même adresse e-mail ou un même nom d'affichage.
+- Les administrateurs voient chaque demande en attente comme une notification.
+- L'approbation crée le compte Supabase Auth, crée son profil avec le rôle `user` et envoie l'invitation de définition du mot de passe.
+- Si l'adresse e-mail ou le nom d'affichage n'est plus disponible au moment de l'approbation, celle-ci échoue explicitement sans créer de compte partiel.
 
 ### ProjectCollaboration
 Représente l'accès accepté d'un utilisateur à l'ensemble d'un projet.
@@ -454,6 +500,8 @@ Points à arbitrer:
 - `Level` 1..n `Dimension`
 - `Project` 1..n `Note`
 - `UserSession` 1..1 `UserPreferences`
+- `UserSession` 1..1 `UserProfile`
+- `UserProfile` 1..n `AccountCreationRequest` approuvées en tant qu'administrateur
 - `Project` 1..n `Task` (legacy minimal)
 - `Project` 1..n `Document` (legacy minimal)
 - `Project` 1..n `Photo` (legacy minimal)
@@ -462,6 +510,9 @@ Points à arbitrer:
 
 ## Invariants transverses
 - Les données accessibles à un utilisateur appartiennent à ses projets ou aux projets dont il a accepté la collaboration.
+- Un utilisateur ne peut écrire que son propre profil et ses propres objets d'avatar.
+- Seul un administrateur peut lire l'ensemble des profils, modifier les rôles, consulter ou approuver les demandes de compte et supprimer un utilisateur.
+- La suppression d'un utilisateur propriétaire supprime physiquement ses projets puis, par cascade, l'ensemble des données qui en dépendent.
 - La gestion des collaborateurs est réservée au propriétaire du projet.
 - Unités métier: centimètre pour géométrie et mesures; m2 pour surfaces.
 - Les coordonnées partagent le même repère au sein d'un niveau.

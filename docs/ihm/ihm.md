@@ -54,6 +54,7 @@
 - SelectionSyncBridge
 - ProjectCollaborationModal
 - AppNotifications
+- AdminModal
 - Note: DetailTree, ProjectNotesBubble et SelectionSyncBridge portent la source de verite de la synchronisation transverse et des interactions communes dans [composants/transverses.md](./composants/transverses.md).
 - Note: ProjectCollaborationModal et AppNotifications portent la gestion des accès projet et l'acceptation des invitations dans [composants/transverses.md](./composants/transverses.md).
 

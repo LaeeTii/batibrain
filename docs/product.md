@@ -26,6 +26,7 @@ Inclut le socle principal déjà décrit dans `docs/ihm/` (hors modules explicit
 
 Périmètre attendu:
 - Authentification et accès application (LoginView).
+- Demande de création de compte soumise à l'approbation d'un administrateur et administration des comptes.
 - Dashboard projet et navigation métier.
 - Éditeur 2D global et éditeur 2D par pièce.
 - Géométrie pièce/mur/ouvertures, métriques et exports PDF existants.

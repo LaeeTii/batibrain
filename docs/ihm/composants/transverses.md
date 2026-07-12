@@ -5,6 +5,7 @@
 
 ## Liste des composants
 - SettingsModal
+- AdminModal
 - AppSidebar
 - SidebarProjectContext
 - Editor2DHeaderControls
@@ -41,15 +42,17 @@
 
 ### Contrat AppNotifications
 - Objectif:
-	- Afficher les notifications de l'utilisateur authentifié et permettre l'acceptation des invitations projet.
+	- Afficher les notifications de l'utilisateur authentifié, permettre l'acceptation des invitations projet et signaler aux administrateurs les demandes de compte.
 - Structure:
 	- Bouton icône cloche en haut à droite de l'application.
 	- Bulle numérique indiquant le nombre de notifications en attente.
-	- Panneau ouvert au clic, contenant une ligne descriptive par invitation.
+	- Panneau ouvert au clic, contenant une ligne descriptive par invitation ou demande de compte visible.
 	- Bouton Accepter placé au bout de chaque ligne d'invitation.
+	- Action d'ouverture d'AdminModal sur chaque demande de compte.
 - Règles métier:
 	- Une invitation est visible uniquement par le compte correspondant à l'adresse invitée.
-	- Le badge compte les invitations en attente.
+	- Le badge compte les invitations en attente et, pour un administrateur, les demandes de compte en attente.
+	- Une demande de compte est visible par tous les administrateurs et jamais par un utilisateur de rôle `user`.
 	- L'acceptation ajoute le projet aux projets accessibles selon le rôle attribué.
 	- Aucune action Refuser n'est proposée et l'invitation n'expire pas automatiquement.
 - Etats et feedback:
@@ -62,6 +65,7 @@
 	- Given une invitation en attente, When l'utilisateur consulte l'application, Then la cloche affiche un badge qui la comptabilise.
 	- Given le panneau est ouvert, When l'utilisateur clique sur Accepter, Then le projet devient accessible selon le rôle attribué.
 	- Given l'acceptation réussit, When l'état est rafraîchi, Then la ligne disparaît et le badge est décrémenté.
+	- Given une demande de compte est en attente, When un administrateur consulte ses notifications, Then une ligne dédiée est affichée et permet d'ouvrir AdminModal.
 
 ### Contrat SettingsModal
 - Objectif:
@@ -72,6 +76,7 @@
 	- La side bar ne contient pas d'entrée Paramètres.
 - Portée:
 	- Modification des préférences de base de l'application.
+	- Modification du profil de compte et de l'adresse e-mail.
 	- Déclenchement du flux de changement de mot de passe.
 	- Déconnexion de l'utilisateur connecté.
 - Structure:
@@ -82,9 +87,16 @@
 		- bloc valeurs de mur par défaut avec les champs `Hauteur` et `Épaisseur`;
 		- bloc thème UI.
 	- Section `Compte`:
+		- bloc profil avec avatar, nom d'affichage, prénom et nom;
+		- bloc adresse e-mail;
 		- bloc sécurité avec changement de mot de passe;
 		- action de déconnexion.
 - Contrat de données:
+	- Profil de compte:
+		- nom d'affichage obligatoire et unique;
+		- prénom et nom enregistrés séparément;
+		- avatar image téléversé dans Supabase Storage;
+		- adresse e-mail active fournie par Supabase Auth.
 	- Unités de longueur disponibles:
 		- `cm` (par défaut)
 		- `m`
@@ -107,6 +119,10 @@
 	- Les sections `Préférences utilisateur` et `Compte` sont visuellement distinctes.
 	- Les actions de compte ne sont pas enregistrées ni présentées comme des préférences utilisateur.
 	- Les préférences sont portées par l'utilisateur courant.
+	- Le profil applicatif est lié à l'identifiant Supabase Auth de l'utilisateur courant.
+	- Le nom d'affichage est refusé s'il est déjà attribué à un autre compte.
+	- Le fichier d'avatar est téléversé dans l'espace privé dédié de l'utilisateur et le profil ne conserve que son chemin de stockage.
+	- Une demande de changement d'adresse e-mail déclenche le flux de confirmation Supabase Auth; l'adresse active reste inchangée dans l'interface tant que la nouvelle adresse n'est pas confirmée.
 	- Le changement d'unité prend effet sans quitter la session.
 	- La hauteur et l'épaisseur de mur par défaut sont affichées dans l'unité de longueur active et enregistrées en centimètres.
 	- Leur modification préremplit les créations futures de pièces et de murs, sans modifier les murs existants.
@@ -116,16 +132,52 @@
 	- Chargement initial des préférences.
 	- Sauvegarde en cours.
 	- Erreur de sauvegarde affichée explicitement.
+	- Conflit de nom d'affichage signalé explicitement sans perdre les autres valeurs saisies.
+	- Téléversement de l'avatar en cours, réussi ou échoué signalé explicitement.
+	- Changement d'adresse e-mail en attente de confirmation signalé sans présenter la nouvelle adresse comme active.
 	- Confirmation visuelle après prise en compte de chaque changement.
 - Criteres d'acceptation testables:
 	- Given l'application est affichée, When l'utilisateur active le bouton icône roue crantée en haut à droite, Then SettingsModal s'ouvre.
 	- Given la side bar est fermée, When l'utilisateur veut accéder aux paramètres, Then le bouton icône roue crantée reste disponible en haut à droite de l'application.
-	- Given la modale est ouverte, When son contenu est affiché, Then les unités, le thème et les valeurs de mur sont regroupés sous `Préférences utilisateur`, tandis que le changement de mot de passe et la déconnexion sont regroupés sous `Compte`.
+	- Given la modale est ouverte, When son contenu est affiché, Then les unités, le thème et les valeurs de mur sont regroupés sous `Préférences utilisateur`, tandis que le profil, l'adresse e-mail, le changement de mot de passe et la déconnexion sont regroupés sous `Compte`.
+	- Given un nom d'affichage disponible, When l'utilisateur enregistre son profil, Then le nom d'affichage, le prénom et le nom mis à jour sont affichés dans la modale.
+	- Given un nom d'affichage déjà utilisé, When l'utilisateur tente d'enregistrer son profil, Then la modification est refusée avec une erreur explicite.
+	- Given une image sélectionnée comme avatar, When le téléversement et la sauvegarde réussissent, Then le nouvel avatar est affiché pour l'utilisateur courant.
+	- Given une nouvelle adresse e-mail valide, When l'utilisateur demande son remplacement, Then une confirmation est envoyée et l'adresse active reste inchangée jusqu'à validation du lien.
 	- Given la modale est ouverte, When l'utilisateur choisit `mm` comme unité de longueur, Then la préférence est enregistrée avec `mm` comme valeur active.
 	- Given la modale est ouverte, When l'utilisateur choisit `cm2` comme unité de surface, Then la préférence est enregistrée avec `cm2` comme valeur active.
 	- Given la modale est ouverte, When l'utilisateur enregistre une hauteur et une épaisseur de mur strictement positives, Then ces préférences deviennent les valeurs proposées lors des prochaines créations de pièces et de murs.
 	- Given des murs existent déjà, When l'utilisateur modifie la hauteur ou l'épaisseur de mur par défaut, Then les propriétés et profils de ces murs restent inchangés.
 	- Given la modale est ouverte, When l'utilisateur clique sur Déconnexion, Then il est redirigé vers LoginView.
+
+### Contrat AdminModal
+- Objectif:
+	- Permettre aux administrateurs de gérer les demandes de compte et les comptes existants.
+- Accès:
+	- Bouton `Admin` placé en bas de la side bar et visible uniquement avec le rôle `admin`.
+- Structure:
+	- Liste des demandes de compte en attente avec action `Approuver`.
+	- Liste des utilisateurs avec leur nom d'affichage, nom, prénom, adresse e-mail et rôle.
+	- Contrôle de rôle `user` ou `admin` sur chaque utilisateur.
+	- Action de suppression sur chaque compte autorisé.
+- Règles métier:
+	- Tout compte approuvé est initialement créé avec le rôle `user`.
+	- L'approbation envoie une invitation Supabase permettant de définir le mot de passe.
+	- Une demande en attente apparaît également dans AppNotifications pour chaque administrateur.
+	- Seul un administrateur peut charger ou exécuter les actions de cette modale; masquer le bouton ne constitue pas la barrière de sécurité.
+	- Un administrateur ne peut ni rétrograder ni supprimer son propre compte.
+	- Toute action doit conserver au moins un administrateur.
+	- La suppression d'un compte propriétaire est autorisée après confirmation et supprime tous ses projets et leurs données dépendantes.
+- États et feedback:
+	- Chargement, liste vide, action en cours, succès et erreur explicite.
+	- Conflit d'adresse e-mail ou de nom d'affichage lors d'une approbation affiché sans créer de compte partiel.
+	- Confirmation de suppression indiquant le nombre de projets et leur suppression irréversible.
+- Critères d'acceptation testables:
+	- Given une demande en attente, When un administrateur consulte l'application, Then AppNotifications la comptabilise et AdminModal la liste.
+	- Given une demande valide, When un administrateur l'approuve, Then un compte `user` est créé et une invitation de définition du mot de passe est envoyée.
+	- Given un compte existant, When un administrateur change son rôle, Then le nouveau rôle est persisté et appliqué aux accès suivants.
+	- Given un administrateur cible son propre compte, When il tente de le rétrograder ou de le supprimer, Then l'action est refusée explicitement.
+	- Given un utilisateur propriétaire de projets, When un administrateur confirme sa suppression après l'alerte, Then le compte, ses projets et toutes leurs données dépendantes sont supprimés.
 
 ## Responsabilites
 - SettingsModal:

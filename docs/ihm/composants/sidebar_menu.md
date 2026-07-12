@@ -4,6 +4,7 @@
 - Bouton icône de fermeture de la side bar.
 - Logo + nom de l'application
 - Avatar + nom de l'utilisateur connecté
+- Bouton `Admin` en bas de la side bar, visible uniquement pour un utilisateur de rôle `admin`.
 - Séléction du projet courant (dropdown)
 - Action de gestion des collaborateurs dans le contexte du projet courant, visible uniquement pour son propriétaire, ouvrant ProjectCollaborationModal.
 - "créer un projet" (bouton) -> ouvre une modale.
@@ -55,6 +56,8 @@ Lorsque la side bar est fermée, elle est masquée et un bouton icône menu rest
 - Given la side bar est ouverte, When l'utilisateur active son bouton icône de fermeture, Then la side bar est masquée et la zone principale reste affichée.
 - Given la side bar est fermée, When l'utilisateur active le bouton icône menu en haut à gauche de l'application, Then la side bar est rouverte.
 - Given la side bar est fermée, When l'utilisateur change de vue, Then la nouvelle vue conserve la side bar fermée et le bouton icône menu reste disponible.
+- Given l'utilisateur courant possède le rôle `admin`, When la side bar est affichée, Then le bouton `Admin` est visible en bas de la side bar.
+- Given l'utilisateur courant possède le rôle `user`, When la side bar est affichée, Then aucun bouton `Admin` n'est affiché.
 - Given la side bar est fermée, When l'application est rechargée, Then la side bar retrouve son état ouvert par défaut.
 - Given la side bar est ouverte, When la navigation principale est affichée, Then chaque destination est présentée sous forme de lien avec une icône explicite et un libellé visible.
 - Given une vue est active, When la side bar est affichée, Then son lien de navigation est identifiable visuellement et expose son état actif aux technologies d'assistance.

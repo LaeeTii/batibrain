@@ -96,13 +96,28 @@ Date de mise à jour: 2026-07-12
 	- Choix des unités de surface.
 	- Choix de la hauteur de mur par défaut.
 	- Choix de l'épaisseur de mur par défaut.
+	- Modification du profil de compte: nom d'affichage unique, nom, prénom et avatar.
+	- Modification de l'adresse e-mail avec confirmation de la nouvelle adresse.
 	- Modification du mot de passe.
+	- Demande de création de compte depuis LoginView, soumise à l'approbation d'un administrateur.
+	- Administration des comptes, des rôles `user` et `admin`, et des suppressions de comptes.
 	- Choix du thème UI, limité pour l'instant à clair, foncé ou system.
 - Règles métier minimales:
 	- Les paramètres sont accessibles depuis un bouton icône roue crantée situé en haut à droite de l'application.
 	- La side bar ne contient aucune entrée Paramètres.
 	- Les unités, le thème et les valeurs de mur par défaut sont regroupés sous `Préférences utilisateur`.
-	- Le changement de mot de passe et la déconnexion sont regroupés sous `Compte` et ne sont pas présentés comme des préférences.
+	- Le profil, l'adresse e-mail, le changement de mot de passe et la déconnexion sont regroupés sous `Compte` et ne sont pas présentés comme des préférences.
+	- Le nom d'affichage est obligatoire et unique parmi les comptes BatiBrain.
+	- Le nom et le prénom sont enregistrés séparément.
+	- L'avatar est une image téléversée dans Supabase Storage; seul son chemin de stockage est conservé dans le profil.
+	- Une nouvelle adresse e-mail ne remplace l'adresse courante qu'après sa confirmation par e-mail.
+	- Une demande de compte ne crée pas immédiatement un utilisateur Supabase Auth et ne recueille aucun mot de passe.
+	- Chaque demande en attente produit une notification visible par les administrateurs.
+	- L'approbation crée un compte de rôle `user` et envoie une invitation Supabase permettant de définir le mot de passe.
+	- Seul un administrateur peut consulter les utilisateurs, approuver une demande, modifier un rôle ou supprimer un compte.
+	- Un administrateur ne peut ni rétrograder ni supprimer son propre compte.
+	- Toute opération sur les rôles doit conserver au moins un administrateur.
+	- La suppression d'un compte propriétaire exige une alerte explicite puis supprime en cascade ses projets et toutes leurs données.
 	- Le changement de mot de passe est proposé dans le contexte du compte authentifié.
 	- La déconnexion est accessible depuis la modale de paramètres.
 	- Le thème appliqué reste cohérent sur l'interface courante après sélection.
@@ -114,6 +129,15 @@ Date de mise à jour: 2026-07-12
 	- L'accès aux paramètres reste disponible lorsque la side bar est fermée.
 	- Aucune entrée Paramètres n'est affichée dans la side bar.
 	- La modale affiche deux sections distinctes intitulées `Préférences utilisateur` et `Compte`.
+	- L'utilisateur peut modifier son nom d'affichage, son nom et son prénom depuis la section `Compte`.
+	- Un nom d'affichage déjà utilisé est refusé avec un message explicite.
+	- L'utilisateur peut téléverser une image comme avatar et voir l'avatar mis à jour après la sauvegarde.
+	- L'utilisateur peut demander la modification de son adresse e-mail; l'adresse courante reste affichée comme active jusqu'à confirmation de la nouvelle adresse.
+	- Un lien de LoginView ouvre le formulaire de demande de compte.
+	- Une personne dont la demande n'est pas approuvée ne peut pas se connecter.
+	- Un administrateur voit le bouton `Admin` en bas de la side bar et peut ouvrir la modale de gestion des comptes.
+	- La modale Admin liste les utilisateurs et les demandes en attente, permet leur approbation, le changement de rôle et la suppression d'un compte.
+	- La suppression affiche le nombre de projets qui seront supprimés et exige une confirmation explicite.
 	- L'utilisateur peut modifier l'unité de mesure sans quitter sa session.
 	- L'utilisateur peut choisir une unité de mesure parmi cm, m ou mm, avec cm par défaut.
 	- L'utilisateur peut choisir une unité de surface parmi cm2, m2 ou mm2, avec m2 par défaut.

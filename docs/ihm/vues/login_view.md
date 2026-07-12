@@ -15,6 +15,7 @@
 	- Redirection vers DashboardView en cas de succes.
 	- Redirection automatique vers DashboardView si session déjà active.
 	- Acces a un lien "mot de passe oublie" vers le flux de reinitialisation.
+	- Accès à un lien `Créer un compte` ouvrant le formulaire de demande de compte.
 	- Option "Se souvenir de moi".
 - Out-of-scope:
 	- Inscription utilisateur (creation de compte) depuis cette vue.
@@ -31,6 +32,7 @@
 	- Champ Mot de passe.
 	- Case a cocher "Se souvenir de moi".
 	- Lien secondaire "Mot de passe oublie ?".
+	- Lien secondaire `Créer un compte`.
 	- Bouton primaire "Se connecter".
 - Zone de message contextuel dans la carte:
 	- Affichage des erreurs de validation ou d'authentification.
@@ -54,6 +56,10 @@
 	- Si le formulaire est invalide, la soumission est bloquee et les erreurs sont affichees.
 - Lien "Mot de passe oublie ?":
 	- Ouvre le flux de reinitialisation (ecran dedie ou URL externe configuree).
+- Lien `Créer un compte`:
+	- Ouvre un formulaire demandant adresse e-mail, nom d'affichage unique, prénom et nom.
+	- Aucun mot de passe n'est demandé à ce stade.
+	- Une soumission valide crée une demande en attente et affiche que l'accès nécessite l'approbation d'un administrateur.
 - Redirections:
 	- Si authentification reussie, redirection vers DashboardView.
 	- Si session déjà active a l'ouverture de la vue, redirection automatique vers DashboardView.
@@ -70,6 +76,10 @@
 - Authentification:
 	- Le flux de connexion repose sur Supabase Auth avec identifiants email + mot de passe.
 	- Une connexion est consideree valide uniquement si un token de session actif est obtenu.
+- Création de compte:
+	- Une demande ne crée pas immédiatement de compte Supabase Auth.
+	- Tant que la demande n'est pas approuvée, le demandeur ne possède aucun accès et ne peut pas se connecter.
+	- Après approbation, une invitation Supabase est envoyée afin que l'utilisateur définisse son mot de passe; le compte créé porte le rôle `user`.
 - Persistance de session:
 	- Si "Se souvenir de moi" est active, la session est persistee localement selon la politique du provider d'authentification.
 	- Si "Se souvenir de moi" est desactivee, la session est limitee a la duree de vie de la session courante.
@@ -107,6 +117,9 @@
 	- Tentatives bloquees jusqu'a expiration de la temporisation.
 - Etat lien mot de passe oublie:
 	- Feedback de redirection vers le flux de reinitialisation.
+- État demande de compte:
+	- Soumission en cours, erreur explicite ou confirmation de mise en attente.
+	- Une adresse e-mail ou un nom d'affichage déjà utilisé ou déjà demandé est refusé explicitement.
 - Etat session active detectee:
 	- Aucun formulaire affiche durablement; redirection automatique vers l'ecran cible.
 
@@ -122,6 +135,7 @@
 	- Email saisi par l'utilisateur.
 	- Mot de passe saisi par l'utilisateur.
 	- Choix Se souvenir de moi (booleen).
+	- Dans le formulaire de demande: adresse e-mail, nom d'affichage, prénom et nom.
 - Données derivees (non editees directement):
 	- Validite locale du formulaire (format email, champs requis).
 	- Ecran cible de redirection apres authentification (ecran demande initialement ou DashboardView en fallback).
@@ -201,6 +215,16 @@
 	- Then la session est invalidee
 	- And LoginView est affichee
 	- And l'acces direct aux vues metier est de nouveau bloque
+- Scenario 10 - Demande de compte:
+	- Given une personne sans compte ouvre LoginView
+	- When elle soumet une adresse e-mail, un nom d'affichage, un prénom et un nom disponibles
+	- Then une demande en attente est créée sans mot de passe
+	- And un message indique que l'approbation d'un administrateur est nécessaire
+- Scenario 11 - Compte approuvé:
+	- Given un administrateur approuve une demande en attente
+	- When l'approbation réussit
+	- Then le demandeur reçoit une invitation pour définir son mot de passe
+	- And son compte est créé avec le rôle `user`
 
 ## Recap decisions et hypotheses explicites
 - Decisions validees:
