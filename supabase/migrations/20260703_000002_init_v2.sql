@@ -4,34 +4,6 @@ begin;
 
 create extension if not exists pgcrypto;
 
-create type opening_type_enum as enum ('door', 'window', 'glass_door', 'other');
-create type opening_placement_type_enum as enum ('interior', 'exterior');
-create type project_role_enum as enum ('read', 'write');
-create type project_invitation_status_enum as enum ('pending', 'accepted', 'cancelled');
-create type room_type_enum as enum (
-  'cuisine',
-  'chambre',
-  'salon',
-  'salle_de_bain',
-  'toilettes',
-  'bureau',
-  'garage',
-  'hall',
-  'salle_de_jeu',
-  'bibliotheque',
-  'autre'
-);
-create type dimension_type_enum as enum ('point-point', 'wall-wall', 'point-on-wall');
-create type note_origin_type_enum as enum (
-  'project',
-  'level',
-  'room',
-  'wall',
-  'opening',
-  'vertex',
-  'dimension'
-);
-
 create function set_updated_at()
 returns trigger
 language plpgsql
@@ -48,7 +20,7 @@ create table projects (
   name text not null,
   address text,
   description text,
-  is_soft_deleted boolean not null default false,
+  is_soft_deleted boolean not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz
@@ -58,7 +30,7 @@ create table project_collaborations (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references projects(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
-  role project_role_enum not null,
+  role text not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (project_id, user_id)
@@ -69,67 +41,20 @@ create table project_invitations (
   project_id uuid not null references projects(id) on delete cascade,
   invited_user_id uuid not null references auth.users(id) on delete cascade,
   invited_email text not null,
-  role project_role_enum not null,
-  status project_invitation_status_enum not null default 'pending',
+  role text not null,
+  status text not null,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  check (length(trim(invited_email)) > 0)
+  updated_at timestamptz not null default now()
 );
-
-create function validate_project_invitation_account()
-returns trigger
-language plpgsql
-as $$
-begin
-  if not exists (
-    select 1
-    from auth.users
-    where id = new.invited_user_id
-      and lower(email) = lower(trim(new.invited_email))
-  ) then
-    raise exception 'L''adresse invitée doit correspondre au compte BatiBrain ciblé.';
-  end if;
-
-  return new;
-end;
-$$;
-
-create trigger trg_project_invitations_validate_account
-before insert or update of invited_user_id, invited_email on project_invitations
-for each row execute procedure validate_project_invitation_account();
-
-create function accept_project_invitation()
-returns trigger
-language plpgsql
-as $$
-begin
-  if new.status = 'accepted' and old.status = 'pending' then
-    insert into project_collaborations (project_id, user_id, role)
-    values (new.project_id, new.invited_user_id, new.role)
-    on conflict (project_id, user_id)
-    do update set role = excluded.role;
-  end if;
-
-  return new;
-end;
-$$;
-
-create trigger trg_project_invitations_accept
-after update of status on project_invitations
-for each row execute procedure accept_project_invitation();
-
-create unique index uq_project_invitations_pending
-on project_invitations(project_id, invited_user_id)
-where status = 'pending';
 
 create table levels (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references projects(id) on delete cascade,
   name text not null,
-  level_number integer not null default 0,
+  level_number integer not null,
   altitude_cm integer,
-  is_visible boolean not null default true,
-  is_soft_deleted boolean not null default false,
+  is_visible boolean not null,
+  is_soft_deleted boolean not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz,
@@ -140,17 +65,15 @@ create table pieces (
   id uuid primary key default gen_random_uuid(),
   level_id uuid not null references levels(id) on delete cascade,
   name text not null,
-  room_type room_type_enum not null default 'autre',
-  floor_color text not null default '#E5FFFC',
-  wall_thickness_cm numeric(8,2) not null default 10,
-  wall_height_cm numeric(8,2) not null default 250,
+  room_type text not null,
+  floor_color text not null,
+  wall_thickness_cm numeric(8,2) not null,
+  wall_height_cm numeric(8,2) not null,
   notes text,
-  is_soft_deleted boolean not null default false,
+  is_soft_deleted boolean not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  deleted_at timestamptz,
-  check (wall_thickness_cm > 0),
-  check (wall_height_cm > 0)
+  deleted_at timestamptz
 );
 
 create table piece_vertices (
@@ -161,8 +84,7 @@ create table piece_vertices (
   y_cm numeric(10,2) not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  unique (piece_id, vertex_order),
-  check (vertex_order >= 0)
+  unique (piece_id, vertex_order)
 );
 
 create table walls (
@@ -170,13 +92,13 @@ create table walls (
   start_vertex_id uuid not null references piece_vertices(id) on delete cascade,
   end_vertex_id uuid not null references piece_vertices(id) on delete cascade,
   thickness_cm numeric(8,2),
+  height_profiles_linked boolean not null,
   material text,
   insulation text,
   notes text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  check (start_vertex_id <> end_vertex_id),
-  check (thickness_cm is null or thickness_cm > 0)
+  check (start_vertex_id <> end_vertex_id)
 );
 
 create table wall_pieces (
@@ -189,188 +111,83 @@ create table wall_pieces (
 create table wall_height_points (
   id uuid primary key default gen_random_uuid(),
   wall_id uuid not null references walls(id) on delete cascade,
+  face_side text not null check (face_side in ('left', 'right')),
   point_order integer not null,
   position_cm numeric(10,2) not null,
   height_cm numeric(10,2) not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  unique (wall_id, point_order),
-  unique (wall_id, position_cm),
-  check (point_order >= 0),
-  check (position_cm >= 0),
-  check (height_cm > 0)
+  unique (wall_id, face_side, point_order),
+  unique (wall_id, face_side, position_cm)
 );
 
 create table opening_templates (
   id uuid primary key default gen_random_uuid(),
   name text not null,
-  opening_type opening_type_enum not null,
-  placement_type opening_placement_type_enum not null,
+  opening_type text not null,
+  placement_type text not null,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  unique (id, opening_type, placement_type),
-  check (length(trim(name)) > 0)
+  updated_at timestamptz not null default now()
 );
 
 create table openings (
   id uuid primary key default gen_random_uuid(),
   wall_id uuid not null references walls(id) on delete cascade,
-  template_id uuid not null,
-  opening_type opening_type_enum not null,
-  placement_type opening_placement_type_enum not null,
+  template_id uuid not null references opening_templates(id) on delete restrict,
+  opening_type text not null,
+  placement_type text not null,
   offset_cm numeric(8,2) not null,
   width_cm numeric(8,2) not null,
-  bottom_cm numeric(8,2) not null default 0,
+  bottom_cm numeric(8,2) not null,
   height_cm numeric(8,2) not null,
   notes text,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  foreign key (template_id, opening_type, placement_type)
-    references opening_templates(id, opening_type, placement_type) on delete restrict,
-  check (offset_cm >= 0),
-  check (width_cm > 0),
-  check (bottom_cm >= 0),
-  check (height_cm > 0)
+  updated_at timestamptz not null default now()
 );
-
-create function enforce_wall_piece_limit()
-returns trigger
-language plpgsql
-as $$
-begin
-  perform 1
-  from walls
-  where id = new.wall_id
-  for update;
-
-  if (
-    select count(*)
-    from wall_pieces
-    where wall_id = new.wall_id
-  ) >= 2 then
-    raise exception 'Un mur ne peut appartenir qu''à deux pièces au maximum.';
-  end if;
-
-  return new;
-end;
-$$;
-
-create trigger trg_wall_pieces_limit
-before insert on wall_pieces
-for each row execute procedure enforce_wall_piece_limit();
-
-create function validate_opening_wall_placement()
-returns trigger
-language plpgsql
-as $$
-declare
-  linked_piece_count integer;
-begin
-  select count(*)
-  into linked_piece_count
-  from wall_pieces
-  where wall_id = new.wall_id;
-
-  if new.placement_type = 'interior' and linked_piece_count <> 2 then
-    raise exception 'Une ouverture intérieure exige un mur lié à deux pièces.';
-  end if;
-
-  if new.placement_type = 'exterior' and linked_piece_count <> 1 then
-    raise exception 'Une ouverture extérieure exige un mur lié à une seule pièce.';
-  end if;
-
-  return new;
-end;
-$$;
-
-create trigger trg_openings_validate_wall_placement
-before insert or update of wall_id, placement_type on openings
-for each row execute procedure validate_opening_wall_placement();
-
-create function delete_incompatible_wall_openings()
-returns trigger
-language plpgsql
-as $$
-declare
-  affected_wall_id uuid;
-  linked_piece_count integer;
-begin
-  if tg_op = 'DELETE' then
-    affected_wall_id := old.wall_id;
-  else
-    affected_wall_id := new.wall_id;
-  end if;
-
-  select count(*)
-  into linked_piece_count
-  from wall_pieces
-  where wall_id = affected_wall_id;
-
-  delete from openings
-  where wall_id = affected_wall_id
-    and (
-      (placement_type = 'interior' and linked_piece_count <> 2)
-      or (placement_type = 'exterior' and linked_piece_count <> 1)
-    );
-
-  if tg_op = 'DELETE' then
-    return old;
-  end if;
-
-  return new;
-end;
-$$;
-
-create trigger trg_wall_pieces_cleanup_openings
-after insert or delete on wall_pieces
-for each row execute procedure delete_incompatible_wall_openings();
 
 create table dimensions (
   id uuid primary key default gen_random_uuid(),
   level_id uuid not null references levels(id) on delete cascade,
   name text not null,
-  dimension_type dimension_type_enum not null,
+  dimension_type text not null,
   distance_cm numeric(10,2) not null,
   offset_cm numeric(10,2) not null,
   reference_a jsonb not null,
   reference_b jsonb not null,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  check (distance_cm > 0)
+  updated_at timestamptz not null default now()
 );
 
 create table notes (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references projects(id) on delete cascade,
-  origin_type note_origin_type_enum not null,
+  origin_type text not null,
   origin_id uuid,
   content text not null,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  check (length(trim(content)) > 0)
+  updated_at timestamptz not null default now()
 );
 
 create table editor_view_settings (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references projects(id) on delete cascade,
   user_id uuid references auth.users(id) on delete cascade,
-  show_grid boolean not null default true,
-  show_rules boolean not null default true,
-  show_dimensions boolean not null default true,
-  show_angles boolean not null default true,
-  show_notes boolean not null default true,
-  show_room_surfaces boolean not null default true,
-  show_room_icons boolean not null default true,
-  snap_grid boolean not null default true,
-  snap_vertices boolean not null default true,
-  snap_intersections boolean not null default true,
-  snap_walls boolean not null default true,
-  snap_midpoints boolean not null default true,
-  snap_distance_cm numeric(8,2) not null default 10,
+  show_grid boolean not null,
+  show_rules boolean not null,
+  show_dimensions boolean not null,
+  show_angles boolean not null,
+  show_notes boolean not null,
+  show_room_surfaces boolean not null,
+  show_room_icons boolean not null,
+  snap_grid boolean not null,
+  snap_vertices boolean not null,
+  snap_intersections boolean not null,
+  snap_walls boolean not null,
+  snap_midpoints boolean not null,
+  snap_distance_cm numeric(8,2) not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  unique (project_id, user_id),
-  check (snap_distance_cm >= 0)
+  unique (project_id, user_id)
 );
 
 create table tasks (
@@ -383,12 +200,11 @@ create table tasks (
   description text,
   status text not null,
   priority integer not null,
-  is_soft_deleted boolean not null default false,
+  is_soft_deleted boolean not null,
   due_date date,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  deleted_at timestamptz,
-  check (priority between 1 and 5)
+  deleted_at timestamptz
 );
 
 create table documents (
@@ -399,8 +215,8 @@ create table documents (
   name text not null,
   mime_type text,
   storage_path text not null,
-  metadata_json jsonb not null default '{}'::jsonb,
-  is_soft_deleted boolean not null default false,
+  metadata_json jsonb not null,
+  is_soft_deleted boolean not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz
@@ -413,8 +229,8 @@ create table photos (
   wall_id uuid references walls(id) on delete set null,
   name text,
   storage_path text not null,
-  metadata_json jsonb not null default '{}'::jsonb,
-  is_soft_deleted boolean not null default false,
+  metadata_json jsonb not null,
+  is_soft_deleted boolean not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz
@@ -426,7 +242,7 @@ create table work_items (
   name text not null,
   description text,
   status text,
-  is_soft_deleted boolean not null default false,
+  is_soft_deleted boolean not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz
@@ -438,12 +254,11 @@ create table planning_items (
   name text not null,
   start_at timestamptz,
   end_at timestamptz,
-  metadata_json jsonb not null default '{}'::jsonb,
-  is_soft_deleted boolean not null default false,
+  metadata_json jsonb not null,
+  is_soft_deleted boolean not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  deleted_at timestamptz,
-  check (end_at is null or start_at is null or end_at >= start_at)
+  deleted_at timestamptz
 );
 
 create trigger trg_projects_updated_at
