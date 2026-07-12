@@ -108,7 +108,9 @@
 - SettingsModal:
 	- Donner accès aux paramètres utilisateur depuis la side bar.
 - AppSidebar:
-	- Afficher navigation principale et acces paramètres.
+	- Afficher la navigation principale et l'accès aux paramètres.
+	- Permettre de masquer la side bar et de la rouvrir depuis le bouton icône menu en haut à gauche de l'application.
+	- Conserver son état ouvert ou fermé lors des changements de vue pendant la session applicative courante, sans le persister après rechargement.
 - SidebarProjectContext:
 	- Gerer la sélection du projet courant et ses actions de contexte.
 - Editor2DHeaderControls:
@@ -195,6 +197,8 @@
   - une sélection invalide (objet supprime) est purgee avec fallback sur absence de sélection.
 
 ## Etats et interactions
+- AppSidebar peut être ouverte ou fermée; sa fermeture masque uniquement la side bar et laisse la zone principale utilisable.
+- Lorsque AppSidebar est fermée, le bouton icône menu en haut à gauche de l'application reste visible et permet de la rouvrir.
 - Changement de projet via SidebarProjectContext met a jour le contexte global de la vue active.
 - DetailTree et ProjectNotesBubble peuvent declencher une sélection synchronisee avec le canvas.
 - SelectionSyncBridge maintient une sélection unique a un instant donne.
@@ -223,6 +227,9 @@
 - Si l'objet parent d'une note disparait, la note reste accessible via son rattachement projet et la bulle notes projet.
 
 ## Criteres d'acceptation testables
+- Given AppSidebar est ouverte, When l'utilisateur la ferme, Then elle est masquée sans modifier le projet courant ni la vue active.
+- Given AppSidebar est fermée, When l'utilisateur active le bouton icône menu en haut à gauche de l'application, Then elle est rouverte.
+- Given AppSidebar est fermée, When l'utilisateur change de vue, Then son état fermé est conservé pendant la session applicative courante.
 - Given un objet est selectionne dans DetailTree, When la synchronisation est appliquee, Then l'objet correspondant est selectionne dans le canvas si visible.
 - Given une note projet est selectionnee dans ProjectNotesBubble, When la sélection est propagee, Then la note est active dans les zones capables de l'afficher.
 - Given un changement de projet est effectue depuis SidebarProjectContext, When la vue est rechargee, Then le contexte precedent est purge et seules les données du nouveau projet sont utilisees.

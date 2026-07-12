@@ -33,7 +33,7 @@
 ## Structure écran
 
 - Layout global:
-  - AppSidebar persistante à gauche;
+  - AppSidebar masquable à gauche selon son contrat transverse;
   - zone principale de travail à droite.
 - Header principal:
   - nom du projet, du niveau, identifiant court du mur et, lorsqu'elle existe, pièce d'origine;

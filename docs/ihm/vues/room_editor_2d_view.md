@@ -35,7 +35,7 @@
 
 ## Structure ecran
 - Layout global:
-	- AppSidebar persistante a gauche.
+	- AppSidebar masquable à gauche selon son contrat transverse.
 	- Zone principale d'édition par pièce a droite.
 - En-tete de la zone principale:
 	- titre de la pièce editee,

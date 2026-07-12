@@ -19,7 +19,8 @@
 
 ## Etats et interactions
 - Pas d'etat metier specifique au layout.
-- Le layout reste passif et se contente de structurer l'affichage.
+- Le layout reflète l'état ouvert ou fermé d'AppSidebar sans le gérer lui-même.
+- Lorsque la side bar est fermée, la zone principale utilise l'espace libéré et le bouton icône menu reste disponible en haut à gauche de l'application.
 
 ## Règles metier
 - Ce composant est actuellement specifique a DashboardView.
@@ -31,6 +32,7 @@
 
 ## Criteres d'acceptation testables
 - Given DashboardView est affichee, When le layout est rendu, Then la sidebar et la zone principale sont presentes.
+- Given la sidebar est fermée, When le layout est rendu, Then la zone principale reste utilisable et le bouton icône menu permet de rouvrir la sidebar.
 - Given le contenu principal change, When le layout est rendu, Then la structure de page reste stable sans logique metier additionnelle.
 
 ## References

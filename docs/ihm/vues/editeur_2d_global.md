@@ -33,7 +33,7 @@
 
 ## Structure ecran
 - Colonne gauche:
-  - AppSidebar.
+  - AppSidebar masquable selon son contrat transverse.
 - Zone principale:
   - Header principal:
     - titre projet,

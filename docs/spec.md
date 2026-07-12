@@ -46,6 +46,25 @@ Date de mise à jour: 2026-07-12
 
 ## Backlog features priorisé (1 = plus prioritaire)
 
+### Fermeture de la side bar
+- Version cible validée: V1.
+- Statut: terminée.
+- Objectif:
+	- Permettre à l'utilisateur de masquer la side bar afin de libérer l'espace de la zone principale, puis de la rouvrir sans perdre son contexte.
+- Portée fonctionnelle cible:
+	- Action de fermeture disponible dans la side bar.
+	- Bouton icône menu visible en haut à gauche de l'application lorsque la side bar est fermée.
+	- Conservation de l'état ouvert ou fermé lors des changements de vue pendant la session applicative courante.
+- Règles minimales:
+	- Fermer la side bar masque uniquement cette zone et ne modifie ni le projet courant, ni la vue active, ni les données affichées.
+	- Le bouton icône menu rouvre la side bar.
+	- L'état n'est pas persisté après un rechargement de l'application.
+- Critères d'acceptation:
+	- L'utilisateur peut fermer la side bar depuis son bouton dédié.
+	- Lorsque la side bar est fermée, l'utilisateur peut la rouvrir avec le bouton icône menu en haut à gauche de l'application.
+	- Un changement de vue conserve l'état ouvert ou fermé de la side bar.
+	- Un rechargement de l'application rétablit la side bar ouverte par défaut.
+
 ### 0) Paramètres d'application
 - Statut: terminée.
 - Objectif:

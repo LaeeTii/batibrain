@@ -54,7 +54,8 @@
 
 ## Structure ecran
 - Layout global:
-	- DashboardLayout assemble une sidebar applicative persistante a gauche et une zone principale dashboard a droite.
+	- DashboardLayout assemble une sidebar applicative masquable à gauche et une zone principale dashboard à droite.
+	- La fermeture et la réouverture de la sidebar suivent le contrat transverse AppSidebar.
 - En-tete de la zone principale:
 	- Le nom du projet courant est affiche comme titre principal de la page.
 	- Les boutons icones `Annuler` et `Retablir` sont visibles en haut a droite du header principal.
@@ -66,7 +67,7 @@
 	- Cette zone contient uniquement:
 		- un texte de bienvenue,
 		- une action de creation de nouveau projet,
-		- la sidebar applicative reste visible.
+		- la sidebar applicative reste disponible, dans son état ouvert ou fermé courant.
 - Barre de filtres:
 	- Select de niveau avec option Tous les niveaux.
 	- Champ de recherche par nom de pièce.
