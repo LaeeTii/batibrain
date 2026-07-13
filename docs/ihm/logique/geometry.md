@@ -51,6 +51,7 @@
 - Les ouvertures d'un meme mur ne doivent pas se chevaucher.
 - La hauteur utile d'une ouverture doit rester compatible avec la hauteur disponible du mur support.
 - La hauteur utile d'une ouverture doit être compatible avec le profil disponible sur chacune des deux faces du mur.
+- La hauteur disponible sous une ouverture est contrôlée à ses deux extrémités et à chaque point intermédiaire de chacun des deux profils compris dans sa largeur.
 - Une ouverture intérieure ne peut appartenir qu'a un mur lié à deux pièces.
 - Une ouverture extérieure ne peut appartenir qu'a un mur lié à une seule pièce.
 - Une cote de distance nulle est invalide.
@@ -74,6 +75,7 @@
 - Un template extérieur est admissible uniquement sur un mur extérieur.
 - Cette validation ne recherche pas deux murs distincts adjacents, colinéaires ou superposés.
 - Aucune tolérance géométrique ni règle de recouvrement partiel n'intervient dans cette qualification.
+- Les pièces adjacentes à une ouverture sont exactement les pièces liées à son unique mur support lorsque sa caractéristique intérieur/extérieur est compatible.
 
 ## Convention de longueur de mur
 - Le rendu du plan doit tenir compte de l'epaisseur des murs dans l'affichage des segments muraux.

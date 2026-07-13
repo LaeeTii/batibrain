@@ -131,6 +131,31 @@ export interface Opening {
   notes?: string | null;
 }
 
+export type OpeningKind = 'porte' | 'fenêtre' | 'baie_vitree' | 'autre';
+export type OpeningPlacementType = 'intérieur' | 'extérieur';
+
+export interface OpeningTemplate {
+  id: Id;
+  name: string;
+  type: OpeningKind;
+  placementType: OpeningPlacementType;
+}
+
+/** Modèle d’ouverture V1, indépendant du type Opening du prototype historique. */
+export interface TopologyOpening {
+  id: Id;
+  wallId: Id;
+  templateId: Id;
+  type: OpeningKind;
+  placementType: OpeningPlacementType;
+  positionCm: number;
+  widthCm: number;
+  heightCm: number;
+  bottomCm: number;
+  orientation: string | null;
+  isLocked: boolean;
+}
+
 export interface DerivedWall {
   index: number;
   start: Vertex;
