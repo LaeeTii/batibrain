@@ -77,6 +77,31 @@ export interface Wall {
   notes?: string | null;
 }
 
+export type WallFaceSide = 'gauche' | 'droite';
+
+export interface WallFace {
+  side: WallFaceSide;
+}
+
+export interface WallPieceRelation {
+  wallId: Id;
+  pieceId: Id;
+}
+
+/** Modèle topologique V1, indépendant du type Wall du prototype historique. */
+export interface TopologyWall {
+  id: Id;
+  startVertexId: Id;
+  endVertexId: Id;
+  faces: readonly [WallFace, WallFace];
+  pieceIds: Id[];
+  thicknessCm: number | null;
+  material: string | null;
+  insulation: string | null;
+  notes: string | null;
+  isLocked: boolean;
+}
+
 export type OpeningType = 'door' | 'window' | 'other';
 
 export interface Opening {

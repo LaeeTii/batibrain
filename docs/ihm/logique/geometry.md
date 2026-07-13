@@ -33,7 +33,9 @@
 - Un mur ne peut jamais être lié à trois pièces.
 - Un mur lie a une seule pièce est extérieur pour cette pièce.
 - Un mur lie a deux pièces differentes est intérieur pour les deux pièces.
+- Un mur sans liaison est qualifié de détaché; cette qualification complète les états extérieur et intérieur sans être persistée.
 - Chaque mur possède exactement deux faces et deux profils de hauteur propres, liés par défaut et dissociables.
+- Les faces stables sont toujours ordonnées `gauche`, puis `droite`, relativement au segment orienté du sommet de début vers le sommet de fin.
 - Chaque profil est une liste de points ordonnée par leur distance depuis le début du segment; à la création, sa hauteur est uniforme et provient de la hauteur de mur par défaut de l'utilisateur courant.
 - Le lien entre profils est actif par défaut; lorsqu'il est actif, les deux profils possèdent exactement les mêmes positions et hauteurs.
 - Toute modification effectuée avec le lien actif est répercutée atomiquement sur les deux faces.
@@ -98,6 +100,7 @@
 - Si l'extremite d'un mur est posee sur un mur existant, le mur support est scinde au point d'ancrage et le nouveau mur est lie a ce point.
 - Si le mur d'une troisième pièce rejoint l'intérieur d'un mur existant, le point de jonction devient un sommet partagé, le mur existant est scindé en deux murs et le mur aboutissant constitue le troisième mur autour de ce sommet.
 - Une telle jonction est toujours représentée par trois murs distincts; elle ne doit jamais produire un mur unique lié à trois pièces.
+- Lors de cette scission, la première moitié conserve l'identité du mur support, la seconde reçoit une nouvelle identité et les deux recopient ses propriétés et relations; le mur aboutissant conserve les siennes.
 - L'operation "Couper en deux" créé deux segments colineaires partageant le point de coupe. Le mur de gauche garde le focus fonctionnel, le mur de droite reprend les memes proprietes.
 - Si des murs se croisent sur un meme niveau, ils doivent etre scindes au point d'intersection pour produire des segments elementaires.
 - Si des pièces se chevauchent sur un meme niveau, les murs concernes sont scindes aux intersections necessaires et la zone de chevauchement devient une nouvelle pièce.
