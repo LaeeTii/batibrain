@@ -99,17 +99,13 @@ export async function updateProject(
   changes: Pick<CreateProjectInput, 'name' | 'address' | 'description'>,
 ): Promise<Project> {
   const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from('projects')
-    .update({
-      name: changes.name,
-      address: changes.address ?? null,
-      description: changes.description ?? null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', projectId)
-    .select(PROJECT_COLUMNS)
-    .single();
+  const { data, error } = await supabase.rpc('update_project_with_lock', {
+    target_project_id: projectId,
+    target_name: changes.name,
+    target_address: changes.address ?? null,
+    target_description: changes.description ?? null,
+    target_soft_deleted: false,
+  });
 
   if (error) throw error;
   return mapProjectRow(data as ProjectRow);
@@ -117,11 +113,14 @@ export async function updateProject(
 
 export async function softDeleteProject(projectId: string): Promise<void> {
   const supabase = getSupabaseClient();
-  const now = new Date().toISOString();
-  const { error } = await supabase
-    .from('projects')
-    .update({ is_soft_deleted: true, deleted_at: now, updated_at: now })
-    .eq('id', projectId);
+  const project = await getProject(projectId);
+  const { error } = await supabase.rpc('update_project_with_lock', {
+    target_project_id: projectId,
+    target_name: project.name,
+    target_address: project.address ?? null,
+    target_description: project.description ?? null,
+    target_soft_deleted: true,
+  });
 
   if (error) throw error;
 }

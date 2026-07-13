@@ -6,6 +6,7 @@ import { PreferencesModal } from './components/PreferencesModal';
 import { PreferencesProvider } from './components/PreferencesContext';
 import { AppNotifications } from './components/AppNotifications';
 import { ProjectCollaborationModal } from './components/ProjectCollaborationModal';
+import { ProjectEditingLockIndicator } from './components/ProjectEditingLockIndicator';
 import { AppSidebar, type MainRoute } from './components/AppSidebar';
 import { supabaseAccountGateway } from './data/supabase/account';
 import type { UserProfile } from './domain/types';
@@ -567,6 +568,7 @@ function AuthenticatedApp() {
             </button>
           </div>
         </header>
+        {dashboardContext.projectId && <ProjectEditingLockIndicator projectId={dashboardContext.projectId} />}
         {signOutError && <div className="session-error" role="alert">{signOutError}</div>}
         {projectsStatus === 'loading' ? (
           <main className="auth-loading" aria-live="polite">Chargement des projets…</main>

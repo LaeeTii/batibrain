@@ -104,6 +104,8 @@ Statut : implémentée le 2026-07-13. Les transitions d’invitation sont sécur
 
 Implémenter le verrou au niveau du projet, son acquisition atomique lors d’une modification persistée, son renouvellement à chaque modification persistée du détenteur et son expiration deux minutes après la dernière activité selon l’heure du serveur. Tester avec deux sessions qu’un seul éditeur écrit et que la lecture reste possible.
 
+Statut : implémentée le 2026-07-13. PostgreSQL sérialise l’acquisition sur la ligne du projet, protège les écritures de ses ressources et expose l’état actif calculé selon l’heure serveur ; l’interface signale la lecture seule temporaire avec l’identité du détenteur.
+
 ### V1-19 — Implémenter les verrous manuels
 
 Ajouter les actions verrouiller et déverrouiller pour pièce, mur et ouverture, avec états persistants indépendants et contrôle avant modification ou suppression. Tester la consultation maintenue, l’absence de cascade et l’interdiction pour le rôle lecture.
