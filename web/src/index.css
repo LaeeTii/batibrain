@@ -1447,6 +1447,74 @@ button {
 .dashboard-welcome h1,
 .dashboard-welcome p { margin: 0; }
 
+.canvas2d {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-soft);
+  border-radius: 20px;
+  background: #fff;
+}
+
+.canvas2d > svg { display: block; width: 100%; touch-action: none; cursor: grab; }
+.canvas2d > svg:active { cursor: grabbing; }
+.canvas2d-origin line { stroke: #d45b5b; stroke-width: 1.5; stroke-dasharray: 8 6; vector-effect: non-scaling-stroke; }
+.canvas2d-origin text,
+.canvas2d-rulers text,
+.canvas2d-measurements text,
+.canvas2d-manualDimension text,
+.canvas2d-note text { fill: #455168; font-size: 12px; paint-order: stroke; stroke: #fff; stroke-width: 3px; }
+.canvas2d-roomName,
+.canvas2d-roomSurface { text-anchor: middle; fill: #182133; font-weight: 700; font-size: 14px; }
+.canvas2d-roomSurface { font-size: 12px; font-weight: 500; }
+.canvas2d-roomIcon { display: grid; place-items: center; width: 20px; height: 20px; color: #182133; }
+.canvas2d-manualDimension line { stroke: #56657c; stroke-width: 1; marker-start: initial; vector-effect: non-scaling-stroke; }
+.canvas2d-note circle { fill: #ffe08a; stroke: #9a7628; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.canvas2d-zoomControls { position: absolute; top: 14px; right: 14px; display: grid; gap: 6px; }
+.canvas2d-zoomControls button { width: 40px; height: 40px; padding: 0; border: 1px solid var(--border-soft); background: var(--bg-surface-strong); color: var(--text-strong); cursor: pointer; }
+.canvas2d-scale { position: absolute; right: 16px; bottom: 14px; display: grid; justify-items: end; gap: 4px; padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,.88); color: #182133; font-size: .78rem; }
+.canvas2d-scale span { display: block; height: 7px; min-width: 24px; border: solid #182133; border-width: 0 2px 2px; }
+.canvas2d-options { display: grid; gap: 6px; }
+.canvas2d-options label { display: grid; grid-template-columns: auto auto 1fr auto; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--bg-surface-muted); }
+
+.global-editor__header,
+.global-editor__levelBar,
+.global-editor__visibleLevels {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.global-editor__header { justify-content: space-between; }
+
+.global-editor__levelBar {
+  align-items: flex-end;
+  padding: 18px 20px;
+  border-radius: 20px;
+  background: var(--bg-surface);
+}
+
+.global-editor__levelBar fieldset { min-width: 0; margin: 0; padding: 8px 12px 10px; border: 1px solid var(--border-soft); border-radius: 14px; }
+.global-editor__levelBar legend { padding: 0 6px; color: var(--text-muted); font-size: .86rem; font-weight: 600; }
+.global-editor__visibleLevels { flex-wrap: wrap; }
+.global-editor__visibleLevels label { white-space: nowrap; }
+
+.global-editor__body {
+  display: grid;
+  grid-template-columns: minmax(190px, 1fr) minmax(0, 5fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.global-editor__displayPanel {
+  padding: 18px;
+  border-radius: 20px;
+  background: var(--bg-surface);
+}
+
+.global-editor__displayPanel h2 { margin: 0 0 14px; font-size: 1.1rem; }
+.global-editor__canvasArea { min-width: 0; }
+
 .room-card__area,
 .room-card__finish,
 .summary-stat__label {
@@ -2358,6 +2426,14 @@ button {
     display: grid;
     grid-template-columns: 1fr;
   }
+
+  .global-editor__header,
+  .global-editor__levelBar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .global-editor__body { grid-template-columns: 1fr; }
 
   .dashboard-header__actions {
     width: 100%;

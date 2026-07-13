@@ -130,3 +130,8 @@
 - Vue mur associée : [wall_editor_view.md](../vues/wall_editor_view.md)
 - Logique sélection : [edition_2D_synchronisation_selection.md](../logique/edition_2D_synchronisation_selection.md)
 - Logique géométrique : [geometry.md](../logique/geometry.md)
+
+## État d’implémentation V1-21
+- `Canvas2D`, `CanvasOverlayMeasurements`, `CanvasZoomControls`, `CanvasScaleIndicator` et le contrôle des options d’affichage sont disponibles comme composants partagés.
+- Le viewport de navigation est un état visuel indépendant : zoom, panoramique et réinitialisation ne modifient jamais les coordonnées métier reçues en entrée.
+- `GlobalEditor2DView` utilise dès V1-21 le canvas partagé pour la consultation multi-niveaux et les options d’affichage; ses panneaux, états complets et interactions de sélection restent à intégrer dans les tâches suivantes.

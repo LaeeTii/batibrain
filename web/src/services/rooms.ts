@@ -52,6 +52,19 @@ type PieceOpeningRow = {
   notes: string | null;
 };
 
+type CurrentWallRow = {
+  id: string;
+  start_vertex_id: string;
+  end_vertex_id: string;
+  thickness_cm: number | string | null;
+  material: string | null;
+  insulation: string | null;
+  notes: string | null;
+};
+
+type WallHeightPointRow = { wall_id: string; face_side: 'gauche' | 'droite'; point_order: number; height_cm: number | string };
+type CurrentOpeningRow = Omit<PieceOpeningRow, 'opening_type' | 'offset_cm'> & { opening_type: string; position_cm: number | string };
+
 export interface RoomSnapshot {
   room: Room;
   vertices: Vertex[];
@@ -116,6 +129,13 @@ function mapPieceOpeningRow(row: PieceOpeningRow): Opening {
     heightCm: Number(row.height_cm),
     notes: row.notes,
   };
+}
+
+function mapCurrentOpeningRow(row: CurrentOpeningRow): Opening {
+  const type: Opening['type'] = row.opening_type === 'porte'
+    ? 'door'
+    : row.opening_type === 'fenêtre' || row.opening_type === 'baie_vitree' ? 'window' : 'other';
+  return mapPieceOpeningRow({ ...row, opening_type: type, offset_cm: row.position_cm });
 }
 
 function toPieceRow(room: Room): PieceRow {
@@ -227,25 +247,43 @@ export async function loadRoomSnapshot(roomId: string): Promise<RoomSnapshot> {
 
   const mappedVertices = (vertices ?? []).map((row) => mapPieceVertexRow(row as PieceVertexRow));
 
-  const { data: walls, error: wallsError } = await supabase
-    .from('walls')
-    .select('id, piece_id, start_vertex_id, end_vertex_id, thickness_cm, height_left_cm, height_right_cm, material, insulation, notes')
+  const { data: wallRelations, error: relationsError } = await supabase
+    .from('wall_pieces')
+    .select('wall_id')
     .eq('piece_id', roomId);
+
+  if (relationsError) throw relationsError;
+  const wallIds = (wallRelations ?? []).map((row) => String(row.wall_id));
+  const { data: walls, error: wallsError } = wallIds.length === 0
+    ? { data: [], error: null }
+    : await supabase.from('walls')
+      .select('id, start_vertex_id, end_vertex_id, thickness_cm, material, insulation, notes')
+      .in('id', wallIds);
 
   if (wallsError) {
     throw wallsError;
   }
 
-  const syncedWalls = syncWallsWithVertices(
-    mappedVertices,
-    (walls ?? []).map((row) => mapPieceWallRow(row as PieceWallRow)),
-  );
+  const { data: heightPoints, error: heightsError } = wallIds.length === 0
+    ? { data: [], error: null }
+    : await supabase.from('wall_height_points')
+      .select('wall_id, face_side, point_order, height_cm')
+      .in('wall_id', wallIds)
+      .order('point_order');
+  if (heightsError) throw heightsError;
+  const heights = heightPoints as WallHeightPointRow[];
+  const syncedWalls = syncWallsWithVertices(mappedVertices, (walls ?? []).map((row) => {
+    const wall = row as CurrentWallRow;
+    const left = heights.find((point) => point.wall_id === wall.id && point.face_side === 'gauche');
+    const right = heights.find((point) => point.wall_id === wall.id && point.face_side === 'droite');
+    return mapPieceWallRow({ ...wall, piece_id: roomId, height_left_cm: left?.height_cm ?? null, height_right_cm: right?.height_cm ?? null });
+  }));
 
   let syncedOpenings: Opening[] = [];
   if (syncedWalls.length > 0) {
     const { data: openings, error: openingsError } = await supabase
       .from('openings')
-      .select('id, wall_id, opening_type, offset_cm, width_cm, bottom_cm, height_cm, notes')
+      .select('id, wall_id, opening_type, position_cm, width_cm, bottom_cm, height_cm, notes')
       .in('wall_id', syncedWalls.map((wall) => wall.id));
 
     if (openingsError) {
@@ -254,7 +292,7 @@ export async function loadRoomSnapshot(roomId: string): Promise<RoomSnapshot> {
 
     syncedOpenings = syncOpeningsWithWalls(
       syncedWalls,
-      (openings ?? []).map((row) => mapPieceOpeningRow(row as PieceOpeningRow)),
+      (openings ?? []).map((row) => mapCurrentOpeningRow(row as CurrentOpeningRow)),
     );
   }
 

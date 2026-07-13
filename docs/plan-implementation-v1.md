@@ -122,6 +122,8 @@ Statut : implémentée le 2026-07-13. Chaque projet possède un niveau 0 nommé 
 
 Créer Canvas2D, grille, zoom, panoramique, indicateur d’échelle, repère global et rendu des pièces, murs et ouvertures. Ajouter les options d’affichage des notes, surfaces, icônes, angles et côtes. Vérifier que la navigation visuelle n’altère jamais les coordonnées métier.
 
+Statut : implémentée le 2026-07-13. Le canvas partagé rend les niveaux visibles avec leur profondeur visuelle, les pièces, murs, ouvertures, notes et mesures, expose toutes les options d’affichage ainsi que le zoom, le panoramique, le reset, l’échelle et le repère global sans mutation des coordonnées métier.
+
 ### V1-22 — Implémenter sélection, panneaux et historique
 
 Créer les panneaux de création et détail, DetailTree, les sections métier, SelectionSyncBridge et la sélection synchronisée canvas/arbre/panneau. Ajouter l’historique limité à 20 actions avec boutons et raccourcis Annuler/Rétablir, puis tester les états lecture seule et verrouillé.

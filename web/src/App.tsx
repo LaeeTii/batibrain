@@ -16,6 +16,7 @@ import { Button, Modal, TextInput, Textarea } from '@mantine/core';
 import { LuMenu, LuSettings } from 'react-icons/lu';
 import { LoginView } from './views/LoginView';
 import { RoomEditor } from './views/RoomEditor';
+import { GlobalEditor2DView } from './views/GlobalEditor2DView';
 import {
   RoomsDashboard,
   type DashboardRoomTarget,
@@ -426,11 +427,17 @@ function AuthenticatedApp() {
         onContextChange={updateDashboardContext}
       />
     );
-  } else if (screen.name === 'global-editor' || screen.name === 'metrics') {
+  } else if (screen.name === 'global-editor') {
+    content = <GlobalEditor2DView
+      projectId={dashboardContext.projectId}
+      initialLevelId={dashboardContext.levelId}
+      onLevelChange={(levelId) => updateDashboardContext({ projectId: dashboardContext.projectId, levelId, roomId: '' }, 'replace')}
+    />;
+  } else if (screen.name === 'metrics') {
     content = (
       <main className="app-placeholder" tabIndex={-1}>
         <p className="dashboard-eyebrow">Projet courant</p>
-        <h2>{screen.name === 'global-editor' ? 'Édition globale' : 'Métriques'}</h2>
+        <h2>Métriques</h2>
         <p>Cette vue sera complétée dans une prochaine tâche de la V1.</p>
       </main>
     );
