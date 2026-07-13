@@ -34,7 +34,7 @@ Définir point, segment et polygone, puis implémenter distance, vecteur, projec
 
 ### V1-03 — Implémenter le domaine des pièces
 
-Définir pièce et sommets ordonnés, les valeurs initiales 200 × 200 cm, le type, la couleur, la fermeture implicite et les validations de nombre de sommets, coordonnées et auto-intersections. Chaque invalidité doit produire une erreur métier exploitable par l’interface.
+Définir pièce et sommets ordonnés, la construction rectangulaire depuis deux points sans dimensions par défaut, le type, la couleur, la fermeture implicite et les validations de nombre de sommets, coordonnées et auto-intersections. Chaque invalidité doit produire une erreur métier exploitable par l’interface.
 
 ### V1-04 — Implémenter le domaine des murs et la topologie
 
@@ -114,7 +114,9 @@ Statut : implémentée le 2026-07-13. Les verrous persistants indépendants sont
 
 ### V1-20 — Implémenter niveaux et cartes de pièces du Dashboard
 
-Créer DashboardLayout, la gestion du niveau 0 obligatoire, des niveaux visibles et du niveau éditable, puis RoomCard avec création atomique d’une pièce, renommage, type, couleur, icône dérivée et suppression logique. Utiliser les préférences courantes lors des créations.
+Créer DashboardLayout, la gestion du niveau 0 obligatoire nommé `RDC`, des niveaux visibles et du niveau éditable, puis RoomCard avec création atomique d’une pièce, renommage, type, couleur, icône dérivée et suppression logique. Utiliser les préférences courantes lors des créations.
+
+Statut : implémentée le 2026-07-13. Chaque projet possède un niveau 0 nommé `RDC`, le Dashboard distingue filtre visible et niveau éditable, et les cartes permettent la création transactionnelle avec préférences courantes, la modification des attributs métier et la suppression logique.
 
 ### V1-21 — Implémenter le canvas 2D partagé
 

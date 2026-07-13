@@ -1,6 +1,5 @@
-import type { Point, Polygon, Room, RoomType, Vertex } from './types';
+import type { Point, Polygon, RoomType, Vertex } from './types';
 
-export const DEFAULT_ROOM_SIDE_CM = 200;
 export const DEFAULT_ROOM_NAME = 'Nouvelle pièce';
 export const DEFAULT_ROOM_TYPE: RoomType = 'autre';
 export const DEFAULT_ROOM_FLOOR_COLOR = '#E5FFFC';
@@ -39,48 +38,6 @@ export class RoomValidationError extends Error {
     this.name = 'RoomValidationError';
     this.issue = issue;
   }
-}
-
-export interface CreateDefaultRoomInput {
-  id?: string;
-  levelId: string;
-  name?: string;
-  type?: RoomType;
-  floorColor?: string;
-  origin?: Point;
-}
-
-export function createDefaultRoom(input: CreateDefaultRoomInput): {
-  room: Room;
-  vertices: Vertex[];
-} {
-  const roomId = input.id ?? globalThis.crypto.randomUUID();
-  const origin = input.origin ?? { x: 0, y: 0 };
-  const name = input.name?.trim() || DEFAULT_ROOM_NAME;
-
-  const room: Room = {
-    id: roomId,
-    levelId: input.levelId,
-    name,
-    type: input.type ?? DEFAULT_ROOM_TYPE,
-    floorColor: input.floorColor?.trim() || DEFAULT_ROOM_FLOOR_COLOR,
-    notes: null,
-  };
-
-  const coordinates: Point[] = [
-    origin,
-    { x: origin.x + DEFAULT_ROOM_SIDE_CM, y: origin.y },
-    { x: origin.x + DEFAULT_ROOM_SIDE_CM, y: origin.y + DEFAULT_ROOM_SIDE_CM },
-    { x: origin.x, y: origin.y + DEFAULT_ROOM_SIDE_CM },
-  ];
-  const vertices = coordinates.map((point, order): Vertex => ({
-    id: globalThis.crypto.randomUUID(),
-    pieceId: roomId,
-    order,
-    ...point,
-  }));
-
-  return { room, vertices };
 }
 
 export function roomPolygon(vertices: readonly Vertex[]): Polygon {

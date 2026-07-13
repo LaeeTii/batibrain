@@ -41,7 +41,7 @@
 	- LevelsSection:
 		- creation via Nom (texte) + Niveau (entier positif ou negatif), bouton Créer actif uniquement si les deux champs sont valides,
 		- liste des niveaux avec affichage/masquage et suppression (archivage en cascade),
-		- niveau 0 créé automatiquement et non supprimable.
+		- niveau 0 nommé `RDC`, créé automatiquement avec chaque projet et non supprimable.
 	- RoomsSection:
 		- message d'aide de creation: Cliquez sur le plan et deplacez-vous pour dessiner une pièce,
 		- champs de creation et d'édition: Nom (par defaut Nouvelle pièce si vide), Type (liste déroulante obligatoire, `autre` par défaut), Couleur du sol (par defaut #E5FFFC), Epaisseur et Hauteur,
@@ -107,7 +107,7 @@
 	- Changer l'origine: `LuCrosshair`.
 
 ## Règles metier
-- Le niveau 0 est obligatoire et non supprimable.
+- Tout projet est systématiquement créé avec un niveau 0 nommé `RDC`; ce niveau est obligatoire et non supprimable.
 - Les champs de longueur/hauteur/epaisseur attendent des valeurs numeriques positives selon le domaine.
 - Les valeurs par defaut metier sont appliquees lors de creation (ex: nom de pièce par defaut si vide).
 - La hauteur et l'épaisseur de mur proposées à la création proviennent des préférences de l'utilisateur courant; en l'absence de préférences enregistrées, elles valent respectivement `250 cm` et `10 cm`.
@@ -272,7 +272,7 @@
 - Given un nom de pièce vide a la creation, When la validation est executee, Then le nom applique est Nouvelle pièce.
 - Given l'utilisateur ouvre successivement deux sections de premier niveau, When la seconde s'ouvre, Then la premiere est automatiquement fermee.
 - Given les champs Nom ou Niveau d'un nouveau niveau sont invalides, When l'utilisateur observe le formulaire de creation, Then le bouton Créer reste inactif.
-- Given le niveau 0 est affiche dans la liste, When l'utilisateur consulte ses actions disponibles, Then aucune action de suppression n'est proposee.
+- Given un projet vient d'être créé, When ses niveaux sont chargés, Then un niveau 0 nommé `RDC` est présent et aucune action de suppression n'est proposée pour celui-ci.
 - Given une creation de pièce est en cours, When l'utilisateur deplace la souris apres le premier clic, Then la previsualisation de la pièce et ses dimensions sont visibles en temps reel.
 - Given une pièce existante est selectionnee, When la section Pièces est active, Then le bloc édition pièce s'ouvre automatiquement avec les valeurs de la pièce.
 - Given une pièce est créée sans changement du type, When la création est validée, Then le type `autre` est persisté.

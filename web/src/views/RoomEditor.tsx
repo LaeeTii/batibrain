@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { RoomCanvas } from '../components/RoomCanvas';
 import { DashboardLayout } from '../components/DashboardLayout';
+import { usePreferences } from '../components/PreferencesContext';
 import type { Level, Opening, Project, Room, Vertex, Wall } from '../domain/types';
 import type { DashboardRoomTarget } from './RoomsDashboard';
 import {
   angleAtVertexDegrees,
   centroid,
-  createRectangleRoomGeometry,
+  createRectangleRoomGeometryFromPoints,
   formatOpeningValidationIssue,
   polygonAreaCm2,
   remapWallsToVertices,
@@ -37,9 +38,6 @@ const DEMO_PIECE_ID = 'piece_demo';
 const DEFAULT_ROOM_NAME = '';
 const DEFAULT_LEVEL_NAME = '';
 const DEFAULT_PROJECT_NAME = '';
-const DEFAULT_ROOM_SIDE_CM = 200;
-const DEFAULT_ROOM_HEIGHT_CM = 250;
-const DEFAULT_WALL_THICKNESS_CM = 10;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const OPENING_REMAP_EPSILON = 1e-6;
 const AREA_FORMATTER = new Intl.NumberFormat('fr-FR', {
@@ -66,13 +64,6 @@ const DEFAULT_OPENING_DRAFT: OpeningDraft = {
   bottomCm: '0',
   heightCm: '215',
 };
-
-function createDefaultRoomGeometry(pieceId = DEMO_PIECE_ID): { vertices: Vertex[]; walls: Wall[] } {
-  return createRectangleRoomGeometry(pieceId, DEFAULT_ROOM_SIDE_CM, DEFAULT_ROOM_SIDE_CM, {
-    wallThicknessCm: DEFAULT_WALL_THICKNESS_CM,
-    wallHeightCm: DEFAULT_ROOM_HEIGHT_CM,
-  });
-}
 
 function prepareVerticesForRoom(
   sourceVertices: Vertex[],
@@ -255,9 +246,9 @@ export function RoomEditor({
   onContextChange,
 }: RoomEditorProps) {
   const supabaseConfigured = hasSupabaseConfig();
-  const initialDraft = useMemo(() => createDefaultRoomGeometry(), []);
-  const [vertices, setVertices] = useState<Vertex[]>(initialDraft.vertices);
-  const [wallDefinitions, setWallDefinitions] = useState<Wall[]>(initialDraft.walls);
+  const { preferences } = usePreferences();
+  const [vertices, setVertices] = useState<Vertex[]>([]);
+  const [wallDefinitions, setWallDefinitions] = useState<Wall[]>([]);
   const [openings, setOpenings] = useState<Opening[]>([]);
   const [openingDraft, setOpeningDraft] = useState<OpeningDraft>(DEFAULT_OPENING_DRAFT);
   const [selectedWallIndex, setSelectedWallIndex] = useState<number | null>(null);
@@ -561,12 +552,11 @@ export function RoomEditor({
   }
 
   function resetCanvasToDraft() {
-    const draft = createDefaultRoomGeometry();
     setActiveRoom(null);
     setRoomNameInput(DEFAULT_ROOM_NAME);
     setOpeningDraft(DEFAULT_OPENING_DRAFT);
     setOpeningFormMessage(null);
-    applyRoomGeometry(draft.vertices, draft.walls, []);
+    applyRoomGeometry([], [], []);
     setSelectedWallIndex(null);
   }
 
@@ -626,7 +616,7 @@ export function RoomEditor({
           levelId: preferredLevel.id,
           roomId: '',
         }, 'replace');
-        setStatusMessage('Brouillon local prêt. Enregistre la pièce affichée pour la créer en base.');
+        setStatusMessage('Clique sur le plan pour placer les deux coins opposés de la pièce.');
         return;
       }
 
@@ -813,7 +803,7 @@ export function RoomEditor({
 
     openDraftRoom(roomName);
     setNewRoomNameInput(DEFAULT_ROOM_NAME);
-    setStatusMessage('Brouillon local prêt. Enregistre la pièce affichée pour la créer en base.');
+    setStatusMessage('Clique sur le plan pour placer les deux coins opposés de la pièce.');
     setErrorMessage(null);
     notifyContextChange({ projectId: selectedProjectId, levelId: selectedLevelId, roomId: '' }, 'push');
   };
@@ -874,6 +864,10 @@ export function RoomEditor({
 
       if (!roomName) {
         throw new Error('Renseigne un nom avant de sauvegarder la pièce.');
+      }
+
+      if (!activeRoom && vertices.length !== 4) {
+        throw new Error('Place deux points sur le plan avant de créer la pièce.');
       }
 
       const isCreatingRoom = !activeRoom;
@@ -999,7 +993,7 @@ export function RoomEditor({
                 type="button"
                 className="room-editor__iconAction"
                 onClick={handleCreateRoom}
-                disabled={isBusy || !selectedLevelId}
+                disabled={isBusy || !selectedLevelId || (!activeRoom && vertices.length !== 4)}
                 aria-label="Préparer une nouvelle pièce"
               >
                 +
@@ -1108,6 +1102,20 @@ export function RoomEditor({
               height={760}
               onVerticesChange={handleVerticesChange}
               onWallSelect={setSelectedWallIndex}
+              rectangleCreationEnabled={!activeRoom && vertices.length === 0}
+              onRectangleCreate={(firstPoint, secondPoint) => {
+                try {
+                  const geometry = createRectangleRoomGeometryFromPoints(DEMO_PIECE_ID, firstPoint, secondPoint, {
+                    wallThicknessCm: preferences.defaultWallThicknessCm,
+                    wallHeightCm: preferences.defaultWallHeightCm,
+                  });
+                  applyRoomGeometry(geometry.vertices, geometry.walls, []);
+                  setStatusMessage('Rectangle défini. Vérifie ses propriétés puis crée la pièce.');
+                  setErrorMessage(null);
+                } catch (caught) {
+                  setErrorMessage(formatErrorMessage(caught));
+                }
+              }}
             />
           </div>
 

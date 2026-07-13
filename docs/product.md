@@ -17,7 +17,7 @@ BatiBrain n'est pas un MVP: c'est une vraie application produit, livrée par ver
 - Les angles sont calculés, pas stockés.
 - Les coordonnées sont globales au niveau.
 - Les calculs métier sont exprimés en centimètres.
-- Les valeurs initiales restent: pièce `200 x 200 cm`, mur `10 cm` d'épaisseur, `250 cm` de hauteur; l'utilisateur peut personnaliser l'épaisseur et la hauteur de mur par défaut dans ses paramètres pour les créations futures.
+- Une pièce rectangulaire est créée par deux points définissant librement ses dimensions; aucune largeur ni profondeur n'est imposée par défaut. Les valeurs initiales des murs restent `10 cm` d'épaisseur et `250 cm` de hauteur; l'utilisateur peut les personnaliser dans ses paramètres pour les créations futures.
 
 ## Découpage de livraison
 

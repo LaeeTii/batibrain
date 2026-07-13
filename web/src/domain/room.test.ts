@@ -1,12 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Vertex } from './types';
 import {
-  DEFAULT_ROOM_FLOOR_COLOR,
-  DEFAULT_ROOM_NAME,
-  DEFAULT_ROOM_SIDE_CM,
   RoomValidationError,
   assertValidRoomVertices,
-  createDefaultRoom,
   roomPolygon,
   validateRoomVertices,
 } from './room';
@@ -21,47 +17,15 @@ function vertices(points: Array<[number, number]>, orders?: number[]): Vertex[] 
   }));
 }
 
-describe('création d’une pièce', () => {
-  it('crée le rectangle initial 200 × 200 cm avec les valeurs métier par défaut', () => {
-    const result = createDefaultRoom({ id: 'pièce-1', levelId: 'niveau-1', name: '  ' });
-
-    expect(result.room).toMatchObject({
-      id: 'pièce-1',
-      levelId: 'niveau-1',
-      name: DEFAULT_ROOM_NAME,
-      type: 'autre',
-      floorColor: DEFAULT_ROOM_FLOOR_COLOR,
-    });
-    expect(result.vertices).toHaveLength(4);
-    expect(result.vertices.map(({ x, y }) => [x, y])).toEqual([
-      [0, 0],
-      [DEFAULT_ROOM_SIDE_CM, 0],
-      [DEFAULT_ROOM_SIDE_CM, DEFAULT_ROOM_SIDE_CM],
-      [0, DEFAULT_ROOM_SIDE_CM],
-    ]);
-  });
-
+describe('représentation d’une pièce', () => {
   it('représente la fermeture implicitement sans dupliquer le premier sommet', () => {
-    const { vertices: roomVertices } = createDefaultRoom({ id: 'pièce-1', levelId: 'niveau-1' });
+    const roomVertices = vertices([[10, 20], [310, 20], [310, 180], [10, 180]]);
     const polygon = roomPolygon(roomVertices);
 
     expect(polygon.vertices).toHaveLength(4);
     expect(polygon.vertices.at(-1)).not.toEqual(polygon.vertices[0]);
   });
 
-  it('accepte le type, la couleur et une origine globale personnalisés', () => {
-    const result = createDefaultRoom({
-      id: 'pièce-1',
-      levelId: 'niveau-1',
-      type: 'cuisine',
-      floorColor: '#123456',
-      origin: { x: -300, y: 50 },
-    });
-
-    expect(result.room.type).toBe('cuisine');
-    expect(result.room.floorColor).toBe('#123456');
-    expect(result.vertices[0]).toMatchObject({ x: -300, y: 50 });
-  });
 });
 
 describe('validation des sommets d’une pièce', () => {

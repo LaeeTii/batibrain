@@ -84,6 +84,8 @@ export interface Level {
   projectId: Id;
   name: string;
   altitudeCm?: number | null;
+  number: number;
+  isVisible: boolean;
 }
 
 export type RoomType =
@@ -106,6 +108,7 @@ export interface Room {
   type: RoomType;
   floorColor: string;
   notes?: string | null;
+  isSoftDeleted?: boolean;
 }
 
 export interface Wall {

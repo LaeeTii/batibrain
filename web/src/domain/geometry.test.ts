@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Point, Segment } from './types';
 import {
   centroid,
+  createRectangleRoomGeometryFromPoints,
   distance,
   interiorSegmentLengthCm,
   polygonAreaCm2,
@@ -12,6 +13,26 @@ import {
   segmentOrientationDegrees,
   vector,
 } from './geometry';
+
+describe('création rectangulaire par deux points', () => {
+  it('déduit librement les dimensions et l’origine, quel que soit l’ordre des points', () => {
+    const result = createRectangleRoomGeometryFromPoints(
+      'pièce-1',
+      { x: 410, y: 260 },
+      { x: 10, y: 60 },
+      { wallThicknessCm: 12, wallHeightCm: 280 },
+    );
+    expect(result.vertices.map(({ x, y }) => [x, y])).toEqual([
+      [10, 60], [410, 60], [410, 260], [10, 260],
+    ]);
+    expect(result.walls.every((wall) => wall.thicknessCm === 12 && wall.heightLeftCm === 280)).toBe(true);
+  });
+
+  it('refuse deux points qui ne définissent pas une surface', () => {
+    expect(() => createRectangleRoomGeometryFromPoints('pièce-1', { x: 0, y: 0 }, { x: 0, y: 100 }))
+      .toThrow('largeur');
+  });
+});
 
 const rectangle: Point[] = [
   { x: -100, y: -50 },

@@ -1098,7 +1098,6 @@ textarea {
   gap: 24px;
 }
 
-.dashboard-topbar,
 .level-overview__header,
 .project-overview__header {
   display: flex;
@@ -1126,12 +1125,6 @@ textarea {
   color: var(--text-muted);
 }
 
-.dashboard-topActions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
 .dashboard-iconButton {
   width: 44px;
   height: 44px;
@@ -1149,45 +1142,15 @@ textarea {
   backdrop-filter: blur(14px);
 }
 
-.dashboard-projectBar,
-.dashboard-levelHeader,
 .dashboard-summaryStrip,
 .project-overview__levelHeading,
 .project-overview__levelStats,
 .room-card__titleRow,
-.room-card__stats,
 .dashboard-modalActions {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-}
-
-.dashboard-projectActions,
-.dashboard-levelActions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.dashboard-projectActions {
-  align-items: flex-end;
-}
-
-.dashboard-levelActions {
-  width: 100%;
-  align-items: flex-end;
-  justify-content: space-between;
-  flex-wrap: nowrap;
-}
-
-.dashboard-levelButtons {
-  display: flex;
-  align-items: flex-end;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-left: auto;
 }
 
 .dashboard-field {
@@ -1367,6 +1330,17 @@ button {
   background: var(--bg-surface-strong);
   color: inherit;
   text-align: left;
+  border: 1px solid var(--border-soft);
+}
+
+.room-card__open {
+  display: grid;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
   cursor: pointer;
 }
 
@@ -1381,8 +1355,99 @@ button {
   padding: 18px 20px 20px;
 }
 
+.room-card__titleRow > span,
+.room-card__type {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.room-card__title,
+.room-card__area {
+  display: block;
+}
+
+.room-card__type {
+  justify-content: flex-start;
+  color: var(--text-muted);
+}
+
+.room-card__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 0 14px 14px;
+}
+
+.room-card__iconAction {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  background: var(--bg-surface-muted);
+  color: var(--text-strong);
+  cursor: pointer;
+}
+
+.room-card__iconAction--danger { color: var(--danger); }
+
+.dashboard-header,
+.dashboard-header__actions,
+.dashboard-filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dashboard-header {
+  justify-content: space-between;
+}
+
+.dashboard-header__actions { justify-content: flex-end; }
+
+.dashboard-filters {
+  display: grid;
+  grid-template-columns: auto minmax(260px, 1fr) auto;
+  align-items: end;
+}
+
+.dashboard-filters .dashboard-search { min-width: 0; }
+
+.dashboard-search__control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 14px;
+  border: 1px solid rgba(167, 178, 196, 0.55);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.dashboard-search__control input {
+  width: 100%;
+  min-width: 0;
+  padding-left: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.dashboard-welcome,
+.dashboard-loading {
+  display: grid;
+  justify-items: start;
+  gap: 14px;
+  padding: 32px;
+  border-radius: 28px;
+  background: var(--bg-surface);
+}
+
+.dashboard-welcome h1,
+.dashboard-welcome p { margin: 0; }
+
 .room-card__area,
-.room-card__metaLabel,
 .room-card__finish,
 .summary-stat__label {
   margin: 0;
@@ -1390,8 +1455,6 @@ button {
 
 .room-card__area,
 .room-card__finish,
-.room-card__stats,
-.room-card__badge,
 .summary-stat__label,
 .project-overview__levelStats,
 .project-overview__roomChip,
@@ -1399,35 +1462,12 @@ button {
   color: var(--text-muted);
 }
 
-.room-card__badge,
 .project-overview__levelBadge,
 .project-overview__roomChip {
   padding: 8px 11px;
   border-radius: 999px;
   background: var(--bg-surface-muted);
   font-size: 0.9rem;
-}
-
-.room-card__metaBlock {
-  display: grid;
-  gap: 4px;
-}
-
-.room-card__metaLabel {
-  font-size: 0.84rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.room-card__stats {
-  justify-content: flex-start;
-  gap: 14px;
-  font-size: 0.95rem;
-}
-
-.room-card__cta {
-  color: var(--accent-strong);
-  font-weight: 600;
 }
 
 .room-preview {
@@ -2293,12 +2333,11 @@ button {
     padding: 18px;
   }
 
-  .dashboard-topbar,
+  .dashboard-header,
   .room-editor__header,
   .level-overview__header,
   .project-overview__header,
-  .dashboard-projectBar,
-  .dashboard-levelHeader,
+  .dashboard-filters,
   .dashboard-summaryStrip,
   .project-overview__levelHeading,
   .project-overview__levelStats,
@@ -2315,23 +2354,18 @@ button {
     align-items: stretch;
   }
 
-  .dashboard-topActions,
-  .dashboard-projectActions,
-  .dashboard-levelActions,
-  .dashboard-levelButtons {
+  .dashboard-filters {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-header__actions {
     width: 100%;
     justify-content: stretch;
   }
 
-  .dashboard-topActions > *,
-  .dashboard-projectActions > *,
-  .dashboard-levelActions > *,
-  .dashboard-levelButtons > * {
+  .dashboard-header__actions > * {
     flex: 1 1 auto;
-  }
-
-  .dashboard-levelActions {
-    flex-wrap: wrap;
   }
 
   .room-editor__openingsList li,

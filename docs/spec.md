@@ -499,7 +499,7 @@ Date de mise à jour: 2026-07-12
 	- Édition longueur de mur en plan.
 	- Calculs géométriques partagés (surface, périmètre, centroid, angles, génération des murs).
 	- Persistance Supabase des objets métier principaux.
-	- Valeurs initiales pièce/mur (200x200, 10 cm, 250 cm), avec hauteur et épaisseur de mur par défaut personnalisables dans les paramètres utilisateur.
+	- Création rectangulaire d’une pièce par deux points, sans dimensions par défaut; valeurs initiales des murs (10 cm, 250 cm), personnalisables dans les paramètres utilisateur.
 	- Gestion des propriétés mur et des ouvertures avec validations de base.
 	- Vue multi-pièces, dashboard, exports PDF plan simple et détail.
 	- Vue RoomEditor2D et contrats transverses de sélection/synchronisation.

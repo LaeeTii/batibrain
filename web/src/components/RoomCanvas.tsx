@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { centroid, formatLengthCm, insertVertexBetween, polygonAreaCm2, polygonPerimeterCm, removeVertex, snapPointToNearbyAxes, updateVertexPosition, updateWallLength, wallsFromVertices } from '../domain/geometry';
-import type { Opening, Room, Vertex, Wall } from '../domain/types';
+import type { Opening, Point, Room, Vertex, Wall } from '../domain/types';
 
 const SNAP_THRESHOLD_CM = 12;
 const VIEWBOX_PADDING_CM = 80;
@@ -21,6 +21,8 @@ export interface RoomCanvasProps {
   showInspector?: boolean;
   onVerticesChange: (next: Vertex[]) => void;
   onWallSelect?: (wallIndex: number) => void;
+  rectangleCreationEnabled?: boolean;
+  onRectangleCreate?: (firstPoint: Point, secondPoint: Point) => void;
 }
 
 function toPointsAttribute(vertices: Vertex[]): string {
@@ -144,6 +146,8 @@ export function RoomCanvas({
   showInspector = true,
   onVerticesChange,
   onWallSelect,
+  rectangleCreationEnabled = false,
+  onRectangleCreate,
 }: RoomCanvasProps) {
   const [dragVertexId, setDragVertexId] = useState<string | null>(null);
   const [selectedVertexIds, setSelectedVertexIds] = useState<string[]>([]);
@@ -155,6 +159,8 @@ export function RoomCanvas({
   const wallLengthInputRef = useRef<HTMLInputElement | null>(null);
   const didDragRef = useRef(false);
   const lastDragEndedAtRef = useRef(0);
+  const [rectangleFirstPoint, setRectangleFirstPoint] = useState<Point | null>(null);
+  const [rectanglePointer, setRectanglePointer] = useState<Point | null>(null);
 
   const sortedVertices = useMemo(
     () => [...vertices].sort((a, b) => a.order - b.order),
@@ -201,6 +207,7 @@ export function RoomCanvas({
   }, [selectedVertexIds, walls]);
 
   const handleSvgDoubleClick = (event: React.MouseEvent<SVGSVGElement>) => {
+    if (rectangleCreationEnabled) return;
     const svg = svgRef.current;
     if (!svg) return;
     const { x, y } = getSvgPoint(event, svg);
@@ -284,6 +291,9 @@ export function RoomCanvas({
   };
 
   const handleMouseMove = (event: React.MouseEvent<SVGSVGElement>) => {
+    if (rectangleCreationEnabled && rectangleFirstPoint && svgRef.current) {
+      setRectanglePointer(getSvgPoint(event, svgRef.current));
+    }
     if (!dragVertexId) return;
     const svg = svgRef.current;
     if (!svg) return;
@@ -311,6 +321,19 @@ export function RoomCanvas({
       snapped.point.x,
       snapped.point.y,
     ));
+  };
+
+  const handleCanvasClick = (event: React.MouseEvent<SVGSVGElement>) => {
+    if (!rectangleCreationEnabled || !onRectangleCreate || !svgRef.current || event.target !== event.currentTarget && (event.target as Element).tagName !== 'rect') return;
+    const point = getSvgPoint(event, svgRef.current);
+    if (!rectangleFirstPoint) {
+      setRectangleFirstPoint(point);
+      setRectanglePointer(point);
+      return;
+    }
+    onRectangleCreate(rectangleFirstPoint, point);
+    setRectangleFirstPoint(null);
+    setRectanglePointer(null);
   };
 
   const handleMouseUp = () => {
@@ -414,6 +437,7 @@ export function RoomCanvas({
         width="100%"
         height={height}
         onDoubleClick={handleSvgDoubleClick}
+        onClick={handleCanvasClick}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
@@ -425,6 +449,14 @@ export function RoomCanvas({
           </pattern>
         </defs>
         <rect x={viewBox.minX} y={viewBox.minY} width={viewBox.width} height={viewBox.height} fill="url(#grid)" />
+
+        {rectangleCreationEnabled && rectangleFirstPoint && rectanglePointer ? <rect
+          x={Math.min(rectangleFirstPoint.x, rectanglePointer.x)}
+          y={Math.min(rectangleFirstPoint.y, rectanglePointer.y)}
+          width={Math.abs(rectanglePointer.x - rectangleFirstPoint.x)}
+          height={Math.abs(rectanglePointer.y - rectangleFirstPoint.y)}
+          fill="rgba(14, 84, 233, 0.12)" stroke="#0e54e9" strokeDasharray="8 6" pointerEvents="none"
+        /> : null}
 
         {snapGuide.x !== null && (
           <line

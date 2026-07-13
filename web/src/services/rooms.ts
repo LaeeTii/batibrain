@@ -17,6 +17,7 @@ type PieceRow = {
   room_type: RoomType;
   floor_color: string;
   notes: string | null;
+  is_soft_deleted: boolean;
 };
 
 type PieceVertexRow = {
@@ -75,6 +76,7 @@ function mapPieceRow(row: PieceRow): Room {
     type: row.room_type,
     floorColor: row.floor_color,
     notes: row.notes,
+    isSoftDeleted: row.is_soft_deleted,
   };
 }
 
@@ -124,6 +126,7 @@ function toPieceRow(room: Room): PieceRow {
     room_type: room.type,
     floor_color: room.floorColor,
     notes: room.notes ?? null,
+    is_soft_deleted: room.isSoftDeleted ?? false,
   };
 }
 
@@ -135,6 +138,7 @@ function toPieceInsertRow(room: CreateRoomInput): Partial<PieceRow> {
     room_type: room.type ?? DEFAULT_ROOM_TYPE,
     floor_color: room.floorColor?.trim() || DEFAULT_ROOM_FLOOR_COLOR,
     notes: room.notes ?? null,
+    is_soft_deleted: false,
   };
 }
 
@@ -180,7 +184,7 @@ export async function getRoom(roomId: string): Promise<Room> {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('pieces')
-    .select('id, level_id, name, room_type, floor_color, notes')
+    .select('id, level_id, name, room_type, floor_color, notes, is_soft_deleted')
     .eq('id', roomId)
     .single();
 
@@ -195,8 +199,9 @@ export async function listRoomsByLevel(levelId: string): Promise<Room[]> {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('pieces')
-    .select('id, level_id, name, room_type, floor_color, notes')
+    .select('id, level_id, name, room_type, floor_color, notes, is_soft_deleted')
     .eq('level_id', levelId)
+    .eq('is_soft_deleted', false)
     .order('created_at');
 
   if (error) {
@@ -266,7 +271,7 @@ export async function createRoom(room: CreateRoomInput): Promise<Room> {
   const { data, error } = await supabase
     .from('pieces')
     .insert(toPieceInsertRow(room))
-    .select('id, level_id, name, room_type, floor_color, notes')
+    .select('id, level_id, name, room_type, floor_color, notes, is_soft_deleted')
     .single();
 
   if (error) {
@@ -288,7 +293,7 @@ export async function updateRoom(room: Room): Promise<Room> {
       notes: room.notes ?? null,
     })
     .eq('id', room.id)
-    .select('id, level_id, name, room_type, floor_color, notes')
+    .select('id, level_id, name, room_type, floor_color, notes, is_soft_deleted')
     .single();
 
   if (error) {
@@ -303,7 +308,7 @@ export async function saveRoom(room: Room): Promise<Room> {
   const { data, error } = await supabase
     .from('pieces')
     .upsert(toPieceRow(room), { onConflict: 'id' })
-    .select('id, level_id, name, room_type, floor_color, notes')
+    .select('id, level_id, name, room_type, floor_color, notes, is_soft_deleted')
     .single();
 
   if (error) {
@@ -313,17 +318,20 @@ export async function saveRoom(room: Room): Promise<Room> {
   return mapPieceRow(data as PieceRow);
 }
 
-export async function deleteRoom(roomId: string): Promise<void> {
+export async function softDeleteRoom(roomId: string): Promise<void> {
   const supabase = getSupabaseClient();
   const { error } = await supabase
     .from('pieces')
-    .delete()
+    .update({ is_soft_deleted: true, deleted_at: new Date().toISOString() })
     .eq('id', roomId);
 
   if (error) {
     throw error;
   }
 }
+
+export const deleteRoom = softDeleteRoom;
+
 
 export async function replaceRoomVertices(roomId: string, vertices: Vertex[]): Promise<Vertex[]> {
   if (vertices.length < 3) {

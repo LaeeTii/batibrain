@@ -15,11 +15,9 @@ import { createProject, listProjects, softDeleteProject, updateProject } from '.
 import { Button, Modal, TextInput, Textarea } from '@mantine/core';
 import { LuMenu, LuSettings } from 'react-icons/lu';
 import { LoginView } from './views/LoginView';
-import { LevelOverviewSummary } from './views/LevelOverviewSummary';
 import { RoomEditor } from './views/RoomEditor';
 import {
   RoomsDashboard,
-  type DashboardLevelTarget,
   type DashboardRoomTarget,
 } from './views/RoomsDashboard';
 
@@ -27,7 +25,6 @@ type AppScreen =
   | { name: 'dashboard' }
   | { name: 'global-editor' }
   | { name: 'metrics' }
-  | { name: 'level-overview'; target: DashboardLevelTarget }
   | { name: 'room-editor'; target: DashboardRoomTarget };
 
 type AppHistoryState = {
@@ -67,21 +64,6 @@ function createScreenFromRoute(
     return {
       name: 'room-editor',
       target: dashboardContext,
-    };
-  }
-
-  if (routeName === 'level-overview') {
-    return {
-      name: 'level-overview',
-      target: {
-        projectId: dashboardContext.projectId,
-        projectName: '',
-        levelId: dashboardContext.levelId,
-        levelName: '',
-        rooms: [],
-        totalAreaM2: 0,
-        focusedRoomId: dashboardContext.roomId || undefined,
-      },
     };
   }
 
@@ -125,10 +107,6 @@ function isAppScreen(value: unknown): value is AppScreen {
 
   if (screenName === 'room-editor') {
     return 'target' in value && isDashboardRoomTarget(value.target);
-  }
-
-  if (screenName === 'level-overview') {
-    return 'target' in value && typeof value.target === 'object' && value.target !== null;
   }
 
   return false;
@@ -213,18 +191,6 @@ function syncScreenWithContext(
     return {
       name: 'room-editor',
       target: dashboardContext,
-    };
-  }
-
-  if (screen.name === 'level-overview') {
-    return {
-      name: 'level-overview',
-      target: {
-        ...screen.target,
-        projectId: dashboardContext.projectId,
-        levelId: dashboardContext.levelId,
-        focusedRoomId: dashboardContext.roomId || undefined,
-      },
     };
   }
 
@@ -460,23 +426,6 @@ function AuthenticatedApp() {
         onContextChange={updateDashboardContext}
       />
     );
-  } else if (screen.name === 'level-overview') {
-    content = (
-      <LevelOverviewSummary
-        target={screen.target}
-        onBack={goBack}
-        onContextChange={updateDashboardContext}
-        onOpenRoom={(roomId) => {
-          const nextTarget = {
-            projectId: screen.target.projectId,
-            levelId: screen.target.levelId,
-            roomId,
-          };
-
-          pushScreen({ name: 'room-editor', target: nextTarget }, nextTarget);
-        }}
-      />
-    );
   } else if (screen.name === 'global-editor' || screen.name === 'metrics') {
     content = (
       <main className="app-placeholder" tabIndex={-1}>
@@ -487,21 +436,11 @@ function AuthenticatedApp() {
     );
   } else {
     content = <RoomsDashboard
-      initialProjectId={dashboardContext.projectId}
-      initialLevelId={dashboardContext.levelId}
-      initialRoomId={dashboardContext.roomId}
-      onContextChange={updateDashboardContext}
+      projectId={dashboardContext.projectId}
+      onCreateProject={openCreateProject}
+      onOpenGlobalEditor={() => pushScreen({ name: 'global-editor' })}
       onOpenRoom={(target) => {
         pushScreen({ name: 'room-editor', target }, target);
-      }}
-      onOpenLevelOverview={(target) => {
-        const nextDashboardContext = {
-          projectId: target.projectId,
-          levelId: target.levelId,
-          roomId: target.focusedRoomId ?? '',
-        };
-
-        pushScreen({ name: 'level-overview', target }, nextDashboardContext);
       }}
     />;
   }

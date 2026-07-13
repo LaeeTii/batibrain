@@ -259,6 +259,22 @@ export function createRectangleRoomGeometry(
   };
 }
 
+export function createRectangleRoomGeometryFromPoints(
+  pieceId: string,
+  firstPoint: Point,
+  secondPoint: Point,
+  options: Omit<RectangleRoomGeometryOptions, 'originX' | 'originY'> = {},
+): { vertices: Vertex[]; walls: Wall[] } {
+  const originX = Math.min(firstPoint.x, secondPoint.x);
+  const originY = Math.min(firstPoint.y, secondPoint.y);
+  return createRectangleRoomGeometry(
+    pieceId,
+    Math.abs(secondPoint.x - firstPoint.x),
+    Math.abs(secondPoint.y - firstPoint.y),
+    { ...options, originX, originY },
+  );
+}
+
 export function syncWallsWithVertices(vertices: Vertex[], walls: Wall[]): Wall[] {
   const sorted = sortVertices(vertices);
   if (sorted.length < 2) return [];

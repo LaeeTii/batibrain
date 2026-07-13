@@ -73,6 +73,14 @@ export async function listProjects(): Promise<Project[]> {
   return (data ?? []).map((row) => mapProjectRow(row as ProjectRow));
 }
 
+export async function canWriteProject(projectId: string): Promise<boolean> {
+  const { data, error } = await getSupabaseClient().rpc('can_write_project', {
+    target_project_id: projectId,
+  });
+  if (error) throw error;
+  return data === true;
+}
+
 export async function createProject(project: CreateProjectInput): Promise<Project> {
   const supabase = getSupabaseClient();
   const projectId = project.id ?? crypto.randomUUID();
