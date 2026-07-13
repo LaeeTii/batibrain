@@ -86,6 +86,8 @@ Statut : implémentée le 2026-07-13.
 
 Séparer PreferencesModal, accessible par la roue crantée, et AccountModal, accessible par le profil du header. Gérer unités, thème, hauteur et épaisseur de mur par défaut et options d’affichage. Relire les préférences à la connexion, conserver les centimètres comme unité métier et ne pas modifier rétroactivement les murs existants.
 
+Statut : implémentée le 2026-07-13. Les options d’affichage restent portées par `Editor2DHeaderControls` et persistées par projet, conformément aux spécifications IHM.
+
 ### V1-16 — Implémenter les projets et le contexte courant
 
 Implémenter création, lecture, modification, suppression logique et sélection du projet courant, avec choix par défaut du dernier projet modifié. Couvrir les états vide, chargement, erreur et droits insuffisants.

@@ -1,19 +1,9 @@
 import { getSupabaseClient } from './client';
+import { DEFAULT_USER_PREFERENCES, type UserPreferences } from '../../domain/userPreferences';
 
-export type UserPreferences = {
-  lengthUnit: 'cm' | 'm' | 'mm';
-  surfaceUnit: 'm2' | 'cm2' | 'mm2';
-  theme: 'clair' | 'foncé' | 'system';
-  defaultWallHeightCm: number;
-  defaultWallThicknessCm: number;
-};
-
-export const DEFAULT_USER_PREFERENCES: UserPreferences = {
-  lengthUnit: 'cm',
-  surfaceUnit: 'm2',
-  theme: 'system',
-  defaultWallHeightCm: 250,
-  defaultWallThicknessCm: 10,
+export type PreferencesGateway = {
+  load(): Promise<UserPreferences>;
+  save(preferences: UserPreferences): Promise<void>;
 };
 
 export async function loadUserPreferences(): Promise<UserPreferences> {
@@ -50,3 +40,8 @@ export async function saveUserPreferences(preferences: UserPreferences): Promise
   });
   if (error) throw error;
 }
+
+export const supabasePreferencesGateway: PreferencesGateway = {
+  load: loadUserPreferences,
+  save: saveUserPreferences,
+};
