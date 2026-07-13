@@ -10,6 +10,7 @@ const defaultProps = {
   onCreateProject: vi.fn(),
   onEditProject: vi.fn(),
   onDeleteProject: vi.fn(),
+  onManageCollaborators: vi.fn(),
   onSelectProject: vi.fn(),
 };
 
@@ -53,12 +54,15 @@ describe('AppSidebar', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Supprimer le projet' }));
     expect(defaultProps.onEditProject).toHaveBeenCalled();
     expect(defaultProps.onDeleteProject).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Gérer les collaborateurs' }));
+    expect(defaultProps.onManageCollaborators).toHaveBeenCalled();
   });
 
   it('masque les actions de gestion sans droit propriétaire', () => {
     render(<AppSidebar {...defaultProps} projects={[{ id: 'p1', name: 'Projet partagé', ownerUserId: 'autre', updatedAt: '2026-07-13T10:00:00Z' }]} currentProjectId="p1" activeRoute="dashboard" onClose={vi.fn()} onNavigate={vi.fn()} />);
     expect(screen.queryByRole('button', { name: 'Modifier le projet' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Supprimer le projet' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Gérer les collaborateurs' })).not.toBeInTheDocument();
   });
 
 });

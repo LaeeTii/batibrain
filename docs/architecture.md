@@ -43,6 +43,7 @@ Le socle de tests frontend repose sur Vitest, Testing Library et jsdom. `npm run
 - l'accès aux données est limité côté backend aux projets possédés par l'utilisateur authentifié ou partagés avec lui après acceptation de l'invitation
 - les autorisations de lecture et d'écriture sont contrôlées côté backend selon le rôle projet; l'interface ne constitue pas la barrière de sécurité
 - les fonctions RLS `owns_project`, `can_read_project` et `can_write_project` centralisent la matrice d'accès sans exposer les tables de collaboration; les politiques des ressources imbriquées remontent jusqu'au projet par leurs clés étrangères
+- les RPC de collaboration recherchent le compte invité côté PostgreSQL sans exposer les adresses Auth, réservent les actions de gestion au propriétaire et réalisent l’acceptation dans une transaction unique qui crée la collaboration avant de clôturer l’invitation
 - le propriétaire peut lire et gérer le projet, ses ressources et ses accès; le collaborateur en lecture consulte uniquement, le collaborateur en écriture modifie les ressources métier sans gérer le projet ni ses accès, et un utilisateur sans collaboration ne voit aucune ressource
 - les options de vue liées à un projet restent propres à leur utilisateur et peuvent être persistées dès que celui-ci dispose d'un accès en lecture au projet
 - le contrôle du droit d'écriture précède l'acquisition du verrou d'édition simple
