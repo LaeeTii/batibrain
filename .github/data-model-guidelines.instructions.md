@@ -18,7 +18,9 @@ En cas de conflit documentaire, demander un arbitrage explicite à l'utilisateur
 - `web/src/lib/`: calculs dérivés orientés affichage et synthèse.
 
 ## Règles obligatoires
-- Appliquer toute évolution du schéma persistant à l'unique script d'initialisation `supabase/migrations/20260703_000002_init_v2.sql`.
+- Ne jamais modifier une migration déjà appliquée, notamment `supabase/migrations/20260703_000002_init_v2.sql` qui constitue l'historique initial V1.
+- Appliquer toute évolution du schéma persistant dans une nouvelle migration horodatée sous `supabase/migrations/`.
+- Générer tout éventuel schéma consolidé depuis la chaîne des migrations au lieu de le maintenir manuellement.
 - Définir les types métier dans `web/src/domain/types.ts`.
 - Éviter toute duplication de type dans les vues, composants, services et utilitaires.
 - Conserver l'unité métier en centimètres pour la géométrie et les distances.
@@ -48,7 +50,7 @@ Règle d'implémentation:
 - [ ] Les règles de sélection de `docs/ihm/logique/edition_2D_synchronisation_selection.md` restent respectées.
 - [ ] Les appels de persistance dans `web/src/services/` reflètent le modèle cible.
 - [ ] Aucune régression de suppression logique (pièces) n'est introduite.
-- [ ] Toute évolution de persistance cible l'unique migration d'initialisation V2.
+- [ ] Toute évolution de persistance possède une nouvelle migration horodatée et les migrations antérieures restent inchangées.
 - [ ] Les impacts documentaires sont mis à jour dans le même changement.
 
 ## Mise à jour documentaire obligatoire

@@ -58,6 +58,8 @@ Le socle de tests frontend repose sur Vitest, Testing Library et jsdom. `npm run
 - PostgreSQL garantit uniquement l'intégrité technique indispensable: identité, présence des données structurelles, clés étrangères, unicité technique, sécurité RLS et cohérence transactionnelle
 - une contrainte `CHECK` PostgreSQL n'est ajoutée que si elle protège une propriété structurelle durable et indépendante d'une règle produit susceptible d'évoluer
 - les opérations qui doivent rester indivisibles sont persistées dans une même transaction, sans déplacer pour autant leur décision métier dans la base de données
+- les RPC PostgreSQL `create_piece_complete`, `replace_wall_topology` et `write_wall_height_profiles` constituent les frontières transactionnelles respectives de création d'une pièce, de remplacement d'un ensemble ciblé de murs et d'écriture des profils d'un mur
+- ces RPC reçoivent des instantanés JSON validés par le domaine frontend avec des identifiants explicites; `replace_wall_topology` retire uniquement les murs explicitement remplacés, persiste leurs murs résultants et leurs relations mur-pièce, puis ne réinsère parmi leurs ouvertures que celles dont le placement intérieur ou extérieur reste compatible
 - toute modification d'une règle ou d'une valeur par défaut fonctionnelle doit pouvoir être réalisée dans le code et ses tests sans nécessiter de migration SQL
 
 ## Séquencement

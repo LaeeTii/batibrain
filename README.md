@@ -27,7 +27,7 @@ bati-brain/
 2. Lire `docs/geometry.md`
 3. Parcourir `web/src/domain/types.ts` et `web/src/domain/geometry.ts`
 4. Ouvrir `web/src/components/RoomCanvas.tsx`
-5. Adapter et exécuter la migration `supabase/migrations/20260703_000002_init_v2.sql`
+5. Appliquer dans l'ordre les migrations de `supabase/migrations/`
 
 ## Lancer le prototype web
 
@@ -47,14 +47,14 @@ npm run build
 
 ## Configurer Supabase
 
-1. Créer un projet Supabase et appliquer la migration [supabase/migrations/20260703_000002_init_v2.sql](supabase/migrations/20260703_000002_init_v2.sql)
+1. Créer un projet Supabase et appliquer dans l'ordre les migrations de `supabase/migrations/`
 2. Copier `web/.env.example` vers `web/.env.local`
 3. Renseigner `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY`
 4. Utiliser le client exposé par `web/src/lib/supabase.ts` et les helpers de `web/src/services/rooms.ts`
 
-### Exécuter la migration
+### Exécuter les migrations
 
-Deux options sont possibles pour appliquer [supabase/migrations/20260703_000002_init_v2.sql](supabase/migrations/20260703_000002_init_v2.sql) sur votre projet Supabase.
+Deux options sont possibles pour appliquer la chaîne de migrations sur votre projet Supabase.
 
 #### Option 1 — SQL Editor Supabase
 
@@ -63,8 +63,8 @@ La méthode la plus rapide pour un premier démarrage :
 1. Ouvrir le projet dans le dashboard Supabase
 2. Aller dans **SQL Editor**
 3. Créer une nouvelle requête
-4. Copier le contenu de [supabase/migrations/20260703_000002_init_v2.sql](supabase/migrations/20260703_000002_init_v2.sql)
-5. Exécuter la requête
+4. Copier et exécuter chaque fichier de `supabase/migrations/` dans l'ordre de son horodatage
+5. Ne jamais modifier ni rejouer isolément une migration déjà appliquée
 
 #### Option 2 — Supabase CLI
 
@@ -107,7 +107,8 @@ Notes utiles :
 
 - Les variables d'environnement de `web/.env.local` servent au frontend React, pas à l'exécution des migrations.
 - Si la CLI demande le mot de passe de base de données, il est disponible dans le dashboard Supabase, section **Database**.
-- Si la migration a déjà été exécutée manuellement sur un projet existant, `supabase db push` peut signaler que certains objets existent déjà.
+- Si des migrations ont déjà été exécutées manuellement sur un projet existant, leur historique doit être aligné avant d'utiliser `supabase db push`.
+- Une base neuve est créée en rejouant toute la chaîne. Un éventuel schéma consolidé doit être généré depuis cette chaîne et ne doit pas être maintenu manuellement.
 
 Exemple de démarrage :
 

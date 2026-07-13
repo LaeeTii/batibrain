@@ -26,7 +26,9 @@
 
 Ne pas considérer le code et la documentation sous `web/` comme sources de vérité fonctionnelles tant qu’ils ne sont pas remis à jour.
 
-Toute évolution de persistance doit être portée par `supabase/migrations/20260703_000002_init_v2.sql`, unique script d'initialisation du schéma.
+Les migrations Supabase déjà appliquées sont immuables. Toute évolution de persistance doit être portée par une nouvelle migration horodatée dans `supabase/migrations/`.
+
+`supabase/migrations/20260703_000002_init_v2.sql` constitue l'historique initial V1 et ne doit plus être modifié. Un éventuel schéma consolidé pour base neuve doit être généré depuis les migrations, jamais maintenu comme une seconde source de vérité manuelle.
 
 ## Workflow Git
 

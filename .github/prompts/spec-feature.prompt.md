@@ -32,7 +32,7 @@ Procédure obligatoire:
 - docs/data-model.md
  - Si la feature le justifie, créer un nouveau fichier IHM dédié plutôt que d'étendre un fichier trop générique.
  - Si la feature le justifie, créer un nouveau bloc dans un composant IHM existant plutôt que de surcharger un autre fichier.
- - Si les data-models sont impactés, mettre à jour l'unique script d'initialisation dans `supabase/migrations/20260703_000002_init_v2.sql` et documenter les changements dans `docs/data-model.md`.
+ - Si les data-models sont impactés, ajouter une migration horodatée sans modifier les migrations déjà appliquées et documenter les changements dans `docs/data-model.md`.
 9. Déclarer explicitement la fonctionnalité dans `docs/spec.md`.
 3. Vérifier les manques et conflits d’information.
 4. Poser les questions de clarification minimales.

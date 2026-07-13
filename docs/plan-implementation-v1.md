@@ -16,7 +16,7 @@ Les tâches doivent être réalisées dans l’ordre. Il n’est pas nécessaire
 - Considérer `docs/ihm/` comme source fonctionnelle principale.
 - Placer les types et la logique métier frontend dans `web/src/domain/`.
 - Utiliser Supabase/PostgreSQL comme source des données persistées.
-- Modifier uniquement `supabase/migrations/20260703_000002_init_v2.sql` pour le schéma cible.
+- Conserver les migrations appliquées immuables et ajouter toute évolution de persistance dans une nouvelle migration horodatée sous `supabase/migrations/`.
 - Calculer les données dérivées au lieu de les persister.
 - Ne pas prendre le code actuel de `web/` comme référence fonctionnelle.
 - Ne pas introduire de fonctionnalité prévue après la V1.
@@ -48,9 +48,9 @@ Définir les points ordonnés distance/hauteur, initialiser deux profils uniform
 
 Définir templates et instances, placement, dimensions, caractère intérieur/extérieur, adjacence et validation contre les deux profils du mur. Une ouverture incompatible doit être refusée avant persistance ou identifiée pour suppression après une modification topologique.
 
-### V1-07 — Aligner le schéma Supabase sur le domaine V1
+### V1-07 — Aligner la migration initiale Supabase sur le domaine V1
 
-Aligner l’unique script d’initialisation sur profils, préférences, demandes de compte, projets, collaborations, invitations, niveaux, pièces, sommets, murs, faces, profils, ouvertures, côtes, notes, options de vue et verrous manuels. Retirer du schéma cible les domaines hors V1 non nécessaires. Vérifier l’initialisation complète d’une base vide.
+Aligner la migration initiale sur profils, préférences, demandes de compte, projets, collaborations, invitations, niveaux, pièces, sommets, murs, faces, profils, ouvertures, côtes, notes, options de vue et verrous manuels. Retirer du schéma cible les domaines hors V1 non nécessaires. Vérifier l’initialisation complète d’une base vide. Après son application, cette migration devient immuable et les tâches suivantes ajoutent des migrations incrémentales.
 
 ### V1-08 — Implémenter les transactions métier Supabase
 

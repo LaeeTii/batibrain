@@ -40,7 +40,6 @@
 ## Statut de fraîcheur (rappel)
 
 - Les artefacts suivants sont actuellement non à jour et ne doivent pas servir de source de vérité fonctionnelle:
-	- [supabase/migrations/20260703_000001_init.sql](../supabase/migrations/20260703_000001_init.sql)
 	- Le code et la documentation sous [web/](../web/)
 
 ## Autres Guidelines Spécifiques

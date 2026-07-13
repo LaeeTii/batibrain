@@ -1,6 +1,6 @@
 # Projet BatiBrain — Point d'entrée
 
-Date de mise à jour: 2026-07-10
+Date de mise à jour: 2026-07-13
 
 ## Objectif du document
 Ce document est le point d'entrée pour développer l'application avec une approche humaine + Copilot.
@@ -80,8 +80,11 @@ Une feature est considérée terminée si:
 Liste des artefacts non à jour:
 - Le code et la documentation sous [web/](../web/)
 
-Règle de persistance:
-- Toute évolution du schéma cible l'unique script d'initialisation [supabase/migrations/20260703_000002_init_v2.sql](../supabase/migrations/20260703_000002_init_v2.sql).
+Règles de persistance:
+- La migration initiale [supabase/migrations/20260703_000002_init_v2.sql](../supabase/migrations/20260703_000002_init_v2.sql) est un historique immuable.
+- Toute évolution de persistance est ajoutée dans une nouvelle migration horodatée sous `supabase/migrations/`; une migration déjà appliquée n'est jamais modifiée.
+- Une base neuve est créée en rejouant la chaîne complète des migrations.
+- Un éventuel schéma consolidé est un artefact généré depuis cette chaîne et non une source SQL maintenue séparément.
 
 Conséquence pratique:
 - Les éléments ci-dessus peuvent servir de contexte technique, mais pas de référence fonctionnelle finale.
