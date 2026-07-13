@@ -33,6 +33,8 @@ export interface Project {
   name: string;
   address?: string | null;
   description?: string | null;
+  ownerUserId: Id;
+  updatedAt: string;
 }
 
 export type UserRole = 'user' | 'admin';

@@ -15,6 +15,8 @@
   --accent-strong: #2e7f7d;
   --success: #2a8a57;
   --danger: #b9445e;
+  --darkAddButton: #18794e;
+  --darkSuppButton: #a8324a;
   --create-button-color: #22c55e;
   --create-button-text-color: #ffffff;
   --view-button-color: #3b82f6;
@@ -673,8 +675,27 @@ textarea {
 
 .app-projectSelector {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 42px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
+}
+
+.app-projectActions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.app-projectActions button {
+  width: 42px;
+}
+
+.app-projectActions .app-projectActions__add {
+  background: var(--darkAddButton);
+}
+
+.app-projectActions .app-projectActions__delete {
+  background: var(--darkSuppButton);
 }
 
 .app-projectSelector select,

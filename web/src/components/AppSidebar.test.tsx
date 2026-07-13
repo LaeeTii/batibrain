@@ -6,7 +6,10 @@ import { AppSidebar } from './AppSidebar';
 const defaultProps = {
   projects: [],
   currentProjectId: '',
+  canManageCurrentProject: false,
   onCreateProject: vi.fn(),
+  onEditProject: vi.fn(),
+  onDeleteProject: vi.fn(),
   onSelectProject: vi.fn(),
 };
 
@@ -38,10 +41,24 @@ describe('AppSidebar', () => {
   });
 
   it('affiche le sélecteur de projet avant la navigation et le bouton de création', () => {
-    render(<AppSidebar {...defaultProps} projects={[{ id: 'p1', name: 'Maison' }]} currentProjectId="p1" activeRoute="dashboard" onClose={vi.fn()} onNavigate={vi.fn()} />);
+    render(<AppSidebar {...defaultProps} projects={[{ id: 'p1', name: 'Maison', ownerUserId: 'u1', updatedAt: '2026-07-13T10:00:00Z' }]} currentProjectId="p1" activeRoute="dashboard" onClose={vi.fn()} onNavigate={vi.fn()} />);
     expect(screen.getByRole('combobox', { name: 'Projet courant' })).toHaveValue('p1');
     fireEvent.click(screen.getByRole('button', { name: 'Créer un projet' }));
     expect(defaultProps.onCreateProject).toHaveBeenCalled();
+  });
+
+  it('expose les actions du projet courant', () => {
+    render(<AppSidebar {...defaultProps} canManageCurrentProject projects={[{ id: 'p1', name: 'Maison', ownerUserId: 'u1', updatedAt: '2026-07-13T10:00:00Z' }]} currentProjectId="p1" activeRoute="dashboard" onClose={vi.fn()} onNavigate={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Modifier le projet' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Supprimer le projet' }));
+    expect(defaultProps.onEditProject).toHaveBeenCalled();
+    expect(defaultProps.onDeleteProject).toHaveBeenCalled();
+  });
+
+  it('masque les actions de gestion sans droit propriétaire', () => {
+    render(<AppSidebar {...defaultProps} projects={[{ id: 'p1', name: 'Projet partagé', ownerUserId: 'autre', updatedAt: '2026-07-13T10:00:00Z' }]} currentProjectId="p1" activeRoute="dashboard" onClose={vi.fn()} onNavigate={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: 'Modifier le projet' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Supprimer le projet' })).not.toBeInTheDocument();
   });
 
 });

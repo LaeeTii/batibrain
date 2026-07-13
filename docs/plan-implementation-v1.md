@@ -92,6 +92,8 @@ Statut : implémentée le 2026-07-13. Les options d’affichage restent portées
 
 Implémenter création, lecture, modification, suppression logique et sélection du projet courant, avec choix par défaut du dernier projet modifié. Couvrir les états vide, chargement, erreur et droits insuffisants.
 
+Statut : implémentée le 2026-07-13. La liste active exclut les projets supprimés logiquement, le contexte initial choisit le projet accessible modifié le plus récemment et les actions de modification ou suppression sont réservées au propriétaire.
+
 ### V1-17 — Implémenter invitations et collaborations
 
 Créer ProjectCollaborationModal, AppNotifications et les capacités frontend centralisées. Gérer invitation d’un compte existant, rôles lecture/écriture, renvoi, annulation, acceptation, changement de rôle et retrait. Vérifier qu’il n’existe aucun accès avant acceptation et que seul le propriétaire gère le partage.
