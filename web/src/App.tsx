@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { AuthProvider, useAuth } from './components/AuthProvider';
+import { LoginView } from './views/LoginView';
 import { LevelOverviewSummary } from './views/LevelOverviewSummary';
 import { RoomEditor } from './views/RoomEditor';
 import {
@@ -237,7 +239,7 @@ function buildAppUrl(screen: AppScreen, dashboardContext: DashboardRoomTarget): 
   return url.toString();
 }
 
-export default function App() {
+function AuthenticatedApp() {
   const initialHistoryStateRef = useRef<AppHistoryState>(getInitialHistoryState());
   const [screen, setScreen] = useState<AppScreen>(initialHistoryStateRef.current.screen);
   const [dashboardContext, setDashboardContext] = useState<DashboardRoomTarget>(
@@ -359,4 +361,38 @@ export default function App() {
       }}
     />
   );
+}
+
+function AppGuard() {
+  const { status, signOut } = useAuth();
+  const [signOutError, setSignOutError] = useState('');
+
+  if (status === 'loading') {
+    return <main className="auth-loading" aria-live="polite">Chargement de votre session…</main>;
+  }
+
+  if (status !== 'authenticated') {
+    return <LoginView sessionExpired={status === 'expired'} />;
+  }
+
+  return (
+    <>
+      {signOutError && <div className="session-error" role="alert">{signOutError}</div>}
+      <button
+        type="button"
+        className="session-signOut"
+        onClick={async () => {
+          const { error } = await signOut();
+          setSignOutError(error ? 'La déconnexion a échoué. Réessayez.' : '');
+        }}
+      >
+        Se déconnecter
+      </button>
+      <AuthenticatedApp />
+    </>
+  );
+}
+
+export default function App() {
+  return <AuthProvider><AppGuard /></AuthProvider>;
 }
