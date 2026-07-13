@@ -658,8 +658,8 @@ textarea {
   position: absolute;
   top: 56px;
   right: 20px;
-  display: flex;
-  min-width: 240px;
+  display: block;
+  width: min(440px, calc(100vw - 40px));
   align-items: center;
   gap: 10px;
   padding: 16px;
@@ -668,6 +668,14 @@ textarea {
   background: var(--bg-surface-strong);
   box-shadow: var(--shadow-card);
 }
+
+.app-notificationsHost { position: relative; }
+.app-notificationsBadge { position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; background: var(--danger); color: white; font-size: 12px; line-height: 20px; }
+.app-notificationsList, .collaboration-form { display: grid; gap: 12px; }
+.app-notificationRow, .collaboration-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border-soft); }
+.app-notificationRow span, .collaboration-row span { flex: 1; }
+.collaboration-form { grid-template-columns: minmax(0, 1fr) 150px auto; align-items: end; }
+.app-projectCollaborators { grid-column: 1 / -1; width: 100%; display: flex !important; gap: 8px; padding: 0 12px !important; }
 
 .app-notifications p {
   margin: 0;

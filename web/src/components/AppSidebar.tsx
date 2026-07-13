@@ -15,6 +15,7 @@ import {
   LuPlus,
   LuShieldCheck,
   LuTrash2,
+  LuUsers,
 } from 'react-icons/lu';
 import { useAdminControls } from './AdminContext';
 import type { Project } from '../domain/types';
@@ -47,6 +48,7 @@ export function AppSidebar({
   onCreateProject,
   onEditProject,
   onDeleteProject,
+  onManageCollaborators,
   onNavigate,
   onSelectProject,
 }: {
@@ -58,6 +60,7 @@ export function AppSidebar({
   onCreateProject(): void;
   onEditProject(): void;
   onDeleteProject(): void;
+  onManageCollaborators(): void;
   onNavigate(route: MainRoute): void;
   onSelectProject(projectId: string): void;
 }) {
@@ -102,6 +105,7 @@ export function AppSidebar({
             </button>
           )}
         </div>
+        {currentProject && canManageCurrentProject && <button className="app-projectCollaborators" type="button" onClick={onManageCollaborators}><LuUsers aria-hidden="true" /> Gérer les collaborateurs</button>}
       </div>
 
       <nav className="dashboard-nav" aria-label="Navigation principale">

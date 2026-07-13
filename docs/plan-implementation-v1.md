@@ -98,6 +98,8 @@ Statut : implémentée le 2026-07-13. La liste active exclut les projets supprim
 
 Créer ProjectCollaborationModal, AppNotifications et les capacités frontend centralisées. Gérer invitation d’un compte existant, rôles lecture/écriture, renvoi, annulation, acceptation, changement de rôle et retrait. Vérifier qu’il n’existe aucun accès avant acceptation et que seul le propriétaire gère le partage.
 
+Statut : implémentée le 2026-07-13. Les transitions d’invitation sont sécurisées par des RPC PostgreSQL, l’acceptation crée atomiquement la collaboration et les capacités de gestion restent réservées au propriétaire.
+
 ### V1-18 — Implémenter le verrou d’édition collaboratif
 
 Implémenter le verrou au niveau du projet, son acquisition atomique lors d’une modification persistée, son renouvellement à chaque modification persistée du détenteur et son expiration deux minutes après la dernière activité selon l’heure du serveur. Tester avec deux sessions qu’un seul éditeur écrit et que la lecture reste possible.

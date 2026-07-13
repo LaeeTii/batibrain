@@ -4,13 +4,15 @@ import { AdminProvider } from './components/AdminContext';
 import { AccountModal } from './components/AccountModal';
 import { PreferencesModal } from './components/PreferencesModal';
 import { PreferencesProvider } from './components/PreferencesContext';
+import { AppNotifications } from './components/AppNotifications';
+import { ProjectCollaborationModal } from './components/ProjectCollaborationModal';
 import { AppSidebar, type MainRoute } from './components/AppSidebar';
 import { supabaseAccountGateway } from './data/supabase/account';
 import type { UserProfile } from './domain/types';
 import type { Project } from './domain/types';
 import { createProject, listProjects, softDeleteProject, updateProject } from './services/projects';
 import { Button, Modal, TextInput, Textarea } from '@mantine/core';
-import { LuBell, LuBellOff, LuMenu, LuSettings } from 'react-icons/lu';
+import { LuMenu, LuSettings } from 'react-icons/lu';
 import { LoginView } from './views/LoginView';
 import { LevelOverviewSummary } from './views/LevelOverviewSummary';
 import { RoomEditor } from './views/RoomEditor';
@@ -265,7 +267,7 @@ function AuthenticatedApp() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [collaborationOpen, setCollaborationOpen] = useState(false);
   const [signOutError, setSignOutError] = useState('');
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -529,6 +531,7 @@ function AuthenticatedApp() {
           onCreateProject={openCreateProject}
           onEditProject={() => { if (currentProject) openEditProject(currentProject); }}
           onDeleteProject={() => { if (currentProject) setProjectToDelete(currentProject); }}
+          onManageCollaborators={() => setCollaborationOpen(true)}
           onNavigate={(route) => pushScreen({ name: route })}
           onSelectProject={(projectId) => {
             if (projectId !== dashboardContext.projectId) {
@@ -545,9 +548,12 @@ function AuthenticatedApp() {
             </button>
           )}
           <div className="app-globalActions__right">
-            <button className="app-iconButton" type="button" onClick={() => setNotificationsOpen((open) => !open)} aria-label="Ouvrir les notifications" aria-expanded={notificationsOpen} title="Ouvrir les notifications">
-              <LuBell aria-hidden="true" />
-            </button>
+            <AppNotifications onProjectAccepted={(projectId) => {
+              void listProjects().then((loadedProjects) => {
+                setProjects(loadedProjects);
+                updateDashboardContext({ projectId, levelId: '', roomId: '' }, 'push');
+              });
+            }} />
             <button className="app-iconButton" type="button" onClick={() => setPreferencesOpen(true)} aria-label="Ouvrir les préférences" title="Ouvrir les préférences">
               <LuSettings aria-hidden="true" />
             </button>
@@ -560,12 +566,6 @@ function AuthenticatedApp() {
               <strong>{sidebarProfile.displayName}</strong>
             </button>
           </div>
-          {notificationsOpen && (
-            <section className="app-notifications" aria-label="Notifications">
-              <LuBellOff aria-hidden="true" />
-              <p>Aucune notification.</p>
-            </section>
-          )}
         </header>
         {signOutError && <div className="session-error" role="alert">{signOutError}</div>}
         {projectsStatus === 'loading' ? (
@@ -584,6 +584,7 @@ function AuthenticatedApp() {
         )}
       </div>
       <PreferencesModal opened={preferencesOpen} onClose={() => setPreferencesOpen(false)} />
+      {collaborationOpen && currentProject && currentProject.ownerUserId === session?.user.id && <ProjectCollaborationModal projectId={currentProject.id} projectName={currentProject.name} onClose={() => setCollaborationOpen(false)} />}
       {accountOpen && (
         <AccountModal
           onClose={() => setAccountOpen(false)}
