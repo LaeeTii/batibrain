@@ -42,10 +42,25 @@ export interface Level {
   altitudeCm?: number | null;
 }
 
+export type RoomType =
+  | 'cuisine'
+  | 'chambre'
+  | 'salon'
+  | 'salle_de_bain'
+  | 'toilettes'
+  | 'bureau'
+  | 'garage'
+  | 'hall'
+  | 'salle_de_jeu'
+  | 'bibliotheque'
+  | 'autre';
+
 export interface Room {
   id: Id;
   levelId: Id;
   name: string;
+  type: RoomType;
+  floorColor: string;
   notes?: string | null;
 }
 

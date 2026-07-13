@@ -25,6 +25,10 @@
 
 ## Invariants
 - L'ordre des sommets d'une pièce doit rester stable afin de permettre le calcul fiable des murs, angles, surfaces et perimetres.
+- Une pièce possède au moins trois sommets aux coordonnées finies, ordonnés de manière unique et continue à partir de zéro.
+- La fermeture d'une pièce est implicite entre son dernier et son premier sommet; le premier sommet n'est pas dupliqué en fin de liste.
+- Le contour d'une pièce ne peut pas s'auto-intersecter.
+- Une nouvelle pièce utilise un rectangle initial de `200 × 200 cm`, le nom `Nouvelle pièce` si aucun nom n'est fourni, le type `autre` et la couleur de sol `#E5FFFC`.
 - Un mur peut exister seul ou etre lie a une ou deux pièces.
 - Un mur ne peut jamais être lié à trois pièces.
 - Un mur lie a une seule pièce est extérieur pour cette pièce.

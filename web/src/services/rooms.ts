@@ -6,13 +6,16 @@ import {
   syncWallsWithVertices,
   validateOpenings,
 } from '../domain/geometry';
-import type { Opening, Room, Vertex, Wall } from '../domain/types';
+import { DEFAULT_ROOM_FLOOR_COLOR, DEFAULT_ROOM_TYPE } from '../domain/room';
+import type { Opening, Room, RoomType, Vertex, Wall } from '../domain/types';
 import { getSupabaseClient } from '../lib/supabase';
 
 type PieceRow = {
   id: string;
   level_id: string;
   name: string;
+  room_type: RoomType;
+  floor_color: string;
   notes: string | null;
 };
 
@@ -59,6 +62,8 @@ export interface CreateRoomInput {
   id?: string;
   levelId: string;
   name: string;
+  type?: RoomType;
+  floorColor?: string;
   notes?: string | null;
 }
 
@@ -67,6 +72,8 @@ function mapPieceRow(row: PieceRow): Room {
     id: row.id,
     levelId: row.level_id,
     name: row.name,
+    type: row.room_type,
+    floorColor: row.floor_color,
     notes: row.notes,
   };
 }
@@ -114,6 +121,8 @@ function toPieceRow(room: Room): PieceRow {
     id: room.id,
     level_id: room.levelId,
     name: room.name,
+    room_type: room.type,
+    floor_color: room.floorColor,
     notes: room.notes ?? null,
   };
 }
@@ -123,6 +132,8 @@ function toPieceInsertRow(room: CreateRoomInput): Partial<PieceRow> {
     ...(room.id ? { id: room.id } : {}),
     level_id: room.levelId,
     name: room.name,
+    room_type: room.type ?? DEFAULT_ROOM_TYPE,
+    floor_color: room.floorColor?.trim() || DEFAULT_ROOM_FLOOR_COLOR,
     notes: room.notes ?? null,
   };
 }
@@ -169,7 +180,7 @@ export async function getRoom(roomId: string): Promise<Room> {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('pieces')
-    .select('id, level_id, name, notes')
+    .select('id, level_id, name, room_type, floor_color, notes')
     .eq('id', roomId)
     .single();
 
@@ -184,7 +195,7 @@ export async function listRoomsByLevel(levelId: string): Promise<Room[]> {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('pieces')
-    .select('id, level_id, name, notes')
+    .select('id, level_id, name, room_type, floor_color, notes')
     .eq('level_id', levelId)
     .order('created_at');
 
@@ -255,7 +266,7 @@ export async function createRoom(room: CreateRoomInput): Promise<Room> {
   const { data, error } = await supabase
     .from('pieces')
     .insert(toPieceInsertRow(room))
-    .select('id, level_id, name, notes')
+    .select('id, level_id, name, room_type, floor_color, notes')
     .single();
 
   if (error) {
@@ -272,10 +283,12 @@ export async function updateRoom(room: Room): Promise<Room> {
     .update({
       level_id: room.levelId,
       name: room.name,
+      room_type: room.type,
+      floor_color: room.floorColor,
       notes: room.notes ?? null,
     })
     .eq('id', room.id)
-    .select('id, level_id, name, notes')
+    .select('id, level_id, name, room_type, floor_color, notes')
     .single();
 
   if (error) {
@@ -290,7 +303,7 @@ export async function saveRoom(room: Room): Promise<Room> {
   const { data, error } = await supabase
     .from('pieces')
     .upsert(toPieceRow(room), { onConflict: 'id' })
-    .select('id, level_id, name, notes')
+    .select('id, level_id, name, room_type, floor_color, notes')
     .single();
 
   if (error) {
