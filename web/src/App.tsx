@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AuthProvider, useAuth } from './components/AuthProvider';
+import { SettingsModal } from './components/SettingsModal';
+import { LuSettings } from 'react-icons/lu';
 import { LoginView } from './views/LoginView';
 import { LevelOverviewSummary } from './views/LevelOverviewSummary';
 import { RoomEditor } from './views/RoomEditor';
@@ -366,6 +368,7 @@ function AuthenticatedApp() {
 function AppGuard() {
   const { status, signOut } = useAuth();
   const [signOutError, setSignOutError] = useState('');
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   if (status === 'loading') {
     return <main className="auth-loading" aria-live="polite">Chargement de votre session…</main>;
@@ -378,16 +381,19 @@ function AppGuard() {
   return (
     <>
       {signOutError && <div className="session-error" role="alert">{signOutError}</div>}
-      <button
-        type="button"
-        className="session-signOut"
-        onClick={async () => {
-          const { error } = await signOut();
-          setSignOutError(error ? 'La déconnexion a échoué. Réessayez.' : '');
-        }}
-      >
-        Se déconnecter
+      <button type="button" className="session-settings" aria-label="Ouvrir les paramètres" onClick={() => setSettingsOpen(true)}>
+        <LuSettings aria-hidden="true" />
       </button>
+      {settingsOpen && (
+        <SettingsModal
+          onClose={() => setSettingsOpen(false)}
+          onSignOut={async () => {
+            const { error } = await signOut();
+            setSignOutError(error ? 'La déconnexion a échoué. Réessayez.' : '');
+            if (!error) setSettingsOpen(false);
+          }}
+        />
+      )}
       <AuthenticatedApp />
     </>
   );

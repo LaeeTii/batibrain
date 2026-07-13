@@ -35,6 +35,18 @@ export interface Project {
   description?: string | null;
 }
 
+export type UserRole = 'user' | 'admin';
+
+export interface UserProfile {
+  userId: Id;
+  displayName: string;
+  firstName: string;
+  lastName: string;
+  avatarStoragePath: string | null;
+  avatarUrl: string | null;
+  role: UserRole;
+}
+
 export interface Level {
   id: Id;
   projectId: Id;

@@ -109,6 +109,8 @@ Règles:
 - `displayName` est obligatoire et unique parmi les profils BatiBrain.
 - Le prénom et le nom sont persistés séparément.
 - L'avatar est stocké dans un bucket Supabase Storage privé; seul son chemin est persisté dans le profil.
+- Un avatar est une image JPEG, PNG, WebP ou GIF de 5 Mio maximum, stockée sous le préfixe privé de l'identifiant utilisateur.
+- La modification personnelle passe par `update_own_profile`, qui ne reçoit jamais le rôle et refuse tout chemin d'avatar appartenant à un autre utilisateur.
 - L'utilisateur authentifié peut créer, lire et modifier uniquement son propre profil.
 - Tout nouveau compte approuvé reçoit le rôle `user`.
 - Le rôle est modifiable uniquement par un administrateur et n'est jamais accepté depuis une mise à jour de profil personnelle.

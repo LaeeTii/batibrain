@@ -119,6 +119,7 @@
 		- nom d'affichage obligatoire et unique;
 		- prénom et nom enregistrés séparément;
 		- avatar image téléversé dans Supabase Storage;
+		- avatar limité à 5 Mio et aux formats JPEG, PNG, WebP ou GIF;
 		- adresse e-mail active fournie par Supabase Auth.
 	- Unités de longueur disponibles:
 		- `cm` (par défaut)

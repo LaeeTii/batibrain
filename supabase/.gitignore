@@ -1,6 +1,7 @@
 # Supabase
 .branches
 .temp
+migrations/20260714000007_create_initial_user_profile.sql
 
 # dotenvx
 .env.keys

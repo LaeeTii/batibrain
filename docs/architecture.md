@@ -26,6 +26,8 @@ Le socle de tests frontend repose sur Vitest, Testing Library et jsdom. `npm run
 - les projections (métriques, angles, vues dérivées) sont calculées
 - les préférences utilisateur (unités, thème, hauteur et épaisseur de mur par défaut) sont persistées côté Supabase/PostgreSQL et relues à l'ouverture de session pour initialiser l'interface
 - le profil applicatif (nom d'affichage unique, prénom, nom et chemin d'avatar) est persisté dans une table publique liée à `auth.users`; l'image d'avatar est téléversée dans un bucket Supabase Storage privé propre à cet usage
+- la RPC `update_own_profile` limite une modification personnelle au nom d'affichage, au prénom, au nom et au chemin d'avatar du compte courant; le rôle n'est jamais un paramètre accepté
+- les avatars privés sont limités à 5 Mio et aux formats JPEG, PNG, WebP ou GIF; leur chemin commence obligatoirement par l'identifiant de l'utilisateur courant
 - l'adresse e-mail, le mot de passe, la confirmation du changement d'e-mail et la déconnexion restent gérés par Supabase Auth; la nouvelle adresse ne devient active qu'après confirmation
 - les rôles applicatifs `user` et `admin` sont persistés dans le profil public et contrôlés côté backend; ils ne sont jamais modifiables depuis les paramètres personnels ni depuis les métadonnées éditables par l'utilisateur
 - une demande de compte est persistée sans mot de passe avant tout utilisateur Supabase Auth; son approbation passe par une fonction serveur utilisant l'API Auth Admin pour créer l'utilisateur de rôle `user` et lui envoyer une invitation
