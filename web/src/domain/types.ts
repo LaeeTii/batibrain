@@ -83,6 +83,21 @@ export interface WallFace {
   side: WallFaceSide;
 }
 
+export interface WallHeightProfilePoint {
+  id: Id;
+  wallId: Id;
+  faceSide: WallFaceSide;
+  order: number;
+  positionCm: number;
+  heightCm: number;
+}
+
+export interface WallHeightProfiles {
+  wallId: Id;
+  gauche: WallHeightProfilePoint[];
+  droite: WallHeightProfilePoint[];
+}
+
 export interface WallPieceRelation {
   wallId: Id;
   pieceId: Id;
@@ -100,6 +115,7 @@ export interface TopologyWall {
   insulation: string | null;
   notes: string | null;
   isLocked: boolean;
+  heightProfilesLinked: boolean;
 }
 
 export type OpeningType = 'door' | 'window' | 'other';

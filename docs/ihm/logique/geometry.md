@@ -44,6 +44,7 @@
 - Pour un mur mitoyen, l'orientation de chaque face vers l'une des deux pièces est calculée depuis la topologie.
 - Pour un mur extérieur, les faces intérieure et extérieure sont toutes deux éditables.
 - Si le sens du segment est inversé par une transformation topologique, les profils sont permutés afin de rester attachés à la même face physique.
+- Lors de cette inversion, les distances des points sont recalculées depuis la nouvelle origine du segment (`nouvelle distance = longueur du mur - ancienne distance`) et leur ordre est inversé.
 - L'édition géométrique d'un mur mitoyen doit impacter de facon coherente les deux pièces liees a ce mur.
 - Un mur n'est supprimable que lorsqu'il n'est plus lie a aucune pièce.
 - Une ouverture doit rester entierement comprise dans son mur support.
@@ -113,6 +114,7 @@
 - Refuser un profil sans point aux deux extrémités, non ordonné, hors des bornes du mur ou contenant une hauteur non positive.
 - Refuser une modification de profil qui rend une ouverture existante incompatible avec l'une des deux faces.
 - Refuser toute persistance partielle qui rendrait différents deux profils dont le lien est actif.
+- Refuser une remise en liaison non confirmée; après confirmation, le profil de la face affichée devient la source copiée vers la face opposée.
 - Refuser deux ouvertures chevauchantes sur un meme mur.
 - Refuser la pose d'un template intérieur sur un mur extérieur et d'un template extérieur sur un mur intérieur.
 - Refuser une cote de longueur nulle.

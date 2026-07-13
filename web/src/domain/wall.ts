@@ -69,6 +69,7 @@ export function createWallsFromVertices(
       insulation: null,
       notes: null,
       isLocked: false,
+      heightProfilesLinked: true,
     };
   });
 }
