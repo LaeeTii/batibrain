@@ -80,9 +80,11 @@ Créer AdminModal pour lister demandes et utilisateurs, approuver, changer un r�
 
 Créer les routes V1, AppSidebar avec liens et icônes, vue active, destinations futures désactivées, ouverture/fermeture de session, actions Notifications et Paramètres, thème Mantine et contrat iconographique. Vérifier l’accessibilité clavier et le comportement au rechargement.
 
-### V1-15 — Implémenter SettingsModal et les préférences
+Statut : implémentée le 2026-07-13.
 
-Séparer Préférences utilisateur et Compte, puis gérer unités, thème, hauteur et épaisseur de mur par défaut et options d’affichage. Relire les préférences à la connexion, conserver les centimètres comme unité métier et ne pas modifier rétroactivement les murs existants.
+### V1-15 — Implémenter PreferencesModal et AccountModal
+
+Séparer PreferencesModal, accessible par la roue crantée, et AccountModal, accessible par le profil du header. Gérer unités, thème, hauteur et épaisseur de mur par défaut et options d’affichage. Relire les préférences à la connexion, conserver les centimètres comme unité métier et ne pas modifier rétroactivement les murs existants.
 
 ### V1-16 — Implémenter les projets et le contexte courant
 

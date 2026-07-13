@@ -1,13 +1,12 @@
-# Side bar menu- description
+# AppSidebar — description
 
-## Structure (colone de gauche)
-- Bouton icône de fermeture de la side bar.
-- Logo + nom de l'application
-- Avatar + nom de l'utilisateur connecté
+## Structure (colonne de gauche)
+- Bouton icône de fermeture placé tout en haut à droite de la side bar, sans modifier le centrage de l'identité visuelle.
+- Logo blanc centré avec le nom de l'application placé en dessous, sans contour autour de l'ensemble.
 - Bouton `Admin` en bas de la side bar, visible uniquement pour un utilisateur de rôle `admin`.
-- Séléction du projet courant (dropdown)
+- Sélecteur du projet courant, placé juste au-dessus du lien `Tableau de bord`, avec un bouton icône `+` accolé à droite.
 - Action de gestion des collaborateurs dans le contexte du projet courant, visible uniquement pour son propriétaire, ouvrant ProjectCollaborationModal.
-- "créer un projet" (bouton) -> ouvre une modale.
+- Le bouton `+` ouvre la modale de création d'un projet.
 - Liens de navigation avec une icône explicite et un libellé visible :
     - "Tableau de bord" -> ouvre la vue tableau de bord.
     - "Édition globale" -> ouvre la vue édition globale du projet.
@@ -23,7 +22,7 @@ Lorsque la side bar est fermée, elle est masquée et un bouton icône menu rest
 ## Iconographie
 - Fermer la side bar: `LuPanelLeftClose`, icône seule.
 - Rouvrir la side bar: `LuMenu`, icône seule.
-- Créer un projet: `LuFolderPlus`, icône + texte.
+- Créer un projet: `LuPlus`, icône seule, avec un nom accessible et une infobulle.
 - Gérer les collaborateurs: `LuUsers`, icône + texte.
 - Navigation principale, toujours avec icône + texte:
     - Dashboard: `LuLayoutDashboard`;
@@ -55,18 +54,18 @@ Lorsque la side bar est fermée, elle est masquée et un bouton icône menu rest
 
 - L'état n'est pas persisté après un rechargement de l'application.
 
-- Le bouton "Créer un projet" ouvre un modal avec les champs suivants :
+- Le bouton `+` accolé au sélecteur ouvre une modale avec les champs suivants :
     - Nom du projet (input text)
     - Description (input text)
     - Bouton "Créer" (button actif que si le champ nom est rempli)
 
-- Après la création d'un projet, la modale se ferme, Le projet est créé dans la base de données et le champ séléction du projet courant est mis à jour avec le projet créé. 
+- Après la création d'un projet, la modale se ferme, le projet est créé dans la base de données et le sélecteur du projet courant est mis à jour avec le projet créé.
 
-- le projet courant détermine le contexte de l'application, toutes les vues affichent les données du projet courant.
+- Le projet courant détermine le contexte de l'application; toutes les vues affichent les données du projet courant.
 
-- le sélecteur de projet contient les projets possédés par l'utilisateur et les projets partagés dont il a accepté l'invitation.
+- Le sélecteur contient les projets possédés par l'utilisateur et les projets partagés dont il a accepté l'invitation.
 
-- un projet faisant l'objet d'une invitation encore en attente n'apparaît pas dans le sélecteur.
+- Un projet faisant l'objet d'une invitation encore en attente n'apparaît pas dans le sélecteur.
 
 ## Critères d'acceptation testables
 
@@ -79,3 +78,6 @@ Lorsque la side bar est fermée, elle est masquée et un bouton icône menu rest
 - Given la side bar est ouverte, When la navigation principale est affichée, Then chaque destination est présentée sous forme de lien avec une icône explicite et un libellé visible.
 - Given une vue est active, When la side bar est affichée, Then son lien de navigation est identifiable visuellement et expose son état actif aux technologies d'assistance.
 - Given une destination est indisponible, When la side bar est affichée, Then son lien est identifiable comme indisponible et ne déclenche aucune navigation.
+- Given AppSidebar est affichée, When l'utilisateur consulte son en-tête, Then le logo blanc et le nom sont centrés indépendamment du bouton de fermeture placé en haut à droite.
+- Given plusieurs projets sont accessibles, When l'utilisateur choisit un projet dans le sélecteur situé au-dessus du lien Tableau de bord, Then ce projet devient le contexte courant.
+- Given l'utilisateur active le bouton `+`, When la modale s'ouvre et qu'il crée un projet valide, Then le nouveau projet devient le projet courant.

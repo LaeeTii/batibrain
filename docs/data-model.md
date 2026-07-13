@@ -40,7 +40,7 @@ Ce document ne remplace pas les sources fonctionnelles principales (`docs/ihm/`)
 | Domaine | Statut | Commentaire |
 |---|---|---|
 | Projet / niveaux / pièces / murs / faces / profils de hauteur / ouvertures / côtes / notes | Stabilisé | Contrats IHM détaillés disponibles (vues + logique + composants). |
-| Authentification / session / profil | Stabilisé | Contrats détaillés disponibles dans LoginView et SettingsModal. |
+| Authentification / session / profil | Stabilisé | Contrats détaillés disponibles dans LoginView, AccountModal et PreferencesModal. |
 | Collaboration projet | Stabilisé | Propriété, rôles globaux et invitations applicatives définis pour la V1. |
 | Verrouillage manuel | Stabilisé | État persistant indépendant pour les pièces, murs et ouvertures. |
 | Exports PDF plan et plan + détail | Stabilisé | Matrice complète de templates et données minimales définies. |

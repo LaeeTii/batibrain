@@ -4,7 +4,8 @@
 - Definir les composants transverses utilises par plusieurs vues et leur contrat de synchronisation avec le contexte projet et la sélection globale.
 
 ## Liste des composants
-- SettingsModal
+- PreferencesModal
+- AccountModal
 - AdminModal
 - AppSidebar
 - SidebarProjectContext
@@ -90,30 +91,33 @@
 	- Given l'acceptation réussit, When l'état est rafraîchi, Then la ligne disparaît et le badge est décrémenté.
 	- Given une demande de compte est en attente, When un administrateur consulte ses notifications, Then une ligne dédiée est affichée et permet d'ouvrir AdminModal.
 
-### Contrat SettingsModal
+### Contrat PreferencesModal
 - Objectif:
-	- Donner accès aux préférences utilisateur et aux paramètres de compte depuis une action globale de l'application.
+	- Donner accès exclusivement aux préférences utilisateur.
 - Accès:
 	- Bouton icône roue crantée situé en haut à droite de l'application.
 	- Le bouton reste disponible indépendamment de l'état ouvert ou fermé de la side bar.
 	- La side bar ne contient pas d'entrée Paramètres.
-- Portée:
-	- Modification des préférences de base de l'application.
-	- Modification du profil de compte et de l'adresse e-mail.
-	- Déclenchement du flux de changement de mot de passe.
-	- Déconnexion de l'utilisateur connecté.
 - Structure:
-	- Bloc profil courant en en-tête.
-	- Section `Préférences utilisateur`:
-		- bloc unités de mesure;
-		- bloc unités de surface;
-		- bloc valeurs de mur par défaut avec les champs `Hauteur` et `Épaisseur`;
-		- bloc thème UI.
-	- Section `Compte`:
-		- bloc profil avec avatar, nom d'affichage, prénom et nom;
-		- bloc adresse e-mail;
-		- bloc sécurité avec changement de mot de passe;
-		- action de déconnexion.
+	- choix de l'unité de longueur;
+	- choix de l'unité de surface;
+	- choix du thème UI;
+	- hauteur et épaisseur de mur par défaut;
+	- action d'enregistrement des préférences.
+
+### Contrat AccountModal
+- Objectif:
+	- Regrouper la gestion du compte et la déconnexion sans les mélanger aux préférences.
+- Accès:
+	- Bouton de profil situé à droite du header global, composé de l'avatar et du nom d'affichage;
+	- en l'absence d'avatar, affichage des initiales du prénom et du nom dans un cercle;
+	- l'adresse e-mail n'est pas affichée dans le header;
+	- l'accès reste disponible lorsque la side bar est fermée.
+- Structure:
+	- bloc profil avec avatar, nom d'affichage, prénom et nom;
+	- bloc adresse e-mail;
+	- bloc sécurité avec changement de mot de passe;
+	- action de déconnexion.
 - Contrat de données:
 	- Profil de compte:
 		- nom d'affichage obligatoire et unique;
@@ -140,7 +144,8 @@
 		- valeur initiale `10 cm`
 		- valeur strictement positive
 - Règles métier:
-	- Les sections `Préférences utilisateur` et `Compte` sont visuellement distinctes.
+	- PreferencesModal ne contient aucune action de profil, d'adresse e-mail, de mot de passe ou de déconnexion.
+	- AccountModal ne contient aucune préférence d'unité, de thème ou de valeur de mur par défaut.
 	- Les actions de compte ne sont pas enregistrées ni présentées comme des préférences utilisateur.
 	- Les préférences sont portées par l'utilisateur courant.
 	- Le profil applicatif est lié à l'identifiant Supabase Auth de l'utilisateur courant.
@@ -160,10 +165,11 @@
 	- Téléversement de l'avatar en cours, réussi ou échoué signalé explicitement.
 	- Changement d'adresse e-mail en attente de confirmation signalé sans présenter la nouvelle adresse comme active.
 	- Confirmation visuelle après prise en compte de chaque changement.
-- Criteres d'acceptation testables:
-	- Given l'application est affichée, When l'utilisateur active le bouton icône roue crantée en haut à droite, Then SettingsModal s'ouvre.
-	- Given la side bar est fermée, When l'utilisateur veut accéder aux paramètres, Then le bouton icône roue crantée reste disponible en haut à droite de l'application.
-	- Given la modale est ouverte, When son contenu est affiché, Then les unités, le thème et les valeurs de mur sont regroupés sous `Préférences utilisateur`, tandis que le profil, l'adresse e-mail, le changement de mot de passe et la déconnexion sont regroupés sous `Compte`.
+- Critères d'acceptation testables:
+	- Given l'application est affichée, When l'utilisateur active le bouton icône roue crantée, Then PreferencesModal s'ouvre sans action de compte ni déconnexion.
+	- Given la side bar est fermée, When l'utilisateur veut accéder aux préférences, Then le bouton icône roue crantée reste disponible en haut à droite de l'application.
+	- Given l'application est affichée, When l'utilisateur active son avatar ou son nom d'affichage, Then AccountModal s'ouvre avec la gestion du compte et la déconnexion.
+	- Given aucun avatar n'est défini, When le profil est affiché dans le header, Then les initiales du prénom et du nom apparaissent dans un cercle avec le nom d'affichage, sans adresse e-mail.
 	- Given un nom d'affichage disponible, When l'utilisateur enregistre son profil, Then le nom d'affichage, le prénom et le nom mis à jour sont affichés dans la modale.
 	- Given un nom d'affichage déjà utilisé, When l'utilisateur tente d'enregistrer son profil, Then la modification est refusée avec une erreur explicite.
 	- Given une image sélectionnée comme avatar, When le téléversement et la sauvegarde réussissent, Then le nouvel avatar est affiché pour l'utilisateur courant.
@@ -172,7 +178,7 @@
 	- Given la modale est ouverte, When l'utilisateur choisit `cm2` comme unité de surface, Then la préférence est enregistrée avec `cm2` comme valeur active.
 	- Given la modale est ouverte, When l'utilisateur enregistre une hauteur et une épaisseur de mur strictement positives, Then ces préférences deviennent les valeurs proposées lors des prochaines créations de pièces et de murs.
 	- Given des murs existent déjà, When l'utilisateur modifie la hauteur ou l'épaisseur de mur par défaut, Then les propriétés et profils de ces murs restent inchangés.
-	- Given la modale est ouverte, When l'utilisateur clique sur Déconnexion, Then il est redirigé vers LoginView.
+	- Given AccountModal est ouverte, When l'utilisateur clique sur Déconnexion, Then il est redirigé vers LoginView.
 
 ### Contrat AdminModal
 - Objectif:
@@ -219,9 +225,10 @@
 	- accepter: `LuCheck`, icône + texte;
 	- ouvrir l'administration: `LuArrowUpRight`, icône + texte;
 	- aucune notification: `LuBellOff`, icône décorative accompagnant le message vide.
-- SettingsModal:
+- PreferencesModal:
 	- Préférences utilisateur: `LuSlidersHorizontal`, icône + titre;
-	- Compte et profil: `LuUserRound`, icône + titre;
+- AccountModal:
+	- Compte et profil: avatar ou initiales avec nom d'affichage dans le header, puis `LuUserRound` dans la modale;
 	- sécurité et changement de mot de passe: `LuKeyRound`, icône + texte;
 	- déconnexion: `LuLogOut`, icône + texte.
 - AdminModal, avec icône + texte:
@@ -234,10 +241,14 @@
 - DetailTree utilise `LuChevronRight` et `LuChevronDown` sous forme d'icônes seules pour replier ou déplier un nœud.
 
 ## Responsabilites
-- SettingsModal:
-	- Donner accès aux préférences utilisateur et aux paramètres de compte depuis le bouton icône roue crantée en haut à droite de l'application.
+- PreferencesModal:
+	- Donner accès uniquement aux préférences utilisateur depuis le bouton icône roue crantée en haut à droite de l'application.
+- AccountModal:
+	- Donner accès au profil, à l'adresse e-mail, à la sécurité et à la déconnexion depuis l'avatar et le nom d'affichage du header global.
 - AppSidebar:
 	- Afficher la navigation principale sans entrée Paramètres.
+	- Afficher l'identité visuelle centrée et le bouton de fermeture en haut à droite sans que celui-ci décale le logo ou le nom.
+	- Afficher le sélecteur du projet courant et son bouton `+` juste au-dessus du lien Tableau de bord.
 	- Présenter chaque destination sous forme de lien avec une icône explicite et un libellé visible.
 	- Identifier le lien de la vue active et rendre les destinations indisponibles non activables.
 	- Permettre de masquer la side bar et de la rouvrir depuis le bouton icône menu en haut à gauche de l'application.

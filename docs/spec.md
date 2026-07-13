@@ -73,6 +73,9 @@ Date de mise à jour: 2026-07-12
 - Objectif:
 	- Présenter les destinations de la navigation principale comme des liens reconnaissables, accompagnés d'icônes explicites.
 - Portée fonctionnelle cible:
+	- Identité visuelle composée du logo blanc centré et du nom de l'application placé en dessous, sans contour.
+	- Bouton de fermeture placé tout en haut à droite sans décaler l'identité visuelle.
+	- Sélecteur du projet courant placé juste au-dessus du lien Tableau de bord, avec un bouton `+` accolé à droite pour créer un projet.
 	- Remplacement des boutons de navigation de la side bar par des liens conservant les destinations existantes.
 	- Affichage d'une icône explicite et d'un libellé visible pour chaque lien.
 	- Identification du lien correspondant à la vue active.
@@ -81,6 +84,9 @@ Date de mise à jour: 2026-07-12
 	- Les destinations indisponibles restent non activables et leur état est identifiable visuellement et par les technologies d'assistance.
 	- Le changement de présentation n'ajoute ni destination ni règle métier.
 - Critères d'acceptation:
+	- Le logo et le nom restent centrés indépendamment du bouton de fermeture.
+	- Le sélecteur de projet et son bouton `+` sont affichés immédiatement avant le premier lien de navigation.
+	- Après création depuis le bouton `+`, le nouveau projet devient le projet courant.
 	- Chaque destination de la side bar est présentée sous forme de lien avec une icône explicite et un libellé visible.
 	- Le lien de la vue active est identifiable visuellement et par les technologies d'assistance.
 	- Un lien vers une destination indisponible ne déclenche aucune navigation et expose son état indisponible.
@@ -123,7 +129,9 @@ Date de mise à jour: 2026-07-12
 	- Administration des comptes, des rôles `user` et `admin`, et des suppressions de comptes.
 	- Choix du thème UI, limité pour l'instant à clair, foncé ou system.
 - Règles métier minimales:
-	- Les paramètres sont accessibles depuis un bouton icône roue crantée situé en haut à droite de l'application.
+	- Les préférences sont accessibles depuis un bouton icône roue crantée situé en haut à droite de l'application.
+	- La gestion du compte et la déconnexion sont accessibles depuis l'avatar et le nom d'affichage situés à droite du header global.
+	- En l'absence d'avatar, les initiales du prénom et du nom sont affichées dans un cercle; l'adresse e-mail n'est pas affichée dans le header.
 	- La side bar ne contient aucune entrée Paramètres.
 	- Les unités, le thème et les valeurs de mur par défaut sont regroupés sous `Préférences utilisateur`.
 	- Le profil, l'adresse e-mail, le changement de mot de passe et la déconnexion sont regroupés sous `Compte` et ne sont pas présentés comme des préférences.
@@ -139,17 +147,19 @@ Date de mise à jour: 2026-07-12
 	- Toute opération sur les rôles doit conserver au moins un administrateur.
 	- La suppression d'un compte propriétaire exige une alerte explicite puis supprime en cascade ses projets et toutes leurs données.
 	- Le changement de mot de passe est proposé dans le contexte du compte authentifié.
-	- La déconnexion est accessible depuis la modale de paramètres.
+	- La déconnexion est accessible depuis la modale de compte ouverte par le profil du header.
 	- Le thème appliqué reste cohérent sur l'interface courante après sélection.
 	- La hauteur et l'épaisseur de mur par défaut sont des valeurs strictement positives, enregistrées en centimètres et affichées dans l'unité de longueur choisie.
 	- Les valeurs initiales sont `250 cm` pour la hauteur et `10 cm` pour l'épaisseur.
 	- Une modification s'applique aux pièces et murs créés ensuite, sans modifier les murs existants.
 - Critères d'acceptation:
-	- L'utilisateur peut ouvrir la modale de paramètres depuis le bouton icône roue crantée situé en haut à droite de l'application.
-	- L'accès aux paramètres reste disponible lorsque la side bar est fermée.
+	- L'utilisateur peut ouvrir la modale de préférences depuis le bouton icône roue crantée situé en haut à droite de l'application.
+	- L'utilisateur peut ouvrir la modale de compte depuis l'avatar et le nom d'affichage situés à droite du header.
+	- Les accès aux préférences et au compte restent disponibles lorsque la side bar est fermée.
 	- Aucune entrée Paramètres n'est affichée dans la side bar.
-	- La modale affiche deux sections distinctes intitulées `Préférences utilisateur` et `Compte`.
-	- L'utilisateur peut modifier son nom d'affichage, son nom et son prénom depuis la section `Compte`.
+	- La modale de préférences ne contient que les unités, le thème et les valeurs de mur par défaut.
+	- La modale de compte contient le profil, l'adresse e-mail, le changement de mot de passe et la déconnexion.
+	- L'utilisateur peut modifier son nom d'affichage, son nom et son prénom depuis la modale de compte.
 	- Un nom d'affichage déjà utilisé est refusé avec un message explicite.
 	- L'utilisateur peut téléverser une image comme avatar et voir l'avatar mis à jour après la sauvegarde.
 	- L'utilisateur peut demander la modification de son adresse e-mail; l'adresse courante reste affichée comme active jusqu'à confirmation de la nouvelle adresse.
