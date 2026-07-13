@@ -1,4 +1,6 @@
 import React from 'react';
+import { LuShield } from 'react-icons/lu';
+import { useAdminControls } from './AdminContext';
 
 const DASHBOARD_NAV_ITEMS = [
   { shortLabel: 'TB', label: 'Tableau de bord', isActive: true },
@@ -10,6 +12,7 @@ const DASHBOARD_NAV_ITEMS = [
 ];
 
 export function Sidebar() {
+  const { isAdmin, openAdmin } = useAdminControls();
   return (
     <aside className="dashboard-sidebar">
       <div className="dashboard-brandBlock">
@@ -40,6 +43,12 @@ export function Sidebar() {
           </button>
         ))}
       </nav>
+
+      {isAdmin && (
+        <button type="button" className="dashboard-adminButton" onClick={openAdmin}>
+          <LuShield aria-hidden="true" /> Admin
+        </button>
+      )}
     </aside>
   );
 }

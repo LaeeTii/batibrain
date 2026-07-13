@@ -24,11 +24,14 @@ export const supabaseAccountGateway: AccountGateway = {
   async loadProfile() {
     try {
       const client = getSupabaseClient();
-      const [{ data: authData, error: authError }, { data, error }] = await Promise.all([
-        client.auth.getUser(),
-        client.from('user_profiles').select('user_id,display_name,first_name,last_name,avatar_storage_path,role').single(),
-      ]);
-      if (authError || error || !data) return { profile: null, email: '', error: normalizeError(authError ?? error) };
+      const { data: authData, error: authError } = await client.auth.getUser();
+      if (authError || !authData.user) return { profile: null, email: '', error: normalizeError(authError) };
+      const { data, error } = await client
+        .from('user_profiles')
+        .select('user_id,display_name,first_name,last_name,avatar_storage_path,role')
+        .eq('user_id', authData.user.id)
+        .single();
+      if (error || !data) return { profile: null, email: '', error: normalizeError(error) };
 
       const avatarUrl = data.avatar_storage_path
         ? (await client.storage.from('user-avatars').createSignedUrl(data.avatar_storage_path, 3600)).data?.signedUrl ?? null
@@ -49,16 +52,19 @@ export const supabaseAccountGateway: AccountGateway = {
     let previousPath: string | null = null;
 
     try {
+      const { data: userData, error: userError } = await client.auth.getUser();
+      if (userError || !userData.user) return { profile: null, error: normalizeError(userError) };
       const { data: current, error: currentError } = await client
-        .from('user_profiles').select('avatar_storage_path').single();
+        .from('user_profiles')
+        .select('avatar_storage_path')
+        .eq('user_id', userData.user.id)
+        .single();
       if (currentError) return { profile: null, error: normalizeError(currentError) };
       previousPath = current.avatar_storage_path;
 
       if (avatar) {
         const validationError = validateAvatar(avatar);
         if (validationError) return { profile: null, error: new Error(validationError) };
-        const { data: userData, error: userError } = await client.auth.getUser();
-        if (userError || !userData.user) return { profile: null, error: normalizeError(userError) };
         const extension = avatar.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'image';
         uploadedPath = `${userData.user.id}/avatar-${crypto.randomUUID()}.${extension}`;
         const { error: uploadError } = await client.storage.from('user-avatars').upload(uploadedPath, avatar);
@@ -101,6 +107,14 @@ export const supabaseAccountGateway: AccountGateway = {
     return { error: error ? normalizeError(error) : null };
   },
 };
+
+export async function getCurrentUserRole(): Promise<UserRole | null> {
+  const client = getSupabaseClient();
+  const { data: authData, error: authError } = await client.auth.getUser();
+  if (authError || !authData.user) return null;
+  const { data, error } = await client.from('user_profiles').select('role').eq('user_id', authData.user.id).single();
+  return error ? null : data.role as UserRole;
+}
 
 function mapProfile(data: Record<string, unknown>, avatarUrl: string | null): UserProfile {
   return {

@@ -1,18 +1,14 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, apikey, content-type',
-};
+import { corsHeaders, withCors } from '../_shared/cors.ts';
 
 Deno.serve(async (request) => {
-  if (request.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
+  const headers = corsHeaders(request, 'POST, OPTIONS');
+  if (!headers) return json({ error: 'Origine non autorisée.' }, 403);
+  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
 
   try {
     const authorization = request.headers.get('Authorization');
-    if (!authorization) return json({ error: 'Authentification requise.' }, 401);
+    if (!authorization) return withCors(json({ error: 'Authentification requise.' }, 401), headers);
 
     const supabaseUrl = requiredEnvironment('SUPABASE_URL');
     const anonKey = requiredEnvironment('SUPABASE_ANON_KEY');
@@ -23,17 +19,17 @@ Deno.serve(async (request) => {
     });
 
     const { data: authData, error: authError } = await userClient.auth.getUser();
-    if (authError || !authData.user) return json({ error: 'Session administrateur invalide.' }, 401);
+    if (authError || !authData.user) return withCors(json({ error: 'Session administrateur invalide.' }, 401), headers);
 
     const { data: profile, error: profileError } = await userClient
       .from('user_profiles')
       .select('role')
       .eq('user_id', authData.user.id)
       .single();
-    if (profileError || profile?.role !== 'admin') return json({ error: 'Accès administrateur requis.' }, 403);
+    if (profileError || profile?.role !== 'admin') return withCors(json({ error: 'Accès administrateur requis.' }, 403), headers);
 
     const body = await request.json() as { requestId?: string };
-    if (!body.requestId) return json({ error: 'Identifiant de demande requis.' }, 400);
+    if (!body.requestId) return withCors(json({ error: 'Identifiant de demande requis.' }, 400), headers);
 
     const serviceClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
@@ -43,24 +39,25 @@ Deno.serve(async (request) => {
       .select('id,email,status')
       .eq('id', body.requestId)
       .single();
-    if (requestError || !accountRequest) return json({ error: 'Demande de compte introuvable.' }, 404);
-    if (accountRequest.status !== 'en_attente') return json({ error: 'Cette demande a déjà été traitée.' }, 409);
+    if (requestError || !accountRequest) return withCors(json({ error: 'Demande de compte introuvable.' }, 404), headers);
+    if (accountRequest.status !== 'en_attente') return withCors(json({ error: 'Cette demande a déjà été traitée.' }, 409), headers);
 
     const { error: invitationError } = await serviceClient.auth.admin.inviteUserByEmail(
       accountRequest.email,
       {
+        redirectTo: 'https://laeetii.github.io/batibrain/',
         data: {
           account_creation_request_id: accountRequest.id,
           approved_by_user_id: authData.user.id,
         },
       },
     );
-    if (invitationError) return json({ error: invitationError.message }, 409);
+    if (invitationError) return withCors(json({ error: invitationError.message }, 409), headers);
 
-    return json({ approved: true });
+    return withCors(json({ approved: true }), headers);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Erreur serveur inattendue.';
-    return json({ error: message }, 500);
+    return withCors(json({ error: message }, 500), headers);
   }
 });
 
@@ -73,6 +70,6 @@ function requiredEnvironment(name: string): string {
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json' },
   });
 }

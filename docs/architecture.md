@@ -32,9 +32,12 @@ Le socle de tests frontend repose sur Vitest, Testing Library et jsdom. `npm run
 - les rôles applicatifs `user` et `admin` sont persistés dans le profil public et contrôlés côté backend; ils ne sont jamais modifiables depuis les paramètres personnels ni depuis les métadonnées éditables par l'utilisateur
 - une demande de compte est persistée sans mot de passe avant tout utilisateur Supabase Auth; son approbation passe par une fonction serveur utilisant l'API Auth Admin pour créer l'utilisateur de rôle `user` et lui envoyer une invitation
 - le dépôt public d'une demande passe par la RPC `submit_account_creation_request`, qui normalise les saisies et contrôle atomiquement l'unicité de l'adresse e-mail et du nom d'affichage parmi les comptes et demandes en attente
-- la fonction serveur `approve-account-request` est la seule frontière utilisant la clé `service_role`; elle vérifie la session et le rôle administrateur avant d'envoyer l'invitation Supabase Auth
+- les fonctions serveur `approve-account-request` et `admin-accounts` sont les seules frontières utilisant la clé `service_role`; elles vérifient la session et le rôle administrateur avant toute opération Supabase Auth Admin
 - les métadonnées de l'invitation déclenchent, dans la transaction de création de l'utilisateur Auth, la création de son profil `user` et le passage de la demande à l'état `approuvée`; une erreur annule donc les trois écritures
+- `admin-accounts` agrège les profils, les adresses Auth, les demandes en attente et le nombre de projets possédés; il délègue les changements de rôle à la RPC protégée `set_user_role` et les suppressions à l'API Auth Admin
+- avant une suppression, le frontend confirme le nombre de projets possédés et le serveur le recompte; la suppression Auth cascade ensuite sur le profil, les projets possédés et leurs dépendances
 - les opérations d'administration Auth, notamment la création et la suppression d'un utilisateur, s'exécutent uniquement dans un environnement serveur sécurisé; aucune clé secrète Supabase n'est exposée au frontend
+- la base protège également le dernier administrateur contre une suppression directe de l'utilisateur Auth
 - le premier rôle `admin` est attribué manuellement au compte initial depuis l'interface d'administration de la base Supabase
 - la propriété des projets, les collaborations et les invitations sont persistées dans Supabase/PostgreSQL
 - l'accès aux données est limité côté backend aux projets possédés par l'utilisateur authentifié ou partagés avec lui après acceptation de l'invitation

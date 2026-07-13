@@ -117,6 +117,8 @@ Règles:
 - Le premier administrateur est promu manuellement dans Supabase après la création de son compte.
 - Un administrateur ne peut ni rétrograder ni supprimer son propre compte.
 - Toute modification de rôle ou suppression de compte doit conserver au moins un administrateur.
+- La suppression est confirmée avec le nombre courant de projets possédés; le serveur refuse l'opération si ce nombre a changé depuis l'affichage.
+- La suppression du compte Supabase Auth cascade physiquement sur son profil, ses projets possédés et toutes les données dépendantes de ces projets.
 - L'adresse e-mail et le mot de passe ne sont pas dupliqués dans le profil: ils restent gérés par Supabase Auth.
 - Une nouvelle adresse e-mail devient l'adresse active uniquement après confirmation du flux Supabase Auth.
 

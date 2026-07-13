@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AuthProvider, useAuth } from './components/AuthProvider';
 import { SettingsModal } from './components/SettingsModal';
+import { AdminProvider } from './components/AdminContext';
 import { LuSettings } from 'react-icons/lu';
 import { LoginView } from './views/LoginView';
 import { LevelOverviewSummary } from './views/LevelOverviewSummary';
@@ -394,7 +395,9 @@ function AppGuard() {
           }}
         />
       )}
-      <AuthenticatedApp />
+      <AdminProvider>
+        <AuthenticatedApp />
+      </AdminProvider>
     </>
   );
 }

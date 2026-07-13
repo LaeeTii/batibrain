@@ -47,6 +47,25 @@ export interface UserProfile {
   role: UserRole;
 }
 
+export interface AdminUserSummary {
+  userId: Id;
+  displayName: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: UserRole;
+  ownedProjectCount: number;
+}
+
+export interface AccountRequestSummary {
+  id: Id;
+  email: string;
+  displayName: string;
+  firstName: string;
+  lastName: string;
+  createdAt: string;
+}
+
 export interface Level {
   id: Id;
   projectId: Id;
