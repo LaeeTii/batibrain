@@ -35,6 +35,21 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+:root[data-mantine-color-scheme='dark'] {
+  --bg-shell: #0c1424;
+  --bg-surface: rgba(18, 30, 51, 0.92);
+  --bg-surface-strong: #121e33;
+  --bg-surface-muted: rgba(31, 47, 73, 0.92);
+  --border-soft: rgba(174, 190, 218, 0.22);
+  --border-strong: rgba(174, 190, 218, 0.3);
+  --text-strong: #edf3ff;
+  --text-muted: #aab8cf;
+  --accent-soft: rgba(61, 213, 240, 0.18);
+  --accent-strong: #71d8d3;
+  --shadow-soft: 0 24px 60px rgba(0, 0, 0, 0.3);
+  --shadow-card: 0 12px 32px rgba(0, 0, 0, 0.25);
+}
+
 * {
   box-sizing: border-box;
 }
