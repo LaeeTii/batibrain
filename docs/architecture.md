@@ -29,6 +29,9 @@ Le socle de tests frontend repose sur Vitest, Testing Library et jsdom. `npm run
 - l'adresse e-mail, le mot de passe, la confirmation du changement d'e-mail et la déconnexion restent gérés par Supabase Auth; la nouvelle adresse ne devient active qu'après confirmation
 - les rôles applicatifs `user` et `admin` sont persistés dans le profil public et contrôlés côté backend; ils ne sont jamais modifiables depuis les paramètres personnels ni depuis les métadonnées éditables par l'utilisateur
 - une demande de compte est persistée sans mot de passe avant tout utilisateur Supabase Auth; son approbation passe par une fonction serveur utilisant l'API Auth Admin pour créer l'utilisateur de rôle `user` et lui envoyer une invitation
+- le dépôt public d'une demande passe par la RPC `submit_account_creation_request`, qui normalise les saisies et contrôle atomiquement l'unicité de l'adresse e-mail et du nom d'affichage parmi les comptes et demandes en attente
+- la fonction serveur `approve-account-request` est la seule frontière utilisant la clé `service_role`; elle vérifie la session et le rôle administrateur avant d'envoyer l'invitation Supabase Auth
+- les métadonnées de l'invitation déclenchent, dans la transaction de création de l'utilisateur Auth, la création de son profil `user` et le passage de la demande à l'état `approuvée`; une erreur annule donc les trois écritures
 - les opérations d'administration Auth, notamment la création et la suppression d'un utilisateur, s'exécutent uniquement dans un environnement serveur sécurisé; aucune clé secrète Supabase n'est exposée au frontend
 - le premier rôle `admin` est attribué manuellement au compte initial depuis l'interface d'administration de la base Supabase
 - la propriété des projets, les collaborations et les invitations sont persistées dans Supabase/PostgreSQL

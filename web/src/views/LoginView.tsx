@@ -12,6 +12,7 @@ import {
   LuUserRoundPlus,
 } from 'react-icons/lu';
 import { useAuth } from '../components/AuthProvider';
+import { AccountRequestForm } from '../components/AccountRequestForm';
 import logo from '../assets/logo.svg';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -27,6 +28,7 @@ export function LoginView({ sessionExpired = false }: { sessionExpired?: boolean
   const [message, setMessage] = useState(sessionExpired ? 'Votre session a expiré. Veuillez vous reconnecter.' : '');
   const [messageKind, setMessageKind] = useState<'error' | 'success'>('error');
   const [submitting, setSubmitting] = useState(false);
+  const [requestingAccount, setRequestingAccount] = useState(false);
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
 
@@ -101,9 +103,13 @@ export function LoginView({ sessionExpired = false }: { sessionExpired?: boolean
           <p className="login-brand__name" aria-label="BatiBrain">
             <span className="login-brand__nameBati">Bati</span><span className="login-brand__nameBrain">Brain</span>
           </p>
-          <h1 id="login-title">Connexion</h1>
+          <h1 id="login-title">{requestingAccount ? 'Demande de compte' : 'Connexion'}</h1>
         </header>
 
+        {requestingAccount ? (
+          <AccountRequestForm onBack={() => setRequestingAccount(false)} />
+        ) : (
+          <>
         {message && (
           <div className={`login-message login-message--${messageKind}`} role={messageKind === 'error' ? 'alert' : 'status'}>
             {messageKind === 'error' ? <LuCircleAlert aria-hidden="true" /> : <LuCircleCheck aria-hidden="true" />}
@@ -146,10 +152,12 @@ export function LoginView({ sessionExpired = false }: { sessionExpired?: boolean
           </button>
         </form>
 
-        <button type="button" className="login-create" disabled title="Disponible avec la gestion des demandes de compte">
+        <button type="button" className="login-create" onClick={() => setRequestingAccount(true)}>
           <LuUserRoundPlus aria-hidden="true" /> Créer un compte
         </button>
         <p className="login-security">Votre session est sécurisée par Supabase Auth.</p>
+          </>
+        )}
       </section>
     </main>
   );

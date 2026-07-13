@@ -138,6 +138,9 @@ Règles:
 - Les administrateurs voient chaque demande en attente comme une notification.
 - L'approbation crée le compte Supabase Auth, crée son profil avec le rôle `user` et envoie l'invitation de définition du mot de passe.
 - Si l'adresse e-mail ou le nom d'affichage n'est plus disponible au moment de l'approbation, celle-ci échoue explicitement sans créer de compte partiel.
+- Le dépôt utilise la RPC publique `submit_account_creation_request`; elle normalise l'adresse e-mail et sérialise les contrôles d'unicité concurrents avant l'insertion.
+- L'approbation est initiée par la fonction serveur `approve-account-request`, réservée à un administrateur authentifié. La création du profil et la mise à jour de la demande sont déclenchées dans la transaction d'insertion `auth.users`, afin qu'aucun utilisateur Auth partiel ne subsiste en cas d'échec.
+- Les demandes `en_attente`, lisibles uniquement par les administrateurs, constituent la source de leurs notifications de compte sans duplication dans une table dédiée.
 
 ### ProjectCollaboration
 Représente l'accès accepté d'un utilisateur à l'ensemble d'un projet.
