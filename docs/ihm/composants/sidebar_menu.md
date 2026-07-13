@@ -7,6 +7,7 @@
 - Sélecteur du projet courant, placé juste au-dessus du lien `Tableau de bord`, avec un bouton icône `+` accolé à droite.
 - Action de gestion des collaborateurs dans le contexte du projet courant, visible uniquement pour son propriétaire, ouvrant ProjectCollaborationModal.
 - Le bouton `+` ouvre la modale de création d'un projet.
+- Pour le propriétaire du projet courant, les actions de modification et de suppression logique sont affichées sous le sélecteur. Elles restent absentes pour un collaborateur.
 - Liens de navigation avec une icône explicite et un libellé visible :
     - "Tableau de bord" -> ouvre la vue tableau de bord.
     - "Édition globale" -> ouvre la vue édition globale du projet.
@@ -23,6 +24,8 @@ Lorsque la side bar est fermée, elle est masquée et un bouton icône menu rest
 - Fermer la side bar: `LuPanelLeftClose`, icône seule.
 - Rouvrir la side bar: `LuMenu`, icône seule.
 - Créer un projet: `LuPlus`, icône seule, avec un nom accessible et une infobulle.
+- Modifier le projet: `LuPencil`, icône seule, avec un nom accessible et une infobulle.
+- Supprimer logiquement le projet: `LuTrash2`, icône seule, avec un nom accessible et une infobulle.
 - Gérer les collaborateurs: `LuUsers`, icône + texte.
 - Navigation principale, toujours avec icône + texte:
     - Dashboard: `LuLayoutDashboard`;
@@ -60,6 +63,8 @@ Lorsque la side bar est fermée, elle est masquée et un bouton icône menu rest
     - Bouton "Créer" (button actif que si le champ nom est rempli)
 
 - Après la création d'un projet, la modale se ferme, le projet est créé dans la base de données et le sélecteur du projet courant est mis à jour avec le projet créé.
+
+- Seul le propriétaire peut modifier le nom et la description du projet ou confirmer sa suppression logique. Après suppression, le projet disparaît de la liste active et le projet accessible modifié le plus récemment devient le contexte courant.
 
 - Le projet courant détermine le contexte de l'application; toutes les vues affichent les données du projet courant.
 

@@ -11,8 +11,10 @@ import {
   LuListChecks,
   LuPanelLeftClose,
   LuPencilRuler,
+  LuPencil,
   LuPlus,
   LuShieldCheck,
+  LuTrash2,
 } from 'react-icons/lu';
 import { useAdminControls } from './AdminContext';
 import type { Project } from '../domain/types';
@@ -40,20 +42,27 @@ export function AppSidebar({
   activeRoute,
   projects,
   currentProjectId,
+  canManageCurrentProject,
   onClose,
   onCreateProject,
+  onEditProject,
+  onDeleteProject,
   onNavigate,
   onSelectProject,
 }: {
   activeRoute: MainRoute;
   projects: Project[];
   currentProjectId: string;
+  canManageCurrentProject: boolean;
   onClose(): void;
   onCreateProject(): void;
+  onEditProject(): void;
+  onDeleteProject(): void;
   onNavigate(route: MainRoute): void;
   onSelectProject(projectId: string): void;
 }) {
   const { isAdmin, openAdmin } = useAdminControls();
+  const currentProject = projects.find((project) => project.id === currentProjectId);
 
   return (
     <aside className="dashboard-sidebar" aria-label="Navigation de l’application">
@@ -78,9 +87,21 @@ export function AppSidebar({
           <option value="">{projects.length === 0 ? 'Aucun projet' : 'Sélectionner un projet'}</option>
           {projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
         </select>
-        <button type="button" onClick={onCreateProject} aria-label="Créer un projet" title="Créer un projet">
-          <LuPlus aria-hidden="true" />
-        </button>
+        <div className="app-projectActions">
+          {currentProject && canManageCurrentProject && (
+            <button type="button" onClick={onEditProject} aria-label="Modifier le projet" title="Modifier le projet">
+              <LuPencil aria-hidden="true" />
+            </button>
+          )}
+          <button className="app-projectActions__add" type="button" onClick={onCreateProject} aria-label="Créer un projet" title="Créer un projet">
+            <LuPlus aria-hidden="true" />
+          </button>
+          {currentProject && canManageCurrentProject && (
+            <button className="app-projectActions__delete" type="button" onClick={onDeleteProject} aria-label="Supprimer le projet" title="Supprimer le projet">
+              <LuTrash2 aria-hidden="true" />
+            </button>
+          )}
+        </div>
       </div>
 
       <nav className="dashboard-nav" aria-label="Navigation principale">

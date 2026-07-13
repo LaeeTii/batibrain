@@ -8,7 +8,7 @@ import { AppSidebar, type MainRoute } from './components/AppSidebar';
 import { supabaseAccountGateway } from './data/supabase/account';
 import type { UserProfile } from './domain/types';
 import type { Project } from './domain/types';
-import { createProject, listProjects } from './services/projects';
+import { createProject, listProjects, softDeleteProject, updateProject } from './services/projects';
 import { Button, Modal, TextInput, Textarea } from '@mantine/core';
 import { LuBell, LuBellOff, LuMenu, LuSettings } from 'react-icons/lu';
 import { LoginView } from './views/LoginView';
@@ -269,11 +269,16 @@ function AuthenticatedApp() {
   const [signOutError, setSignOutError] = useState('');
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [projectsStatus, setProjectsStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [projectsError, setProjectsError] = useState('');
   const [projectModalOpen, setProjectModalOpen] = useState(false);
+  const [projectModalMode, setProjectModalMode] = useState<'create' | 'edit'>('create');
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDescription, setNewProjectDescription] = useState('');
   const [projectCreationPending, setProjectCreationPending] = useState(false);
   const [projectCreationError, setProjectCreationError] = useState('');
+  const [projectDeletionPending, setProjectDeletionPending] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -286,32 +291,93 @@ function AuthenticatedApp() {
   useEffect(() => {
     let active = true;
     void listProjects().then((loadedProjects) => {
-      if (active) setProjects(loadedProjects);
+      if (!active) return;
+      setProjects(loadedProjects);
+      setProjectsStatus('ready');
+      setProjectsError('');
+      const requestedProjectExists = loadedProjects.some((project) => project.id === dashboardContext.projectId);
+      if (!requestedProjectExists) {
+        const defaultProjectId = loadedProjects[0]?.id ?? '';
+        updateDashboardContext({ projectId: defaultProjectId, levelId: '', roomId: '' });
+      }
     }).catch(() => {
-      if (active) setProjects([]);
+      if (!active) return;
+      setProjects([]);
+      setProjectsStatus('error');
+      setProjectsError('Les projets n’ont pas pu être chargés. Réessayez.');
     });
     return () => { active = false; };
   }, []);
 
-  async function handleCreateProject() {
+  async function handleSaveProject() {
     const name = newProjectName.trim();
     if (!name) return;
     setProjectCreationPending(true);
     setProjectCreationError('');
     try {
-      const createdProject = await createProject({
-        name,
-        description: newProjectDescription.trim() || null,
-      });
-      setProjects((current) => [...current, createdProject]);
-      updateDashboardContext({ projectId: createdProject.id, levelId: '', roomId: '' }, 'push');
+      if (projectModalMode === 'edit') {
+        const currentProject = projects.find((project) => project.id === dashboardContext.projectId);
+        if (!currentProject || currentProject.ownerUserId !== session?.user.id) {
+          throw new Error('Droits insuffisants');
+        }
+        const updatedProject = await updateProject(currentProject.id, {
+          name,
+          address: currentProject.address,
+          description: newProjectDescription.trim() || null,
+        });
+        setProjects((current) => [updatedProject, ...current.filter((project) => project.id !== updatedProject.id)]);
+      } else {
+        if (!session?.user.id) throw new Error('Session absente');
+        const createdProject = await createProject({
+          ownerUserId: session.user.id,
+          name,
+          description: newProjectDescription.trim() || null,
+        });
+        setProjects((current) => [createdProject, ...current]);
+        updateDashboardContext({ projectId: createdProject.id, levelId: '', roomId: '' }, 'push');
+      }
       setNewProjectName('');
       setNewProjectDescription('');
       setProjectModalOpen(false);
     } catch {
-      setProjectCreationError('Le projet n’a pas pu être créé.');
+      setProjectCreationError(projectModalMode === 'edit'
+        ? 'Le projet n’a pas pu être modifié. Vérifiez que vous en êtes propriétaire.'
+        : 'Le projet n’a pas pu être créé.');
     } finally {
       setProjectCreationPending(false);
+    }
+  }
+
+  function openCreateProject() {
+    setProjectModalMode('create');
+    setNewProjectName('');
+    setNewProjectDescription('');
+    setProjectCreationError('');
+    setProjectModalOpen(true);
+  }
+
+  function openEditProject(project: Project) {
+    setProjectModalMode('edit');
+    setNewProjectName(project.name);
+    setNewProjectDescription(project.description ?? '');
+    setProjectCreationError('');
+    setProjectModalOpen(true);
+  }
+
+  async function handleDeleteProject() {
+    if (!projectToDelete || projectToDelete.ownerUserId !== session?.user.id) return;
+    setProjectDeletionPending(true);
+    setProjectsError('');
+    try {
+      await softDeleteProject(projectToDelete.id);
+      const remainingProjects = projects.filter((project) => project.id !== projectToDelete.id);
+      setProjects(remainingProjects);
+      updateDashboardContext({ projectId: remainingProjects[0]?.id ?? '', levelId: '', roomId: '' }, 'push');
+      setProjectToDelete(null);
+    } catch {
+      setProjectsError('Le projet n’a pas pu être supprimé. Vérifiez que vous en êtes propriétaire.');
+    } finally {
+      setProjectDeletionPending(false);
     }
   }
 
@@ -440,6 +506,7 @@ function AuthenticatedApp() {
   const activeRoute: MainRoute = screen.name === 'global-editor' || screen.name === 'metrics'
     ? screen.name
     : 'dashboard';
+  const currentProject = projects.find((project) => project.id === dashboardContext.projectId) ?? null;
   const sidebarProfile = profile ?? {
     displayName: session?.user.user_metadata.display_name ?? 'Utilisateur',
     firstName: session?.user.user_metadata.first_name ?? '',
@@ -457,10 +524,17 @@ function AuthenticatedApp() {
           activeRoute={activeRoute}
           projects={projects}
           currentProjectId={dashboardContext.projectId}
+          canManageCurrentProject={currentProject?.ownerUserId === session?.user.id}
           onClose={() => setSidebarOpen(false)}
-          onCreateProject={() => setProjectModalOpen(true)}
+          onCreateProject={openCreateProject}
+          onEditProject={() => { if (currentProject) openEditProject(currentProject); }}
+          onDeleteProject={() => { if (currentProject) setProjectToDelete(currentProject); }}
           onNavigate={(route) => pushScreen({ name: route })}
-          onSelectProject={(projectId) => updateDashboardContext({ projectId, levelId: '', roomId: '' }, 'push')}
+          onSelectProject={(projectId) => {
+            if (projectId !== dashboardContext.projectId) {
+              updateDashboardContext({ projectId, levelId: '', roomId: '' }, 'push');
+            }
+          }}
         />
       )}
       <div className="app-shell__content">
@@ -494,7 +568,20 @@ function AuthenticatedApp() {
           )}
         </header>
         {signOutError && <div className="session-error" role="alert">{signOutError}</div>}
-        {content}
+        {projectsStatus === 'loading' ? (
+          <main className="auth-loading" aria-live="polite">Chargement des projets…</main>
+        ) : projectsStatus === 'error' ? (
+          <main className="app-placeholder" role="alert">
+            <h2>Impossible de charger les projets</h2>
+            <p>{projectsError}</p>
+            <Button onClick={() => window.location.reload()}>Réessayer</Button>
+          </main>
+        ) : (
+          <>
+            {projectsError && <div className="session-error" role="alert">{projectsError}</div>}
+            {content}
+          </>
+        )}
       </div>
       <PreferencesModal opened={preferencesOpen} onClose={() => setPreferencesOpen(false)} />
       {accountOpen && (
@@ -507,12 +594,18 @@ function AuthenticatedApp() {
           }}
         />
       )}
-      <Modal opened={projectModalOpen} onClose={() => setProjectModalOpen(false)} title="Créer un projet" centered>
+      <Modal opened={projectModalOpen} onClose={() => setProjectModalOpen(false)} title={projectModalMode === 'edit' ? 'Modifier le projet' : 'Créer un projet'} centered>
         <div className="app-projectForm">
           <TextInput label="Nom du projet" value={newProjectName} onChange={(event) => setNewProjectName(event.currentTarget.value)} required autoFocus />
           <Textarea label="Description" value={newProjectDescription} onChange={(event) => setNewProjectDescription(event.currentTarget.value)} />
           {projectCreationError && <p className="app-projectForm__error" role="alert">{projectCreationError}</p>}
-          <Button onClick={() => void handleCreateProject()} disabled={!newProjectName.trim()} loading={projectCreationPending}>Créer</Button>
+          <Button onClick={() => void handleSaveProject()} disabled={!newProjectName.trim()} loading={projectCreationPending}>{projectModalMode === 'edit' ? 'Enregistrer' : 'Créer'}</Button>
+        </div>
+      </Modal>
+      <Modal opened={Boolean(projectToDelete)} onClose={() => setProjectToDelete(null)} title="Supprimer le projet" centered>
+        <div className="app-projectForm">
+          <p>Le projet « {projectToDelete?.name} » sera supprimé logiquement et masqué de vos projets actifs.</p>
+          <Button color="red" onClick={() => void handleDeleteProject()} loading={projectDeletionPending}>Confirmer la suppression</Button>
         </div>
       </Modal>
     </div>
