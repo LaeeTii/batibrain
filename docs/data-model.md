@@ -517,6 +517,10 @@ Chaque colonne est filtrable et triable selon son type. Une valeur sans objet es
 
 ## Invariants transverses
 - Les données accessibles à un utilisateur appartiennent à ses projets ou aux projets dont il a accepté la collaboration.
+- Les politiques RLS appliquent la même matrice à toutes les ressources imbriquées du projet: propriétaire en gestion complète, collaborateur `lecture` en consultation, collaborateur `écriture` en consultation et écriture métier, utilisateur sans accès sans lecture ni écriture.
+- La modification du projet, des invitations et des collaborations reste réservée au propriétaire; chaque collaborateur peut uniquement lire sa propre ligne d'accès et chaque utilisateur invité peut lire sa propre invitation.
+- Une invitation en attente ne satisfait jamais les droits de lecture ou d'écriture du projet.
+- Les options de vue sont des réglages propres à l'utilisateur: il peut créer ou modifier uniquement les siennes lorsqu'il dispose au moins d'un accès en lecture au projet.
 - Un utilisateur ne peut écrire que son propre profil et ses propres objets d'avatar.
 - Seul un administrateur peut lire l'ensemble des profils, modifier les rôles, consulter ou approuver les demandes de compte et supprimer un utilisateur.
 - La suppression d'un utilisateur propriétaire supprime physiquement ses projets puis, par cascade, l'ensemble des données qui en dépendent.

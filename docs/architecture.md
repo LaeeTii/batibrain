@@ -34,6 +34,9 @@ Le socle de tests frontend repose sur Vitest, Testing Library et jsdom. `npm run
 - la propriété des projets, les collaborations et les invitations sont persistées dans Supabase/PostgreSQL
 - l'accès aux données est limité côté backend aux projets possédés par l'utilisateur authentifié ou partagés avec lui après acceptation de l'invitation
 - les autorisations de lecture et d'écriture sont contrôlées côté backend selon le rôle projet; l'interface ne constitue pas la barrière de sécurité
+- les fonctions RLS `owns_project`, `can_read_project` et `can_write_project` centralisent la matrice d'accès sans exposer les tables de collaboration; les politiques des ressources imbriquées remontent jusqu'au projet par leurs clés étrangères
+- le propriétaire peut lire et gérer le projet, ses ressources et ses accès; le collaborateur en lecture consulte uniquement, le collaborateur en écriture modifie les ressources métier sans gérer le projet ni ses accès, et un utilisateur sans collaboration ne voit aucune ressource
+- les options de vue liées à un projet restent propres à leur utilisateur et peuvent être persistées dès que celui-ci dispose d'un accès en lecture au projet
 - le contrôle du droit d'écriture précède l'acquisition du verrou d'édition simple
 - le verrou d'édition collaboratif porte sur le projet entier; la première modification persistée sur un projet libre l'acquiert atomiquement, chaque modification persistée par son détenteur renouvelle son activité et il expire deux minutes après la dernière modification selon l'heure du serveur
 - l'expiration du verrou collaboratif est évaluée à l'écriture et à la lecture depuis son dernier horodatage d'activité; elle ne nécessite ni tâche planifiée ni libération explicite

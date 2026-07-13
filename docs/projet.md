@@ -82,7 +82,7 @@ Liste des artefacts non à jour:
 
 Règles de persistance:
 - La migration initiale [supabase/migrations/20260703_000002_init_v2.sql](../supabase/migrations/20260703_000002_init_v2.sql) est un historique immuable.
-- Toute évolution de persistance est ajoutée dans une nouvelle migration horodatée sous `supabase/migrations/`; une migration déjà appliquée n'est jamais modifiée.
+- Toute évolution de persistance est ajoutée dans une nouvelle migration nommée `<YYYYMMDDHHMMSS>_<description>.sql` sous `supabase/migrations/`; le préfixe numérique avant le premier `_` est unique et une migration déjà appliquée n'est jamais modifiée.
 - Une base neuve est créée en rejouant la chaîne complète des migrations.
 - Un éventuel schéma consolidé est un artefact généré depuis cette chaîne et non une source SQL maintenue séparément.
 

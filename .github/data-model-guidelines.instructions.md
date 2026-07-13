@@ -19,7 +19,7 @@ En cas de conflit documentaire, demander un arbitrage explicite à l'utilisateur
 
 ## Règles obligatoires
 - Ne jamais modifier une migration déjà appliquée, notamment `supabase/migrations/20260703_000002_init_v2.sql` qui constitue l'historique initial V1.
-- Appliquer toute évolution du schéma persistant dans une nouvelle migration horodatée sous `supabase/migrations/`.
+- Appliquer toute évolution du schéma persistant dans une nouvelle migration `<YYYYMMDDHHMMSS>_<description>.sql` sous `supabase/migrations/`, avec un préfixe numérique unique avant le premier `_`.
 - Générer tout éventuel schéma consolidé depuis la chaîne des migrations au lieu de le maintenir manuellement.
 - Définir les types métier dans `web/src/domain/types.ts`.
 - Éviter toute duplication de type dans les vues, composants, services et utilitaires.

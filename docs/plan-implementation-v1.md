@@ -16,7 +16,7 @@ Les tâches doivent être réalisées dans l’ordre. Il n’est pas nécessaire
 - Considérer `docs/ihm/` comme source fonctionnelle principale.
 - Placer les types et la logique métier frontend dans `web/src/domain/`.
 - Utiliser Supabase/PostgreSQL comme source des données persistées.
-- Conserver les migrations appliquées immuables et ajouter toute évolution de persistance dans une nouvelle migration horodatée sous `supabase/migrations/`.
+- Conserver les migrations appliquées immuables et ajouter toute évolution de persistance dans une nouvelle migration `<YYYYMMDDHHMMSS>_<description>.sql` sous `supabase/migrations/`, avec un préfixe numérique unique avant le premier `_`.
 - Calculer les données dérivées au lieu de les persister.
 - Ne pas prendre le code actuel de `web/` comme référence fonctionnelle.
 - Ne pas introduire de fonctionnalité prévue après la V1.
