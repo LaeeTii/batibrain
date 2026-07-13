@@ -1,5 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { MantineProvider, createTheme } from '@mantine/core';
+import '@mantine/core/styles.css';
 import App from './App';
 import './index.css';
 
@@ -11,6 +13,8 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <React.StrictMode>
-    <App />
+    <MantineProvider theme={createTheme({ primaryColor: 'teal', fontFamily: "'Avenir Next', 'Segoe UI', sans-serif" })}>
+      <App />
+    </MantineProvider>
   </React.StrictMode>,
 );

@@ -151,10 +151,10 @@ export function SettingsModal({
       <section className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
         <header className="settings-header">
           <div>
-            <p className="dashboard-eyebrow">Paramètres</p>
+            <p className="dashboard-eyebrow">Gestion du compte</p>
             <h2 id="settings-title">Compte</h2>
           </div>
-          <button ref={closeRef} type="button" className="settings-close" aria-label="Fermer les paramètres" onClick={onClose}><LuX aria-hidden="true" /></button>
+          <button ref={closeRef} type="button" className="settings-close" aria-label="Fermer la gestion du compte" onClick={onClose}><LuX aria-hidden="true" /></button>
         </header>
 
         {feedback && (
