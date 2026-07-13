@@ -110,6 +110,8 @@ Statut : implémentée le 2026-07-13. PostgreSQL sérialise l’acquisition sur 
 
 Ajouter les actions verrouiller et déverrouiller pour pièce, mur et ouverture, avec états persistants indépendants et contrôle avant modification ou suppression. Tester la consultation maintenue, l’absence de cascade et l’interdiction pour le rôle lecture.
 
+Statut : implémentée le 2026-07-13. Les verrous persistants indépendants sont contrôlés par PostgreSQL sur les ressources et leurs données constitutives ; une RPC protégée et un bouton réutilisable exposent les actions selon la capacité d’écriture.
+
 ### V1-20 — Implémenter niveaux et cartes de pièces du Dashboard
 
 Créer DashboardLayout, la gestion du niveau 0 obligatoire, des niveaux visibles et du niveau éditable, puis RoomCard avec création atomique d’une pièce, renommage, type, couleur, icône dérivée et suppression logique. Utiliser les préférences courantes lors des créations.
