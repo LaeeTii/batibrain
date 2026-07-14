@@ -140,6 +140,8 @@ Statut : implémentée le 2026-07-14. GlobalEditor2DView orchestre le chargement
 
 Ajouter création et déplacement des pièces et sommets, magnétisme, validation polygonale, mise à jour des murs et relations, jonctions à trois pièces et compatibilité des ouvertures avec sauvegarde transactionnelle. Tester qu’aucune géométrie invalide ou opération partielle n’est persistée.
 
+Statut : implémentée le 2026-07-14. L’éditeur global crée une pièce rectangulaire en deux clics avec les préférences de mur courantes et permet de déplacer les sommets sélectionnés. Le magnétisme cible les sommets du niveau puis la grille, les contours invalides sont refusés avant écriture et la création comme la mise à jour géométrique utilisent des RPC transactionnelles. Les droits, verrous manuels et verrou collaboratif neutralisent les interactions ; une erreur serveur recharge la géométrie persistée et les déplacements réussis alimentent l’historique.
+
 ### V1-25 — Implémenter les objets secondaires de l’éditeur global
 
 Ajouter les commandes et formulaires de création, modification, suppression et sélection des murs, ouvertures, côtes et notes. Appliquer droits, verrous, validations, historique et raccourci Suppr, avec erreurs explicites sans écriture partielle.

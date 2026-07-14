@@ -9,13 +9,17 @@ import { DashboardLayout } from '../components/DashboardLayout';
 import { ActionHistoryProvider, useActionHistory } from '../components/ActionHistory';
 import { EditorCreationPanel, EditorDetailPanel } from '../components/EditorPanels';
 import { SelectionSyncBridge, useEditorSelection } from '../components/SelectionSyncBridge';
+import { usePreferences } from '../components/PreferencesContext';
 import { getProjectEditingLock } from '../data/supabase/editingLock';
 import { getGlobalEditorAccess, type GlobalEditorAccess } from '../domain/globalEditorAccess';
 import type { Level, Project, ProjectEditingLock } from '../domain/types';
+import type { Point } from '../domain/types';
+import { snapGlobalPoint, translateRoomVertices, validateRoomPolygon } from '../domain/globalGeometry';
+import { updateVertexPosition } from '../domain/geometry';
 import { hasSupabaseConfig } from '../lib/supabase';
 import { listLevelsByProject } from '../services/levels';
 import { canWriteProject, getProject } from '../services/projects';
-import { listRoomsByLevel, loadRoomSnapshot } from '../services/rooms';
+import { createRectangleRoom, listRoomsByLevel, loadRoomSnapshot, updateRoomGeometryAtomically, type RoomSnapshot } from '../services/rooms';
 
 interface GlobalEditor2DViewProps {
   projectId: string;
@@ -94,8 +98,32 @@ export function GlobalEditor2DView({ projectId, initialLevelId = '', onLevelChan
 interface GlobalEditorContentProps { project: Project | null; levels: Level[]; levelData: CanvasLevelData[]; activeLevelId: string; visibleLevelIds: string[]; options: CanvasDisplayOptions; loading: boolean; error: string; access: GlobalEditorAccess; onRetry(): Promise<void>; onOptionsChange(value: CanvasDisplayOptions): void; onToggleLevel(id: string, checked: boolean): void; onActiveLevelChange(id: string): void }
 
 export function GlobalEditorContent({ project, levels, levelData, activeLevelId, visibleLevelIds, options, loading, error, access, onRetry, onOptionsChange, onToggleLevel, onActiveLevelChange }: GlobalEditorContentProps) {
-  const { selection, select } = useEditorSelection(); const { canUndo, canRedo, undo, redo } = useActionHistory(); const activeLevel = levels.find(({ id }) => id === activeLevelId) ?? null; const activeData = levelData.find(({ level }) => level.id === activeLevelId);
+  const { preferences } = usePreferences(); const { selection, select } = useEditorSelection(); const { canUndo, canRedo, record, undo, redo } = useActionHistory(); const activeLevel = levels.find(({ id }) => id === activeLevelId) ?? null; const activeData = levelData.find(({ level }) => level.id === activeLevelId);
+  const [creationMode, setCreationMode] = useState(false); const [creationFirstPoint, setCreationFirstPoint] = useState<Point | null>(null); const [creationPreviewPoint, setCreationPreviewPoint] = useState<Point | null>(null); const [geometryFeedback, setGeometryFeedback] = useState(''); const [geometryError, setGeometryError] = useState('');
   const selectionLocked = levelData.some(({ rooms }) => rooms.some(({ room, walls, openings }) => (selection?.type === 'room' && room.id === selection.id && room.isLocked) || (selection?.type === 'wall' && walls.some(({ id, isLocked }) => id === selection.id && isLocked)) || (selection?.type === 'opening' && openings.some(({ id, isLocked }) => id === selection.id && isLocked))));
+  const allVertices = levelData.flatMap(({ rooms }) => rooms.flatMap(({ vertices }) => vertices));
+  const createAtPoint = async (rawPoint: Point) => {
+    if (!creationMode || !activeLevel || access.readOnly) return; const point = snapGlobalPoint(rawPoint, allVertices, null);
+    if (!creationFirstPoint) { setCreationFirstPoint(point); setCreationPreviewPoint(point); setGeometryFeedback('Premier angle placé. Cliquez sur l’angle opposé.'); return; }
+    setGeometryError('');
+    try { const created = await createRectangleRoom({ levelId: activeLevel.id, name: 'Nouvelle pièce', firstPoint: creationFirstPoint, secondPoint: point, wallThicknessCm: preferences.defaultWallThicknessCm, wallHeightCm: preferences.defaultWallHeightCm }); setCreationFirstPoint(null); setCreationPreviewPoint(null); setCreationMode(false); setGeometryFeedback('Pièce créée.'); await onRetry(); select({ source: 'canvas', type: 'room', id: created.room.id, levelId: activeLevel.id }); }
+    catch (caught) { setGeometryError(message(caught)); }
+  };
+  const moveVertex = async (roomId: string, vertexId: string, rawPoint: Point) => {
+    const snapshot = activeData?.rooms.find(({ room }) => room.id === roomId); if (!snapshot || access.readOnly || snapshot.room.isLocked) return;
+    const point = snapGlobalPoint(rawPoint, allVertices, vertexId); const next: RoomSnapshot = { ...snapshot, vertices: updateVertexPosition(snapshot.vertices, vertexId, point.x, point.y) };
+    const issue = validateRoomPolygon(next.vertices); if (issue) { setGeometryError(issue); return; }
+    setGeometryError('');
+    try { await updateRoomGeometryAtomically(next); setGeometryFeedback('Géométrie enregistrée.'); record({ label: 'Déplacer un sommet', undo: async () => { await updateRoomGeometryAtomically(snapshot); await onRetry(); }, redo: async () => { await updateRoomGeometryAtomically(next); await onRetry(); } }); await onRetry(); }
+    catch (caught) { setGeometryError(`${message(caught)} La géométrie précédente a été conservée.`); await onRetry(); }
+  };
+  const moveRoom = async (roomId: string, delta: Point) => {
+    const snapshot = activeData?.rooms.find(({ room }) => room.id === roomId); if (!snapshot || access.readOnly || snapshot.room.isLocked || Math.hypot(delta.x, delta.y) < 1) return;
+    const anchor = snapGlobalPoint({ x: snapshot.vertices[0].x + delta.x, y: snapshot.vertices[0].y + delta.y }, allVertices.filter(({ pieceId }) => pieceId !== roomId), null);
+    const snappedDelta = { x: anchor.x - snapshot.vertices[0].x, y: anchor.y - snapshot.vertices[0].y }; const next = { ...snapshot, vertices: translateRoomVertices(snapshot.vertices, snappedDelta) };
+    try { await updateRoomGeometryAtomically(next); setGeometryFeedback('Pièce déplacée.'); record({ label: 'Déplacer une pièce', undo: async () => { await updateRoomGeometryAtomically(snapshot); await onRetry(); }, redo: async () => { await updateRoomGeometryAtomically(next); await onRetry(); } }); await onRetry(); }
+    catch (caught) { setGeometryError(`${message(caught)} La géométrie précédente a été conservée.`); await onRetry(); }
+  };
   return <DashboardLayout>
     <header className="global-editor__header">
       <div><p className="dashboard-eyebrow">Éditeur 2D global</p><h1 className="dashboard-pageTitle">{project?.name ?? 'Plan du projet'}</h1></div>
@@ -103,6 +131,8 @@ export function GlobalEditorContent({ project, levels, levelData, activeLevelId,
     </header>
     {!loading && access.message ? <Alert color="orange" icon={<LuLock aria-hidden />} role="status">{access.message}</Alert> : null}
     {selectionLocked ? <Alert color="yellow" icon={<LuLock aria-hidden />} role="status">L’élément sélectionné est verrouillé. Ses informations restent consultables, mais il ne peut pas être modifié.</Alert> : null}
+    {geometryFeedback ? <div className="dashboard-banner dashboard-banner--success" role="status">{geometryFeedback}</div> : null}
+    {geometryError ? <div className="dashboard-banner dashboard-banner--error" role="alert">{geometryError}</div> : null}
     {error ? <div className="dashboard-banner dashboard-banner--error" role="alert">{error}<Button type="button" onClick={() => void onRetry()}>Réessayer</Button></div> : null}
     <section className="global-editor__levelBar">
       <Menu position="bottom-start" withinPortal shadow="md">
@@ -116,8 +146,8 @@ export function GlobalEditorContent({ project, levels, levelData, activeLevelId,
       </Menu>
     </section>
     <section className="global-editor__body">
-      <EditorCreationPanel levels={levels} levelData={levelData} activeLevelId={activeLevelId} readOnly={access.readOnly} selectionLocked={selectionLocked} />
-      <div className="global-editor__canvasArea">{loading ? <div className="dashboard-loading" aria-live="polite">Chargement du plan…</div> : !activeLevel ? <div className="dashboard-emptyState"><h2>Aucun niveau</h2><p>Le projet doit contenir au moins un niveau visible.</p></div> : <Canvas2D levels={levelData} activeLevelId={activeLevel.id} visibleLevelIds={visibleLevelIds} options={options} selection={selection} onSelect={select} />}</div>
+      <EditorCreationPanel levels={levels} levelData={levelData} activeLevelId={activeLevelId} readOnly={access.readOnly} selectionLocked={selectionLocked} onStartRoomCreation={() => { setCreationMode(true); setCreationFirstPoint(null); setCreationPreviewPoint(null); setGeometryFeedback('Cliquez sur le plan pour placer le premier angle.'); }} />
+      <div className="global-editor__canvasArea">{loading ? <div className="dashboard-loading" aria-live="polite">Chargement du plan…</div> : !activeLevel ? <div className="dashboard-emptyState"><h2>Aucun niveau</h2><p>Le projet doit contenir au moins un niveau visible.</p></div> : <Canvas2D levels={levelData} activeLevelId={activeLevel.id} visibleLevelIds={visibleLevelIds} options={options} selection={selection} onSelect={select} editingEnabled={!access.readOnly && !creationMode} creationActive={creationMode} creationFirstPoint={creationFirstPoint} creationPreviewPoint={creationPreviewPoint} onCanvasPoint={(point) => void createAtPoint(point)} onCanvasHover={(point) => setCreationPreviewPoint(point ? snapGlobalPoint(point, allVertices, null) : null)} onVertexMove={(roomId, vertexId, point) => void moveVertex(roomId, vertexId, point)} onRoomMove={(roomId, delta) => void moveRoom(roomId, delta)} />}</div>
       <EditorDetailPanel data={activeData} />
     </section>
   </DashboardLayout>;

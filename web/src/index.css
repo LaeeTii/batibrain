@@ -1191,6 +1191,13 @@ body {
 .global-editor__body { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 12px; min-width: 0; }
 .global-editor__canvasArea { min-width: 0; }
 .canvas2d-selectable { cursor: pointer; vector-effect: non-scaling-stroke; }
+.canvas2d--creating > svg,
+.canvas2d--creating > svg:active,
+.canvas2d--creating > svg * { cursor: crosshair; }
+.canvas2d-vertexHandle { fill: #fff; stroke: #6757ff; stroke-width: 4; cursor: grab; vector-effect: non-scaling-stroke; }
+.canvas2d-creationPreview { fill: rgba(103, 87, 255, .12); stroke: #6757ff; stroke-width: 5; stroke-dasharray: 14 8; pointer-events: none; vector-effect: non-scaling-stroke; }
+.canvas2d-creationPoint circle { fill: #6757ff; stroke: #fff; stroke-width: 3; vector-effect: non-scaling-stroke; }
+.canvas2d-creationPoint text { fill: #4c3fd4; font-weight: 700; paint-order: stroke; stroke: #fff; stroke-width: 3px; }
 .editor-panel { width: 290px; min-height: 700px; padding: 14px; border: 1px solid var(--border-soft); border-radius: 18px; background: var(--bg-surface-strong); }
 .editor-panel--collapsed { width: auto; min-height: 0; padding: 6px; }
 .editor-panel__header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }

@@ -111,3 +111,7 @@ export function writeWallHeightProfiles(
     right_points: rightPoints,
   });
 }
+
+export function updatePieceGeometry(client: SupabaseClient, pieceId: string, vertices: PersistedVertex[]): Promise<void> {
+  return callRpc(client, 'update_piece_geometry', { target_piece_id: pieceId, vertices_data: vertices });
+}

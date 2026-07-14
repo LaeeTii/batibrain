@@ -5,6 +5,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { ActionHistoryProvider } from '../components/ActionHistory';
 import { DEFAULT_CANVAS_DISPLAY_OPTIONS, type CanvasLevelData } from '../components/Canvas2D';
 import { SelectionSyncBridge } from '../components/SelectionSyncBridge';
+import { PreferencesProvider } from '../components/PreferencesContext';
+import { DEFAULT_USER_PREFERENCES } from '../domain/userPreferences';
 import type { Project } from '../domain/types';
 import type { GlobalEditorAccess } from '../domain/globalEditorAccess';
 import { GlobalEditorContent } from './GlobalEditor2DView';
@@ -13,7 +15,8 @@ const project: Project = { id: 'p1', name: 'Maison', ownerUserId: 'u1', updatedA
 const data: CanvasLevelData = { level: { id: 'l1', projectId: 'p1', name: 'RDC', number: 0, isVisible: true }, rooms: [{ room: { id: 'r1', levelId: 'l1', name: 'Cuisine', type: 'cuisine', floorColor: '#E5FFFC', isLocked: true }, vertices: [{ id: 'a', pieceId: 'r1', order: 0, x: 0, y: 0 }, { id: 'b', pieceId: 'r1', order: 1, x: 200, y: 0 }, { id: 'c', pieceId: 'r1', order: 2, x: 200, y: 200 }], walls: [], openings: [] }] };
 
 function renderContent(access: GlobalEditorAccess = { readOnly: false, reason: null, message: null }) {
-  return render(<MantineProvider><ActionHistoryProvider><SelectionSyncBridge validObjects={new Set(['level:l1', 'room:r1'])}><GlobalEditorContent project={project} levels={[data.level]} levelData={[data]} activeLevelId="l1" visibleLevelIds={['l1']} options={DEFAULT_CANVAS_DISPLAY_OPTIONS} loading={false} error="" access={access} onRetry={vi.fn()} onOptionsChange={vi.fn()} onToggleLevel={vi.fn()} onActiveLevelChange={vi.fn()} /></SelectionSyncBridge></ActionHistoryProvider></MantineProvider>);
+  const gateway = { load: vi.fn().mockResolvedValue(DEFAULT_USER_PREFERENCES), save: vi.fn() };
+  return render(<MantineProvider><PreferencesProvider gateway={gateway}><ActionHistoryProvider><SelectionSyncBridge validObjects={new Set(['level:l1', 'room:r1'])}><GlobalEditorContent project={project} levels={[data.level]} levelData={[data]} activeLevelId="l1" visibleLevelIds={['l1']} options={DEFAULT_CANVAS_DISPLAY_OPTIONS} loading={false} error="" access={access} onRetry={vi.fn()} onOptionsChange={vi.fn()} onToggleLevel={vi.fn()} onActiveLevelChange={vi.fn()} /></SelectionSyncBridge></ActionHistoryProvider></PreferencesProvider></MantineProvider>);
 }
 
 describe('GlobalEditorContent', () => {

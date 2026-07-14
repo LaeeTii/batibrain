@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   createPieceComplete,
   replaceWallTopology,
+  updatePieceGeometry,
   writeWallHeightProfiles,
 } from './transactions';
 
@@ -25,6 +26,12 @@ describe('transactions Supabase', () => {
     expect(client.rpc).toHaveBeenCalledWith('create_piece_complete', expect.objectContaining({
       piece_data: piece,
     }));
+  });
+
+  it('met à jour la géométrie d’une pièce via une seule RPC', async () => {
+    const client = { rpc: vi.fn().mockResolvedValue({ data: null, error: null }) };
+    await updatePieceGeometry(client as never, 'piece-1', [{ id: 'v1', vertex_order: 0, x_cm: 10, y_cm: 20 }]);
+    expect(client.rpc).toHaveBeenCalledWith('update_piece_geometry', { target_piece_id: 'piece-1', vertices_data: [{ id: 'v1', vertex_order: 0, x_cm: 10, y_cm: 20 }] });
   });
 
   it('envoie les seuls murs remplacés et leurs ouvertures en un appel RPC', async () => {
