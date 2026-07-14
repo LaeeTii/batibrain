@@ -19,7 +19,8 @@ describe('AppNotifications', () => {
     render(<MantineProvider><AppNotifications gateway={gateway} onProjectAccepted={accepted} /></MantineProvider>);
     await waitFor(() => expect(screen.getByText('1')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Ouvrir les notifications' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Accepter' }));
+    expect((await screen.findByLabelText('Notifications')).parentElement).toHaveClass('app-notificationsDropdown');
+    fireEvent.click((await screen.findByText('Accepter')).closest('button')!);
     await waitFor(() => expect(accepted).toHaveBeenCalledWith('p1'));
   });
 });

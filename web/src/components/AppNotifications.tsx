@@ -34,12 +34,12 @@ export function AppNotifications({ onProjectAccepted, gateway = supabaseCollabor
     catch (caught) { setError(caught instanceof Error ? caught.message : 'L’invitation n’a pas pu être acceptée.'); }
     finally { setBusy(''); }
   }
-  return <Popover opened={open} onChange={setOpen} position="bottom-end" withinPortal shadow="md"><Popover.Target><div className="app-notificationsHost">
+  return <Popover opened={open} onChange={setOpen} position="bottom-end" width="min(440px, calc(100vw - 24px))" withinPortal shadow="md"><Popover.Target><div className="app-notificationsHost">
     <ActionIcon variant="default" className="app-iconButton" onClick={() => { setOpen((value) => !value); if (!open) void load(); }} aria-label="Ouvrir les notifications" aria-expanded={open} title="Ouvrir les notifications">
       <LuBell aria-hidden="true" />
     </ActionIcon>
     {count > 0 && <span className="app-notificationsBadge" aria-hidden="true">{count}</span>}
-    </div></Popover.Target><Popover.Dropdown><section className="app-notifications" aria-label="Notifications">
+    </div></Popover.Target><Popover.Dropdown className="app-notificationsDropdown"><section className="app-notifications" aria-label="Notifications">
       {loading ? <p>Chargement…</p> : error ? <p role="alert">{error}</p> : count === 0 ? <><LuBellOff aria-hidden="true" /><p>Aucune notification.</p></> : <div className="app-notificationsList">
         {invitations.map((invitation) => <div className="app-notificationRow" key={invitation.id}><LuFolderInput aria-hidden="true" /><span>Invitation au projet <strong>{invitation.projectName}</strong> en {invitation.role}</span><Button size="xs" loading={busy === invitation.id} onClick={() => void accept(invitation)} leftSection={<LuCheck />}>Accepter</Button></div>)}
         {adminRequestCount > 0 && <div className="app-notificationRow"><LuUserRoundCheck aria-hidden="true" /><span>{adminRequestCount} demande{adminRequestCount > 1 ? 's' : ''} de compte</span><Button size="xs" variant="subtle" onClick={() => { openAdmin(); setOpen(false); }} leftSection={<LuArrowUpRight />}>Administration</Button></div>}

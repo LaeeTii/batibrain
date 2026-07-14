@@ -565,19 +565,11 @@ body {
 }
 
 .app-notifications {
-  position: absolute;
-  top: 56px;
-  right: 20px;
-  display: block;
-  width: min(440px, calc(100vw - 40px));
-  align-items: center;
-  gap: 10px;
+  width: 100%;
   padding: 16px;
-  border: 1px solid var(--border-soft);
-  border-radius: 14px;
-  background: var(--bg-surface-strong);
-  box-shadow: var(--shadow-card);
 }
+
+.app-notificationsDropdown { padding: 0; overflow: hidden; }
 
 .app-notificationsHost { position: relative; display: inline-flex; overflow: visible; }
 .app-notificationsBadge { position: absolute; z-index: 1; top: -7px; right: -7px; min-width: 20px; height: 20px; padding: 0 5px; border: 2px solid var(--bg-surface-strong); border-radius: 999px; background: var(--danger); color: white; font-size: 11px; font-weight: 700; line-height: 16px; text-align: center; pointer-events: none; }
@@ -585,6 +577,7 @@ body {
 .collaboration-form { display: grid; gap: 12px; }
 .app-notificationRow,
 .collaboration-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border-soft); }
+.app-notificationRow:last-child { border-bottom: 0; }
 .app-notificationRow span,
 .collaboration-row span { flex: 1; }
 .collaboration-form { grid-template-columns: minmax(0, 1fr) 150px auto; align-items: end; }
