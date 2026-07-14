@@ -16,28 +16,27 @@
 - ProjectCollaborationModal
 - AppNotifications
 
-### Contrat du verrou d'édition collaboratif
+### Statut du verrou d'édition collaboratif
+- Le verrou d'édition collaboratif projet est suspendu temporairement en V1.
+- La gestion de conflit entre éditeurs simultanés est différée à une itération ultérieure.
+- Les contrôles d'écriture reposent uniquement sur les droits projet et les verrous manuels durant cette phase.
+- La suspension est appliquée côté frontend et dans la couche SQL de persistance pour éviter toute acquisition implicite du verrou collaboratif.
+
+### Contrat transverse de sauvegarde des vues canvas
 - Portée:
-	- Un verrou unique couvre le projet courant et tous ses objets.
-	- Le verrou est distinct des verrous manuels des pièces, murs et ouvertures.
-- Acquisition et renouvellement:
-	- La première modification effectivement persistée sur un projet libre acquiert atomiquement le verrou pour son auteur.
-	- Seul le propriétaire ou un collaborateur en écriture peut l'acquérir.
-	- Chaque modification effectivement persistée par le détenteur repousse son expiration de deux minutes.
-	- Une modification invalide ou refusée ne renouvelle pas le verrou.
-- Expiration:
-	- Le verrou expire deux minutes après la dernière modification persistée par son détenteur.
-	- L'expiration utilise l'heure du serveur et ne nécessite aucune action manuelle.
-	- Après expiration, le prochain utilisateur autorisé qui persiste une modification acquiert le verrou.
+	- S'applique aux vues canvas métier V1: éditeur global, éditeur pièce et vue mur.
+- Modèle de travail:
+	- Les modifications sont d'abord stockées en brouillon local.
+	- Une auto-sauvegarde est lancée toutes les 5 minutes tant qu'il existe des changements non sauvegardés.
+	- Un bouton `Sauvegarder` permet de forcer la persistance immédiate.
 - Etats et feedback:
-	- Le détenteur peut modifier tous les objets du projet sous réserve de ses droits et des verrous manuels.
-	- Pour les autres utilisateurs, toutes les vues du projet restent consultables mais leurs commandes d'écriture sont indisponibles.
-	- L'état verrouillé indique explicitement l'utilisateur détenteur et le caractère temporaire de la lecture seule.
-- Critères d'acceptation testables:
-	- Deux utilisateurs ne peuvent pas persister simultanément des modifications sur le même projet.
-	- Une modification du détenteur renouvelle la période de deux minutes.
-	- Après deux minutes sans modification persistée, un autre utilisateur autorisé peut modifier le projet et devient détenteur.
-	- Un collaborateur en lecture ne peut jamais acquérir le verrou.
+	- Etats visibles: non sauvegardé, enregistrement en cours, synchronisé, échec.
+	- En cas d'échec, le brouillon local est conservé et une nouvelle tentative automatique intervient au cycle suivant.
+	- En cas d'échec d'auto-sauvegarde, la vue n'affiche qu'un seul message utilisateur non redondant.
+	- Aucun message de succès générique n'est affiché après une action standard sans demande explicite.
+- Sortie de vue:
+	- Une confirmation explicite est affichée seulement lors d'une sortie effective de la vue (changement d'écran, fermeture/rechargement du navigateur) s'il reste des changements non sauvegardés.
+	- Un changement de contexte interne à la même vue (sélection, niveau, panneau, mode) ne doit pas déclencher cette confirmation.
 
 ### Contrat ProjectCollaborationModal
 - Objectif:

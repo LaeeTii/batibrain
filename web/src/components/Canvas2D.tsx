@@ -1,32 +1,79 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActionIcon, Checkbox } from '@mantine/core';
 import {
-  LuBetweenHorizontalStart, LuDraftingCompass, LuEyeOff, LuGrid3X3, LuRuler,
-  LuScan, LuShapes, LuStickyNote, LuZoomIn, LuZoomOut,
+  LuBetweenHorizontalStart,
+  LuDraftingCompass,
+  LuEyeOff,
+  LuGrid3X3,
+  LuRuler,
+  LuScan,
+  LuShapes,
+  LuStickyNote,
+  LuZoomIn,
+  LuZoomOut,
 } from 'react-icons/lu';
+import { Layer, Line, Rect, Stage, Text, Circle, Group } from 'react-konva';
 import { centroid, polygonAreaCm2, polygonInteriorAnglesDegrees, sortVertices } from '../domain/geometry';
-import { MAX_CANVAS_ZOOM, MIN_CANVAS_ZOOM, panViewport, zoomViewport, type CanvasViewport } from '../domain/canvasViewport';
+import {
+  MAX_CANVAS_ZOOM,
+  MIN_CANVAS_ZOOM,
+  panViewport,
+  zoomViewport,
+  type CanvasViewport,
+} from '../domain/canvasViewport';
 import type { Level, Point } from '../domain/types';
-import type { RoomSnapshot } from '../services/rooms';
 import type { EditorSelection } from '../domain/editorSelection';
-import { RoomTypeIcon } from './RoomTypeIcon';
+import type { RoomSnapshot } from '../services/rooms';
+
+type DragState = { x: number; y: number; viewport: CanvasViewport };
 
 export interface CanvasDisplayOptions {
-  grid: boolean; rulers: boolean; dimensions: boolean; angles: boolean;
-  notes: boolean; surfaces: boolean; roomIcons: boolean;
+  grid: boolean;
+  rulers: boolean;
+  dimensions: boolean;
+  angles: boolean;
+  notes: boolean;
+  surfaces: boolean;
+  roomIcons: boolean;
 }
+
 export const DEFAULT_CANVAS_DISPLAY_OPTIONS: CanvasDisplayOptions = {
-  grid: true, rulers: true, dimensions: true, angles: true,
-  notes: true, surfaces: true, roomIcons: true,
+  grid: true,
+  rulers: true,
+  dimensions: true,
+  angles: true,
+  notes: true,
+  surfaces: true,
+  roomIcons: true,
 };
-export interface CanvasNote { id: string; levelId: string; position: Point; text: string }
-export interface CanvasDimension { id: string; levelId: string; start: Point; end: Point; label?: string }
-export interface CanvasLevelData { level: Level; rooms: RoomSnapshot[]; notes?: CanvasNote[]; dimensions?: CanvasDimension[] }
+
+export interface CanvasNote {
+  id: string;
+  levelId: string;
+  position: Point;
+  text: string;
+}
+
+export interface CanvasDimension {
+  id: string;
+  levelId: string;
+  start: Point;
+  end: Point;
+  label?: string;
+}
+
+export interface CanvasLevelData {
+  level: Level;
+  rooms: RoomSnapshot[];
+  notes?: CanvasNote[];
+  dimensions?: CanvasDimension[];
+}
 
 interface Canvas2DProps {
   levels: CanvasLevelData[];
   activeLevelId: string;
   visibleLevelIds: string[];
+  viewportStateKey?: string;
   options?: CanvasDisplayOptions;
   height?: number;
   selection?: EditorSelection | null;
@@ -43,92 +90,591 @@ interface Canvas2DProps {
 
 const PADDING_CM = 120;
 const MIN_VIEW_SIZE_CM = 500;
+const viewportStateCache = new Map<string, CanvasViewport>();
 
 function initialViewport(levels: CanvasLevelData[], visibleIds: Set<string>): CanvasViewport {
-  const vertices = levels.filter(({ level }) => visibleIds.has(level.id)).flatMap(({ rooms }) => rooms.flatMap(({ vertices: roomVertices }) => roomVertices));
-  if (!vertices.length) return { x: -500, y: -350, width: 1000, height: 700 };
-  const xs = vertices.map(({ x }) => x); const ys = vertices.map(({ y }) => y);
-  const minX = Math.min(...xs); const maxX = Math.max(...xs); const minY = Math.min(...ys); const maxY = Math.max(...ys);
-  return { x: minX - PADDING_CM, y: minY - PADDING_CM, width: Math.max(MIN_VIEW_SIZE_CM, maxX - minX + PADDING_CM * 2), height: Math.max(MIN_VIEW_SIZE_CM, maxY - minY + PADDING_CM * 2) };
+  const vertices = levels
+    .filter(({ level }) => visibleIds.has(level.id))
+    .flatMap(({ rooms }) => rooms.flatMap(({ vertices: roomVertices }) => roomVertices));
+
+  if (vertices.length === 0) {
+    return { x: -500, y: -350, width: 1000, height: 700 };
+  }
+
+  const xs = vertices.map(({ x }) => x);
+  const ys = vertices.map(({ y }) => y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+
+  return {
+    x: minX - PADDING_CM,
+    y: minY - PADDING_CM,
+    width: Math.max(MIN_VIEW_SIZE_CM, maxX - minX + PADDING_CM * 2),
+    height: Math.max(MIN_VIEW_SIZE_CM, maxY - minY + PADDING_CM * 2),
+  };
 }
 
 function levelAppearance(levelNumber: number, activeNumber: number) {
   const difference = levelNumber - activeNumber;
-  if (difference === 0) return { stroke: '#182133', fill: 'rgba(33,112,121,.16)', opacity: 1 };
-  return { stroke: difference < 0 ? '#9b6472' : '#637d9f', fill: difference < 0 ? 'rgba(155,100,114,.1)' : 'rgba(99,125,159,.1)', opacity: Math.max(.2, 1 - Math.abs(difference) * .2) };
+  if (difference === 0) {
+    return { stroke: '#182133', fill: 'rgba(33,112,121,.16)', opacity: 1 };
+  }
+
+  return {
+    stroke: difference < 0 ? '#9b6472' : '#637d9f',
+    fill: difference < 0 ? 'rgba(155,100,114,.1)' : 'rgba(99,125,159,.1)',
+    opacity: Math.max(0.2, 1 - Math.abs(difference) * 0.2),
+  };
 }
 
-function OpeningLines({ snapshot, stroke, levelId, selection, onSelect }: { snapshot: RoomSnapshot; stroke: string; levelId: string; selection: EditorSelection | null; onSelect?(selection: EditorSelection): void }) {
-  const vertices = new Map(snapshot.vertices.map((vertex) => [vertex.id, vertex]));
-  const walls = new Map(snapshot.walls.map((wall) => [wall.id, wall]));
-  return <>{snapshot.openings.map((opening) => {
-    const wall = walls.get(opening.wallId); const start = wall ? vertices.get(wall.startVertexId) : undefined; const end = wall ? vertices.get(wall.endVertexId) : undefined;
-    if (!start || !end) return null;
-    const length = Math.hypot(end.x - start.x, end.y - start.y); if (!length) return null;
-    const from = opening.offsetCm / length; const to = (opening.offsetCm + opening.widthCm) / length;
-    const selected = selection?.type === 'opening' && selection.id === opening.id;
-    return <line className="canvas2d-selectable" key={opening.id} x1={start.x + (end.x - start.x) * from} y1={start.y + (end.y - start.y) * from} x2={start.x + (end.x - start.x) * to} y2={start.y + (end.y - start.y) * to} stroke={selected ? '#6757ff' : stroke} strokeWidth={selected ? 14 : 10} onClick={(event) => { event.stopPropagation(); onSelect?.({ source: 'canvas', type: 'opening', id: opening.id, levelId }); }} />;
-  })}</>;
+function openingSegment(snapshot: RoomSnapshot, openingId: string) {
+  const opening = snapshot.openings.find(({ id }) => id === openingId);
+  if (!opening) {
+    return null;
+  }
+
+  const wall = snapshot.walls.find(({ id }) => id === opening.wallId);
+  if (!wall) {
+    return null;
+  }
+
+  const start = snapshot.vertices.find(({ id }) => id === wall.startVertexId);
+  const end = snapshot.vertices.find(({ id }) => id === wall.endVertexId);
+  if (!start || !end) {
+    return null;
+  }
+
+  const length = Math.hypot(end.x - start.x, end.y - start.y);
+  if (length === 0) {
+    return null;
+  }
+
+  const from = opening.offsetCm / length;
+  const to = (opening.offsetCm + opening.widthCm) / length;
+
+  return {
+    opening,
+    x1: start.x + (end.x - start.x) * from,
+    y1: start.y + (end.y - start.y) * from,
+    x2: start.x + (end.x - start.x) * to,
+    y2: start.y + (end.y - start.y) * to,
+  };
+}
+
+function roomIcon(roomType: string): string {
+  switch (roomType) {
+    case 'cuisine':
+      return 'C';
+    case 'chambre':
+      return 'Ch';
+    case 'salon':
+      return 'S';
+    case 'salle_de_bain':
+      return 'SdB';
+    case 'toilettes':
+      return 'WC';
+    case 'bureau':
+      return 'B';
+    case 'garage':
+      return 'G';
+    case 'hall':
+      return 'H';
+    case 'salle_de_jeu':
+      return 'J';
+    case 'bibliotheque':
+      return 'Bib';
+    default:
+      return '';
+  }
 }
 
 export function CanvasOverlayMeasurements({ snapshot, options }: { snapshot: RoomSnapshot; options: CanvasDisplayOptions }) {
-  const vertices = sortVertices(snapshot.vertices); const angles = polygonInteriorAnglesDegrees(vertices);
-  return <g className="canvas2d-measurements">
-    {options.angles ? vertices.map((vertex, index) => Math.abs((angles[index] ?? 90) - 90) > .1 ? <text key={vertex.id} x={vertex.x + 12} y={vertex.y - 12}>{(angles[index] ?? 0).toFixed(1)}°</text> : null) : null}
-    {options.dimensions ? vertices.map((vertex, index) => { const next = vertices[(index + 1) % vertices.length]; if (!next) return null; const length = Math.hypot(next.x - vertex.x, next.y - vertex.y); return <text key={`length-${vertex.id}`} x={(vertex.x + next.x) / 2} y={(vertex.y + next.y) / 2 - 8}>{length.toFixed(1)} cm</text>; }) : null}
-  </g>;
+  const vertices = sortVertices(snapshot.vertices);
+  const angles = polygonInteriorAnglesDegrees(vertices);
+
+  return (
+    <>
+      {options.angles
+        ? vertices.map((vertex, index) => (
+            Math.abs((angles[index] ?? 90) - 90) > 0.1 ? (
+              <Text
+                key={`angle-${vertex.id}`}
+                x={vertex.x + 12}
+                y={vertex.y - 12}
+                text={`${(angles[index] ?? 0).toFixed(1)}°`}
+                fontSize={11}
+                fill="#57606a"
+              />
+            ) : null
+          ))
+        : null}
+      {options.dimensions
+        ? vertices.map((vertex, index) => {
+            const next = vertices[(index + 1) % vertices.length];
+            if (!next) {
+              return null;
+            }
+
+            const length = Math.hypot(next.x - vertex.x, next.y - vertex.y);
+            return (
+              <Text
+                key={`length-${vertex.id}`}
+                x={(vertex.x + next.x) / 2}
+                y={(vertex.y + next.y) / 2 - 8}
+                text={`${length.toFixed(1)} cm`}
+                fontSize={11}
+                fill="#57606a"
+              />
+            );
+          })
+        : null}
+    </>
+  );
 }
 
 export function CanvasZoomControls({ onZoomIn, onZoomOut, onReset }: { onZoomIn(): void; onZoomOut(): void; onReset(): void }) {
-  return <div className="canvas2d-zoomControls" aria-label="Contrôles de zoom"><ActionIcon variant="default" size="lg" onClick={onZoomIn} aria-label="Zoom avant" title="Zoom avant"><LuZoomIn aria-hidden /></ActionIcon><ActionIcon variant="default" size="lg" onClick={onZoomOut} aria-label="Zoom arrière" title="Zoom arrière"><LuZoomOut aria-hidden /></ActionIcon><ActionIcon variant="default" size="lg" onClick={onReset} aria-label="Réinitialiser le zoom" title="Réinitialiser le zoom"><LuScan aria-hidden /></ActionIcon></div>;
+  return (
+    <div className="canvas2d-zoomControls" aria-label="Contrôles de zoom">
+      <ActionIcon variant="default" size="lg" onClick={onZoomIn} aria-label="Zoom avant" title="Zoom avant">
+        <LuZoomIn aria-hidden />
+      </ActionIcon>
+      <ActionIcon variant="default" size="lg" onClick={onZoomOut} aria-label="Zoom arrière" title="Zoom arrière">
+        <LuZoomOut aria-hidden />
+      </ActionIcon>
+      <ActionIcon variant="default" size="lg" onClick={onReset} aria-label="Réinitialiser le zoom" title="Réinitialiser le zoom">
+        <LuScan aria-hidden />
+      </ActionIcon>
+    </div>
+  );
 }
 
 export function CanvasScaleIndicator({ viewportWidth, renderedWidth }: { viewportWidth: number; renderedWidth: number }) {
-  const pixelsPerCm = renderedWidth / Math.max(viewportWidth, 1); const candidates = [10, 20, 50, 100, 200, 500, 1000];
+  const pixelsPerCm = renderedWidth / Math.max(viewportWidth, 1);
+  const candidates = [10, 20, 50, 100, 200, 500, 1000];
   const lengthCm = candidates.find((candidate) => candidate * pixelsPerCm >= 70) ?? 1000;
-  return <div className="canvas2d-scale" aria-label={`Échelle graphique ${lengthCm} centimètres`}><span style={{ width: `${Math.min(160, lengthCm * pixelsPerCm)}px` }} /><strong>{lengthCm} cm</strong></div>;
+
+  return (
+    <div className="canvas2d-scale" aria-label={`Échelle graphique ${lengthCm} centimètres`}>
+      <span style={{ width: `${Math.min(160, lengthCm * pixelsPerCm)}px` }} />
+      <strong>{lengthCm} cm</strong>
+    </div>
+  );
 }
 
 export function CanvasDisplayOptionsMenu({ value, onChange }: { value: CanvasDisplayOptions; onChange(value: CanvasDisplayOptions): void }) {
   const items = [
-    ['grid', 'Grille', LuGrid3X3], ['rulers', 'Règles', LuRuler], ['dimensions', 'Côtes', LuBetweenHorizontalStart],
-    ['angles', 'Angles', LuDraftingCompass], ['notes', 'Notes', LuStickyNote], ['surfaces', 'Surfaces', LuScan], ['roomIcons', 'Icônes de pièces', LuShapes],
+    ['grid', 'Grille', LuGrid3X3],
+    ['rulers', 'Règles', LuRuler],
+    ['dimensions', 'Côtes', LuBetweenHorizontalStart],
+    ['angles', 'Angles', LuDraftingCompass],
+    ['notes', 'Notes', LuStickyNote],
+    ['surfaces', 'Surfaces', LuScan],
+    ['roomIcons', 'Icônes de pièces', LuShapes],
   ] as const;
-  return <div className="canvas2d-options" aria-label="Options d’affichage">{items.map(([key, label, Icon]) => <div className="canvas2d-options__item" key={key}><Checkbox checked={value[key]} onChange={(event) => onChange({ ...value, [key]: event.currentTarget.checked })} aria-label={label} /><Icon aria-hidden /><span>{label}</span>{!value[key] ? <LuEyeOff aria-label="Masqué" /> : null}</div>)}</div>;
+
+  return (
+    <div className="canvas2d-options" aria-label="Options d’affichage">
+      {items.map(([key, label, Icon]) => (
+        <div className="canvas2d-options__item" key={key}>
+          <Checkbox
+            checked={value[key]}
+            onChange={(event) => onChange({ ...value, [key]: event.currentTarget.checked })}
+            aria-label={label}
+          />
+          <Icon aria-hidden />
+          <span>{label}</span>
+          {!value[key] ? <LuEyeOff aria-label="Masqué" /> : null}
+        </div>
+      ))}
+    </div>
+  );
 }
 
-export function Canvas2D({ levels, activeLevelId, visibleLevelIds, options = DEFAULT_CANVAS_DISPLAY_OPTIONS, height = 700, selection = null, onSelect, editingEnabled = false, creationFirstPoint = null, creationPreviewPoint = null, creationActive = false, onCanvasPoint, onCanvasHover, onVertexMove, onRoomMove }: Canvas2DProps) {
-  const visibleIds = useMemo(() => new Set(visibleLevelIds), [visibleLevelIds]); const resetViewport = useMemo(() => initialViewport(levels, visibleIds), [levels, visibleIds]);
-  const [viewport, setViewport] = useState(resetViewport); const [drag, setDrag] = useState<{ x: number; y: number } | null>(null); const svgRef = useRef<SVGSVGElement>(null);
-  const roomDrag = useRef<{ roomId: string; point: Point } | null>(null);
-  const pointerMoved = useRef(false);
-  const pointerStart = useRef<{ x: number; y: number } | null>(null);
-  useEffect(() => setViewport(resetViewport), [resetViewport]);
-  const activeLevel = levels.find(({ level }) => level.id === activeLevelId)?.level; const activeNumber = activeLevel?.number ?? 0;
-  const renderedWidth = svgRef.current?.getBoundingClientRect().width ?? 900;
-  const eventPoint = (event: React.MouseEvent<SVGElement>): Point => {
-    const svg = svgRef.current!; const matrix = svg.getScreenCTM?.();
-    if (matrix && typeof svg.createSVGPoint === 'function') { const point = svg.createSVGPoint(); point.x = event.clientX; point.y = event.clientY; const transformed = point.matrixTransform(matrix.inverse()); return { x: transformed.x, y: transformed.y }; }
-    const rect = svg.getBoundingClientRect(); const scale = Math.min(rect.width / viewport.width || 1, rect.height / viewport.height || 1); const renderedWidth = viewport.width * scale; const renderedHeight = viewport.height * scale;
-    return { x: viewport.x + (event.clientX - rect.left - (rect.width - renderedWidth) / 2) / scale, y: viewport.y + (event.clientY - rect.top - (rect.height - renderedHeight) / 2) / scale };
-  };
-  const pan = (event: React.PointerEvent<SVGSVGElement>) => { if (!drag || !svgRef.current) return; const rect = svgRef.current.getBoundingClientRect(); setViewport((current) => panViewport(current, { x: -(event.clientX - drag.x) * current.width / rect.width, y: -(event.clientY - drag.y) * current.height / rect.height })); setDrag({ x: event.clientX, y: event.clientY }); };
-  const changeZoom = (factor: number) => setViewport((current) => {
-    const currentZoom = resetViewport.width / current.width;
-    const nextZoom = Math.min(MAX_CANVAS_ZOOM, Math.max(MIN_CANVAS_ZOOM, currentZoom * factor));
-    return zoomViewport(current, nextZoom / currentZoom);
+export function Canvas2D({
+  levels,
+  activeLevelId,
+  visibleLevelIds,
+  viewportStateKey,
+  options = DEFAULT_CANVAS_DISPLAY_OPTIONS,
+  height = 700,
+  selection = null,
+  onSelect,
+  editingEnabled = false,
+  creationFirstPoint = null,
+  creationPreviewPoint = null,
+  creationActive = false,
+  onCanvasPoint,
+  onCanvasHover,
+  onVertexMove,
+  onRoomMove,
+}: Canvas2DProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [canvasWidth, setCanvasWidth] = useState(900);
+  const [drag, setDrag] = useState<DragState | null>(null);
+  const roomDragRef = useRef<{ roomId: string; start: Point } | null>(null);
+  const pointerMovedRef = useRef(false);
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  const visibleIds = useMemo(() => new Set(visibleLevelIds), [visibleLevelIds]);
+  const resetViewport = useMemo(() => initialViewport(levels, visibleIds), [levels, visibleIds]);
+  const [viewport, setViewport] = useState(() => (
+    viewportStateKey ? (viewportStateCache.get(viewportStateKey) ?? resetViewport) : resetViewport
+  ));
+
+  useEffect(() => {
+    if (!containerRef.current) {
+      return undefined;
+    }
+
+    const element = containerRef.current;
+    const updateWidth = () => setCanvasWidth(Math.max(320, Math.round(element.getBoundingClientRect().width)));
+    updateWidth();
+
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!viewportStateKey) {
+      return;
+    }
+
+    const cached = viewportStateCache.get(viewportStateKey);
+    if (cached) {
+      setViewport(cached);
+    }
+  }, [viewportStateKey]);
+
+  useEffect(() => {
+    if (!viewportStateKey) {
+      return;
+    }
+
+    viewportStateCache.set(viewportStateKey, viewport);
+  }, [viewport, viewportStateKey]);
+
+  const scale = Math.min(canvasWidth / viewport.width, height / viewport.height);
+  const offsetX = (canvasWidth - viewport.width * scale) / 2;
+  const offsetY = (height - viewport.height * scale) / 2;
+
+  const activeLevel = levels.find(({ level }) => level.id === activeLevelId)?.level;
+  const activeNumber = activeLevel?.number ?? 0;
+
+  const stageToWorld = (stagePoint: Point): Point => ({
+    x: (stagePoint.x - offsetX) / scale + viewport.x,
+    y: (stagePoint.y - offsetY) / scale + viewport.y,
   });
-  return <div className={`canvas2d${creationActive ? ' canvas2d--creating' : ''}`}><svg ref={svgRef} height={height} viewBox={`${viewport.x} ${viewport.y} ${viewport.width} ${viewport.height}`} onClickCapture={(event) => { if (!creationActive || pointerMoved.current || !onCanvasPoint) return; event.preventDefault(); event.stopPropagation(); onCanvasPoint(eventPoint(event)); }} onPointerDown={(event) => { pointerMoved.current = false; pointerStart.current = { x: event.clientX, y: event.clientY }; if (!creationActive && (event.target === event.currentTarget || (event.target as Element).classList.contains('canvas2d-background'))) { event.currentTarget.setPointerCapture(event.pointerId); setDrag({ x: event.clientX, y: event.clientY }); } }} onPointerMove={(event) => { if (creationActive) onCanvasHover?.(eventPoint(event)); const start = pointerStart.current; if (start && Math.hypot(event.clientX - start.x, event.clientY - start.y) > 3) pointerMoved.current = true; pan(event); }} onPointerLeave={() => creationActive && onCanvasHover?.(null)} onPointerUp={() => { setDrag(null); pointerStart.current = null; }} onPointerCancel={() => { setDrag(null); pointerStart.current = null; }}>
-    <defs><pattern id="canvas2d-grid" width="25" height="25" patternUnits="userSpaceOnUse"><path d="M 25 0 L 0 0 0 25" fill="none" stroke="#dce3ec" strokeWidth="1" /></pattern></defs>
-    <rect className="canvas2d-background" x={viewport.x} y={viewport.y} width={viewport.width} height={viewport.height} fill={options.grid ? 'url(#canvas2d-grid)' : '#fff'} />
-    <g className="canvas2d-origin"><line x1={viewport.x} y1={0} x2={viewport.x + viewport.width} y2={0} /><line x1={0} y1={viewport.y} x2={0} y2={viewport.y + viewport.height} /><text x={8} y={-8}>0,0</text></g>
-    {levels.filter(({ level }) => visibleIds.has(level.id)).sort((a, b) => a.level.number - b.level.number).map(({ level, rooms, notes = [], dimensions = [] }) => { const appearance = levelAppearance(level.number, activeNumber); return <g key={level.id} opacity={appearance.opacity} data-editable={level.id === activeLevelId}>
-      {rooms.map((snapshot) => { const vertices = sortVertices(snapshot.vertices); const center = centroid(vertices); const roomSelected = selection?.type === 'room' && selection.id === snapshot.room.id; return <g key={snapshot.room.id} className={roomSelected ? 'is-selected' : ''}><polygon className="canvas2d-selectable" points={vertices.map(({ x, y }) => `${x},${y}`).join(' ')} fill={appearance.fill} stroke={roomSelected ? '#6757ff' : appearance.stroke} strokeWidth={roomSelected ? 10 : 6} onPointerDown={(event) => { if (roomSelected && editingEnabled) { event.currentTarget.setPointerCapture(event.pointerId); roomDrag.current = { roomId: snapshot.room.id, point: eventPoint(event) }; } }} onPointerUp={(event) => { const current = roomDrag.current; roomDrag.current = null; if (current?.roomId === snapshot.room.id) { const end = eventPoint(event); onRoomMove?.(snapshot.room.id, { x: end.x - current.point.x, y: end.y - current.point.y }); } }} onClick={(event) => { event.stopPropagation(); if (level.id === activeLevelId) onSelect?.({ source: 'canvas', type: 'room', id: snapshot.room.id, levelId: level.id }); }} />{snapshot.walls.map((wall) => { const start = snapshot.vertices.find(({ id }) => id === wall.startVertexId); const end = snapshot.vertices.find(({ id }) => id === wall.endVertexId); if (!start || !end) return null; const selected = selection?.type === 'wall' && selection.id === wall.id; return <line key={wall.id} className="canvas2d-selectable" x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke={selected ? '#6757ff' : 'transparent'} strokeWidth={selected ? 12 : 18} onClick={(event) => { event.stopPropagation(); if (level.id === activeLevelId) onSelect?.({ source: 'canvas', type: 'wall', id: wall.id, levelId: level.id }); }} />; })}<OpeningLines snapshot={snapshot} stroke="#fff" levelId={level.id} selection={selection} onSelect={level.id === activeLevelId ? onSelect : undefined} />{roomSelected && editingEnabled && level.id === activeLevelId ? vertices.map((vertex) => <circle key={`handle-${vertex.id}`} className="canvas2d-vertexHandle" cx={vertex.x} cy={vertex.y} r={10} onPointerDown={(event) => { event.stopPropagation(); event.currentTarget.setPointerCapture(event.pointerId); }} onPointerUp={(event) => { event.stopPropagation(); onVertexMove?.(snapshot.room.id, vertex.id, eventPoint(event)); }} />) : null}<CanvasOverlayMeasurements snapshot={snapshot} options={options} /><text className="canvas2d-roomName" x={center.x} y={center.y}>{snapshot.room.name}</text>{options.surfaces ? <text className="canvas2d-roomSurface" x={center.x} y={center.y + 22}>{(polygonAreaCm2(vertices) / 10000).toFixed(2)} m²</text> : null}{options.roomIcons && snapshot.room.type !== 'autre' ? <foreignObject x={center.x - 10} y={center.y + 28} width={20} height={20}><span className="canvas2d-roomIcon"><RoomTypeIcon type={snapshot.room.type} /></span></foreignObject> : null}</g>; })}
-      {options.dimensions ? dimensions.map((dimension) => <g key={dimension.id} className="canvas2d-manualDimension"><line x1={dimension.start.x} y1={dimension.start.y} x2={dimension.end.x} y2={dimension.end.y} /><text x={(dimension.start.x + dimension.end.x) / 2} y={(dimension.start.y + dimension.end.y) / 2 - 8}>{dimension.label ?? `${Math.hypot(dimension.end.x - dimension.start.x, dimension.end.y - dimension.start.y).toFixed(1)} cm`}</text></g>) : null}
-      {options.notes ? notes.map((note) => <g key={note.id} className="canvas2d-note"><circle cx={note.position.x} cy={note.position.y} r={12} /><text x={note.position.x + 18} y={note.position.y + 4}>🗒 {note.text}</text></g>) : null}
-    </g>; })}
-    {creationFirstPoint && creationPreviewPoint ? <polygon className="canvas2d-creationPreview" points={`${creationFirstPoint.x},${creationFirstPoint.y} ${creationPreviewPoint.x},${creationFirstPoint.y} ${creationPreviewPoint.x},${creationPreviewPoint.y} ${creationFirstPoint.x},${creationPreviewPoint.y}`} /> : null}
-    {creationFirstPoint ? <g className="canvas2d-creationPoint"><circle cx={creationFirstPoint.x} cy={creationFirstPoint.y} r={10} /><text x={creationFirstPoint.x + 15} y={creationFirstPoint.y - 15}>Premier angle</text></g> : null}
-    {options.rulers ? <g className="canvas2d-rulers"><text x={viewport.x + 15} y={viewport.y + 25}>X : {Math.round(viewport.x)} → {Math.round(viewport.x + viewport.width)} cm</text><text x={viewport.x + 15} y={viewport.y + 48}>Y : {Math.round(viewport.y)} → {Math.round(viewport.y + viewport.height)} cm</text></g> : null}
-  </svg><CanvasZoomControls onZoomIn={() => changeZoom(1.25)} onZoomOut={() => changeZoom(.8)} onReset={() => setViewport(resetViewport)} /><CanvasScaleIndicator viewportWidth={viewport.width} renderedWidth={renderedWidth} /></div>;
+
+  const getPointerWorldPoint = (stage: import('konva/lib/Stage').default | null): Point | null => {
+    const pointer = stage?.getPointerPosition();
+    if (!pointer) {
+      return null;
+    }
+
+    return stageToWorld(pointer);
+  };
+
+  const startPan = (clientX: number, clientY: number) => {
+    setDrag({ x: clientX, y: clientY, viewport });
+  };
+
+  const updatePan = (clientX: number, clientY: number) => {
+    if (!drag) {
+      return;
+    }
+
+    setViewport(
+      panViewport(drag.viewport, {
+        x: -(clientX - drag.x) / scale,
+        y: -(clientY - drag.y) / scale,
+      }),
+    );
+  };
+
+  const changeZoom = (factor: number) => {
+    setViewport((current) => {
+      const currentZoom = resetViewport.width / current.width;
+      const nextZoom = Math.min(MAX_CANVAS_ZOOM, Math.max(MIN_CANVAS_ZOOM, currentZoom * factor));
+      return zoomViewport(current, nextZoom / currentZoom);
+    });
+  };
+
+  return (
+    <div className={`canvas2d${creationActive ? ' canvas2d--creating' : ''}`} ref={containerRef}>
+      <Stage
+        width={canvasWidth}
+        height={height}
+        onMouseMove={(event) => {
+          const start = pointerStartRef.current;
+          if (start && Math.hypot(event.evt.clientX - start.x, event.evt.clientY - start.y) > 3) {
+            pointerMovedRef.current = true;
+          }
+
+          if (creationActive) {
+            onCanvasHover?.(getPointerWorldPoint(event.target.getStage()));
+          }
+
+          updatePan(event.evt.clientX, event.evt.clientY);
+        }}
+        onMouseUp={(event) => {
+          setDrag(null);
+          pointerStartRef.current = null;
+
+          const roomDrag = roomDragRef.current;
+          if (roomDrag && onRoomMove) {
+            const endPoint = getPointerWorldPoint(event.target.getStage());
+            if (endPoint) {
+              onRoomMove(roomDrag.roomId, {
+                x: endPoint.x - roomDrag.start.x,
+                y: endPoint.y - roomDrag.start.y,
+              });
+            }
+          }
+          roomDragRef.current = null;
+        }}
+        onMouseLeave={() => {
+          setDrag(null);
+          pointerStartRef.current = null;
+          if (creationActive) {
+            onCanvasHover?.(null);
+          }
+        }}
+      >
+        <Layer scaleX={scale} scaleY={scale} x={offsetX - viewport.x * scale} y={offsetY - viewport.y * scale}>
+          <Rect
+            name="canvas-background"
+            x={viewport.x}
+            y={viewport.y}
+            width={viewport.width}
+            height={viewport.height}
+            fill={options.grid ? '#f8fafc' : '#fff'}
+            onMouseDown={(event) => {
+              pointerMovedRef.current = false;
+              pointerStartRef.current = { x: event.evt.clientX, y: event.evt.clientY };
+
+              if (!creationActive) {
+                startPan(event.evt.clientX, event.evt.clientY);
+              }
+            }}
+            onClick={(event) => {
+              if (!creationActive || pointerMovedRef.current || !onCanvasPoint) {
+                return;
+              }
+
+              const point = getPointerWorldPoint(event.target.getStage());
+              if (point) {
+                onCanvasPoint(point);
+              }
+            }}
+          />
+
+          {options.rulers ? (
+            <Group>
+              <Text
+                x={viewport.x + 15}
+                y={viewport.y + 25}
+                text={`X : ${Math.round(viewport.x)} -> ${Math.round(viewport.x + viewport.width)} cm`}
+                fontSize={12}
+                fill="#57606a"
+              />
+              <Text
+                x={viewport.x + 15}
+                y={viewport.y + 48}
+                text={`Y : ${Math.round(viewport.y)} -> ${Math.round(viewport.y + viewport.height)} cm`}
+                fontSize={12}
+                fill="#57606a"
+              />
+            </Group>
+          ) : null}
+
+          {levels
+            .filter(({ level }) => visibleIds.has(level.id))
+            .sort((a, b) => a.level.number - b.level.number)
+            .map(({ level, rooms, notes = [], dimensions = [] }) => {
+              const appearance = levelAppearance(level.number, activeNumber);
+              return (
+                <Group key={level.id} opacity={appearance.opacity}>
+                  {rooms.map((snapshot) => {
+                    const vertices = sortVertices(snapshot.vertices);
+                    const points = vertices.flatMap((vertex) => [vertex.x, vertex.y]);
+                    const center = centroid(vertices);
+                    const isRoomSelected = selection?.type === 'room' && selection.id === snapshot.room.id;
+                    const isActiveLevel = level.id === activeLevelId;
+
+                    return (
+                      <Group key={snapshot.room.id}>
+                        <Line
+                          points={points}
+                          closed
+                          fill={appearance.fill}
+                          stroke={isRoomSelected ? '#6757ff' : appearance.stroke}
+                          strokeWidth={isRoomSelected ? 8 : 4}
+                          onClick={() => {
+                            if (isActiveLevel) {
+                              onSelect?.({ source: 'canvas', type: 'room', id: snapshot.room.id, levelId: level.id });
+                            }
+                          }}
+                          onMouseDown={(event) => {
+                            if (!isActiveLevel || !editingEnabled || !isRoomSelected) {
+                              return;
+                            }
+
+                            const start = getPointerWorldPoint(event.target.getStage());
+                            if (start) {
+                              roomDragRef.current = { roomId: snapshot.room.id, start };
+                            }
+                          }}
+                        />
+
+                        {snapshot.walls.map((wall) => {
+                          const start = snapshot.vertices.find(({ id }) => id === wall.startVertexId);
+                          const end = snapshot.vertices.find(({ id }) => id === wall.endVertexId);
+                          if (!start || !end) {
+                            return null;
+                          }
+
+                          const isWallSelected = selection?.type === 'wall' && selection.id === wall.id;
+                          return (
+                            <Line
+                              key={wall.id}
+                              points={[start.x, start.y, end.x, end.y]}
+                              stroke={isWallSelected ? '#6757ff' : 'rgba(0,0,0,0)'}
+                              strokeWidth={isWallSelected ? 10 : 14}
+                              onClick={() => {
+                                if (isActiveLevel) {
+                                  onSelect?.({ source: 'canvas', type: 'wall', id: wall.id, levelId: level.id });
+                                }
+                              }}
+                            />
+                          );
+                        })}
+
+                        {snapshot.openings.map((opening) => {
+                          const segment = openingSegment(snapshot, opening.id);
+                          if (!segment) {
+                            return null;
+                          }
+
+                          const isOpeningSelected = selection?.type === 'opening' && selection.id === opening.id;
+                          return (
+                            <Line
+                              key={opening.id}
+                              points={[segment.x1, segment.y1, segment.x2, segment.y2]}
+                              stroke={isOpeningSelected ? '#6757ff' : '#ffffff'}
+                              strokeWidth={isOpeningSelected ? 12 : 8}
+                              onClick={() => {
+                                if (isActiveLevel) {
+                                  onSelect?.({ source: 'canvas', type: 'opening', id: opening.id, levelId: level.id });
+                                }
+                              }}
+                            />
+                          );
+                        })}
+
+                        <Text x={center.x - 26} y={center.y - 12} text={snapshot.room.name} fontSize={14} fill="#0f172a" />
+                        {options.surfaces ? (
+                          <Text
+                            x={center.x - 24}
+                            y={center.y + 6}
+                            text={`${(polygonAreaCm2(vertices) / 10000).toFixed(2)} m²`}
+                            fontSize={12}
+                            fill="#334155"
+                          />
+                        ) : null}
+                        {options.roomIcons && snapshot.room.type !== 'autre' ? (
+                          <Text x={center.x - 12} y={center.y + 24} text={roomIcon(snapshot.room.type)} fontSize={12} fill="#475569" />
+                        ) : null}
+
+                        <CanvasOverlayMeasurements snapshot={snapshot} options={options} />
+
+                        {isRoomSelected && isActiveLevel && editingEnabled
+                          ? vertices.map((vertex) => (
+                              <Circle
+                                key={vertex.id}
+                                x={vertex.x}
+                                y={vertex.y}
+                                radius={7}
+                                fill="#ffffff"
+                                stroke="#0f172a"
+                                strokeWidth={2}
+                                draggable
+                                onDragMove={(event) => {
+                                  onVertexMove?.(snapshot.room.id, vertex.id, {
+                                    x: event.target.x(),
+                                    y: event.target.y(),
+                                  });
+                                }}
+                              />
+                            ))
+                          : null}
+                      </Group>
+                    );
+                  })}
+
+                  {options.dimensions
+                    ? dimensions.map((dimension) => (
+                        <Group key={dimension.id}>
+                          <Line points={[dimension.start.x, dimension.start.y, dimension.end.x, dimension.end.y]} stroke="#334155" strokeWidth={1.5} />
+                          <Text
+                            x={(dimension.start.x + dimension.end.x) / 2}
+                            y={(dimension.start.y + dimension.end.y) / 2 - 8}
+                            text={dimension.label ?? `${Math.hypot(dimension.end.x - dimension.start.x, dimension.end.y - dimension.start.y).toFixed(1)} cm`}
+                            fontSize={11}
+                            fill="#334155"
+                          />
+                        </Group>
+                      ))
+                    : null}
+
+                  {options.notes
+                    ? notes.map((note) => (
+                        <Group key={note.id}>
+                          <Circle x={note.position.x} y={note.position.y} radius={10} fill="#fde68a" stroke="#f59e0b" strokeWidth={1} />
+                          <Text x={note.position.x + 14} y={note.position.y - 5} text={note.text} fontSize={11} fill="#7c2d12" />
+                        </Group>
+                      ))
+                    : null}
+                </Group>
+              );
+            })}
+
+          {creationFirstPoint && creationPreviewPoint ? (
+            <Line
+              points={[
+                creationFirstPoint.x,
+                creationFirstPoint.y,
+                creationPreviewPoint.x,
+                creationFirstPoint.y,
+                creationPreviewPoint.x,
+                creationPreviewPoint.y,
+                creationFirstPoint.x,
+                creationPreviewPoint.y,
+              ]}
+              closed
+              fill="rgba(14,84,233,0.12)"
+              stroke="#0e54e9"
+              dash={[8, 6]}
+            />
+          ) : null}
+
+          {creationFirstPoint ? (
+            <Group>
+              <Circle x={creationFirstPoint.x} y={creationFirstPoint.y} radius={9} fill="#0e54e9" />
+              <Text x={creationFirstPoint.x + 14} y={creationFirstPoint.y - 14} text="Premier angle" fontSize={12} fill="#0e54e9" />
+            </Group>
+          ) : null}
+        </Layer>
+      </Stage>
+
+      <CanvasZoomControls
+        onZoomIn={() => changeZoom(1.25)}
+        onZoomOut={() => changeZoom(0.8)}
+        onReset={() => setViewport(resetViewport)}
+      />
+      <CanvasScaleIndicator viewportWidth={viewport.width} renderedWidth={canvasWidth} />
+    </div>
+  );
 }

@@ -3,6 +3,7 @@
 ## Stack cible
 - **Web** : React + TypeScript + Vite
 - **Design system web** : Mantine, utilisé par défaut pour les composants interactifs et leur thème
+- **Moteur canvas web** : React-Konva (`react-konva` + `konva`) pour les vues d'édition 2D
 - **Mobile** : PWA (Progressive Web App) basée sur l'application web
 - **Backend** : Supabase
 - **Base de données** : PostgreSQL
@@ -48,16 +49,15 @@ Le socle de tests frontend repose sur Vitest, Testing Library et jsdom. `npm run
 - les RPC de collaboration recherchent le compte invité côté PostgreSQL sans exposer les adresses Auth, réservent les actions de gestion au propriétaire et réalisent l’acceptation dans une transaction unique qui crée la collaboration avant de clôturer l’invitation
 - le propriétaire peut lire et gérer le projet, ses ressources et ses accès; le collaborateur en lecture consulte uniquement, le collaborateur en écriture modifie les ressources métier sans gérer le projet ni ses accès, et un utilisateur sans collaboration ne voit aucune ressource
 - les options de vue liées à un projet restent propres à leur utilisateur et peuvent être persistées dès que celui-ci dispose d'un accès en lecture au projet
-- le contrôle du droit d'écriture précède l'acquisition du verrou d'édition simple
-- le verrou d'édition collaboratif porte sur le projet entier; la première modification persistée sur un projet libre l'acquiert atomiquement, chaque modification persistée par son détenteur renouvelle son activité et il expire deux minutes après la dernière modification selon l'heure du serveur
-- l'expiration du verrou collaboratif est évaluée à l'écriture et à la lecture depuis son dernier horodatage d'activité; elle ne nécessite ni tâche planifiée ni libération explicite
-- le verrou manuel persistant d'une pièce, d'un mur ou d'une ouverture est distinct du verrou d'édition collaboratif; il est contrôlé avant toute modification ou suppression de la ressource, sans empêcher sa sélection ni sa consultation
+- le contrôle du droit d'écriture est évalué avant toute tentative de persistance
+- le verrou d'édition collaboratif est temporairement désactivé dans le frontend V1; la résolution des conflits multi-utilisateurs est différée
+- le verrou manuel persistant d'une pièce, d'un mur ou d'une ouverture reste actif; il est contrôlé avant toute modification ou suppression de la ressource, sans empêcher sa sélection ni sa consultation
 - les verrous manuels sont indépendants entre pièce, mur et ouverture et ne se propagent pas en cascade
 - la compatibilité intérieur/extérieur entre un template d'ouverture et son mur support est une validation métier géométrique portée par le domaine frontend avant persistance
 - la qualification intérieure ou extérieure d'un mur est calculée depuis le nombre de pièces liées et n'est pas persistée comme donnée source
 - un mur ne peut jamais être lié à trois pièces; lorsqu'une troisième pièce rejoint l'intérieur d'un segment existant, la logique géométrique crée un sommet de jonction, scinde le segment initial en deux et persiste trois murs distincts autour de ce sommet
 - après toute modification topologique, les relations mur-pièce et la compatibilité des ouvertures sont recalculées avant persistance; les ouvertures devenues incompatibles sont supprimées
-- la création complète d’une pièce et la mise à jour de ses sommets traversent des RPC PostgreSQL transactionnelles; le frontend valide le polygone et le magnétisme avant l’appel, puis recharge la source persistée après succès ou erreur
+- la création et les mises à jour géométriques sont en migration vers des opérations pilotées par le domaine TypeScript et une sauvegarde différée côté frontend
 - le type de pièce est persisté dans Supabase/PostgreSQL; son icône est une projection frontend produite avec `react-icons` et n'est pas stockée
 - les options d'affichage des surfaces et des icônes de pièces sont persistées avec les autres préférences de vue et appliquées aux canvas comme aux exports PDF
 - chaque mur persiste deux profils de hauteur ordonnés, un par face stable du segment; ils sont liés par défaut et peuvent être dissociés, tandis que l'association visuelle d'une face à une pièce ou à l'extérieur est calculée depuis la topologie

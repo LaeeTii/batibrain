@@ -43,7 +43,7 @@
   - boutons icônes `Annuler` et `Rétablir` en haut à droite;
   - action `Retour` vers la vue d'origine.
 - Zone de travail:
-  - WallElevationCanvas au centre;
+  - WallElevationCanvas (React-Konva) au centre;
   - panneau d'édition latéral regroupant les propriétés du mur, le profil de la face active et les ouvertures.
 - Le canvas conserve les contrôles de zoom, de dézoom, de réinitialisation et l'indicateur d'échelle définis pour les autres canvas.
 

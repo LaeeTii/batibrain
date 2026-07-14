@@ -37,17 +37,6 @@ export interface Project {
   updatedAt: string;
 }
 
-export interface ProjectEditingLock {
-  projectId: Id;
-  holderUserId: Id | null;
-  holderDisplayName: string | null;
-  lastActivityAt: string | null;
-  expiresAt: string | null;
-  isActive: boolean;
-  heldByCurrentUser: boolean;
-  serverNow: string;
-}
-
 export type UserRole = 'user' | 'admin';
 
 export interface UserProfile {

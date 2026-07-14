@@ -14,7 +14,7 @@ const sectionDetails = {
 
 function shortId(id: string) { return id.slice(0, 8); }
 
-export function EditorCreationPanel({ levels, levelData, activeLevelId, readOnly = false, selectionLocked = false, onStartRoomCreation }: { levels: Level[]; levelData: CanvasLevelData[]; activeLevelId: string; readOnly?: boolean; selectionLocked?: boolean; onStartRoomCreation?(): void }) {
+export function EditorCreationPanel({ levels, levelData, activeLevelId, readOnly = false, selectionLocked = false, creationMessage = '', onStartRoomCreation }: { levels: Level[]; levelData: CanvasLevelData[]; activeLevelId: string; readOnly?: boolean; selectionLocked?: boolean; creationMessage?: string; onStartRoomCreation?(): void }) {
   const { selection, select } = useEditorSelection(); const [collapsed, setCollapsed] = useState(false); const [section, setSection] = useState<string | null>(null);
   useEffect(() => { if (selection && selection.type !== 'point') setSection(selection.type); }, [selection]);
   const data = levelData.find(({ level }) => level.id === activeLevelId);
@@ -31,6 +31,7 @@ export function EditorCreationPanel({ levels, levelData, activeLevelId, readOnly
     {section ? <Button variant="subtle" leftSection={<LuArrowLeft />} onClick={() => setSection(null)}>Retour</Button> : null}
     {readOnly ? <Text size="sm" c="dimmed">Consultation uniquement : les modifications sont indisponibles.</Text> : null}
     {selectionLocked ? <Text size="sm" c="dimmed">Élément verrouillé : ses informations restent consultables.</Text> : null}
+    {creationMessage ? <Text size="sm">{creationMessage}</Text> : null}
     <ScrollArea h={620}><Accordion value={section} onChange={setSection}>{(Object.entries(sectionDetails) as [SectionType, typeof sectionDetails[SectionType]][]).map(([type, [label, Icon]]) => <Accordion.Item key={type} value={type}><Accordion.Control icon={<Icon aria-hidden />}>{label}</Accordion.Control><Accordion.Panel><Stack gap="xs">
       {items[type].length ? items[type].map((item) => <Button key={item.id} variant={selection?.type === type && selection.id === item.id ? 'light' : 'subtle'} justify="flex-start" onClick={() => select({ source: 'creation-list', type, id: item.id, levelId: item.levelId })}>{item.label}</Button>) : <Text size="sm" c="dimmed">Aucun élément.</Text>}
       {type === 'room' ? <Button disabled={readOnly || !onStartRoomCreation} onClick={onStartRoomCreation}>Dessiner une pièce</Button> : <Button disabled>Création disponible dans une prochaine étape</Button>}

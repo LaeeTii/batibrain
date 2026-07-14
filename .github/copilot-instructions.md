@@ -20,6 +20,7 @@
 
 - Keep frontend domain types and geometric business logic in [web/src/domain/](../web/src/domain/).
 - Keep UI behavior and rendering concerns in [web/](../web/) including the PWA target.
+- Use React-Konva as the default rendering and interaction engine for canvas features in [web/](../web/); avoid adding new SVG-based canvas implementations.
 - Treat Supabase and PostgreSQL as the source of truth for persisted business data.
 - Keep derived values such as angles, metrics, and projections computed from source data unless the documentation is updated first.
 
@@ -35,6 +36,10 @@
 - When a code change modifies documented behavior, update the relevant file in [docs/](../docs/) in the same change.
 - Do not introduce features beyond the validated target version unless the user explicitly asks for them.
 - If the documentation does not fully answer the task, make the smallest assumption consistent with the existing docs and state that assumption clearly.
+- Ne pas ajouter de bloc de texte informatif (info, note, astuce, bannière d’aide) dans l’interface ou la documentation produit sans demande explicite de l’utilisateur.
+- Pour les vues d'édition, ne demander une confirmation de navigation que lors d'une sortie effective de la vue (changement d'écran, fermeture d'onglet, rechargement), jamais lors d'un changement de contexte interne à la même vue.
+- En cas d'échec d'auto-sauvegarde, n'afficher qu'un seul message utilisateur non redondant par vue.
+- Ne pas afficher de message de succès générique après une action standard (exemple: « Modification appliquée. ») sans demande explicite de l'utilisateur.
 - Toujours utiliser les accents en francais lors de la generation de texte (Markdown) et de texte dans le code (commentaires, labels UI, messages, chaines). Ne pas produire de francais sans accents sauf contrainte technique explicite.
 
 ## Statut de fraîcheur (rappel)

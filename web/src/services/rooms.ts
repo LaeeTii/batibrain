@@ -10,7 +10,6 @@ import {
 import { DEFAULT_ROOM_FLOOR_COLOR, DEFAULT_ROOM_TYPE } from '../domain/room';
 import type { Opening, Room, RoomType, Vertex, Wall } from '../domain/types';
 import { getSupabaseClient } from '../lib/supabase';
-import { createPieceComplete, updatePieceGeometry } from '../data/supabase/transactions';
 
 type PieceRow = {
   id: string;
@@ -90,19 +89,25 @@ export interface CreateRoomInput {
 export async function createRectangleRoom(input: CreateRoomInput & { firstPoint: { x: number; y: number }; secondPoint: { x: number; y: number }; wallThicknessCm: number; wallHeightCm: number }): Promise<RoomSnapshot> {
   const id = input.id ?? crypto.randomUUID();
   const geometry = createRectangleRoomGeometryFromPoints(id, input.firstPoint, input.secondPoint, { wallThicknessCm: input.wallThicknessCm, wallHeightCm: input.wallHeightCm });
-  const persistedWalls = geometry.walls.map((wall) => {
-    const start = geometry.vertices.find((vertex) => vertex.id === wall.startVertexId)!; const end = geometry.vertices.find((vertex) => vertex.id === wall.endVertexId)!;
-    const length = Math.hypot(end.x - start.x, end.y - start.y);
-    const profiles = (side: 'gauche' | 'droite') => [{ id: crypto.randomUUID(), point_order: 0, position_cm: 0, height_cm: input.wallHeightCm }, { id: crypto.randomUUID(), point_order: 1, position_cm: length, height_cm: input.wallHeightCm }];
-    return { id: wall.id, start_vertex_id: wall.startVertexId, end_vertex_id: wall.endVertexId, thickness_cm: input.wallThicknessCm, height_profiles_linked: true, material: null, insulation: null, notes: null, is_locked: false, piece_ids: [id], profiles: { gauche: profiles('gauche'), droite: profiles('droite') } };
+  return saveRoomSnapshot({
+    room: {
+      id,
+      levelId: input.levelId,
+      name: input.name.trim() || 'Nouvelle pièce',
+      type: input.type ?? DEFAULT_ROOM_TYPE,
+      floorColor: input.floorColor?.trim() || DEFAULT_ROOM_FLOOR_COLOR,
+      notes: input.notes ?? null,
+      isSoftDeleted: false,
+      isLocked: false,
+    },
+    vertices: geometry.vertices,
+    walls: geometry.walls,
+    openings: [],
   });
-  await createPieceComplete(getSupabaseClient(), { id, level_id: input.levelId, name: input.name.trim() || 'Nouvelle pièce', room_type: input.type ?? DEFAULT_ROOM_TYPE, floor_color: input.floorColor?.trim() || DEFAULT_ROOM_FLOOR_COLOR, wall_thickness_cm: input.wallThicknessCm, wall_height_cm: input.wallHeightCm, notes: input.notes ?? null, is_soft_deleted: false, is_locked: false }, geometry.vertices.map((vertex) => ({ id: vertex.id, vertex_order: vertex.order, x_cm: vertex.x, y_cm: vertex.y })), persistedWalls);
-  return loadRoomSnapshot(id);
 }
 
 export async function updateRoomGeometryAtomically(snapshot: RoomSnapshot): Promise<RoomSnapshot> {
-  await updatePieceGeometry(getSupabaseClient(), snapshot.room.id, sortVertices(snapshot.vertices).map((vertex) => ({ id: vertex.id, vertex_order: vertex.order, x_cm: vertex.x, y_cm: vertex.y })));
-  return loadRoomSnapshot(snapshot.room.id);
+  return saveRoomSnapshot(snapshot);
 }
 
 function mapPieceRow(row: PieceRow): Room {
@@ -533,4 +538,96 @@ export async function saveRoomSnapshot(snapshot: RoomSnapshot): Promise<RoomSnap
     walls,
     openings,
   };
+}
+
+function toGeometryVerticesPayload(vertices: Vertex[]) {
+  return sortVertices(vertices).map((vertex, index) => ({
+    id: vertex.id,
+    vertex_order: index,
+    x_cm: vertex.x,
+    y_cm: vertex.y,
+  }));
+}
+
+function buildFlatProfile(heightCm: number, lengthCm: number) {
+  const normalizedLength = Math.max(1, lengthCm);
+  return [
+    {
+      id: crypto.randomUUID(),
+      point_order: 0,
+      position_cm: 0,
+      height_cm: heightCm,
+    },
+    {
+      id: crypto.randomUUID(),
+      point_order: 1,
+      position_cm: normalizedLength,
+      height_cm: heightCm,
+    },
+  ];
+}
+
+function toCreatePieceWallsPayload(vertices: Vertex[], walls: Wall[]) {
+  const syncedWalls = syncWallsWithVertices(vertices, walls);
+  const verticesById = new Map(vertices.map((vertex) => [vertex.id, vertex]));
+  return syncedWalls.map((wall) => {
+    const start = verticesById.get(wall.startVertexId);
+    const end = verticesById.get(wall.endVertexId);
+    const lengthCm = start && end ? Math.hypot(end.x - start.x, end.y - start.y) : 1;
+    const leftHeightCm = wall.heightLeftCm ?? wall.heightRightCm ?? 250;
+    const rightHeightCm = wall.heightRightCm ?? wall.heightLeftCm ?? 250;
+    return {
+      id: wall.id,
+      start_vertex_id: wall.startVertexId,
+      end_vertex_id: wall.endVertexId,
+      thickness_cm: wall.thicknessCm ?? 10,
+      height_profiles_linked: leftHeightCm === rightHeightCm,
+      material: wall.material,
+      insulation: wall.insulation,
+      notes: wall.notes,
+      is_locked: wall.isLocked === true,
+      profiles: {
+        gauche: buildFlatProfile(leftHeightCm, lengthCm),
+        droite: buildFlatProfile(rightHeightCm, lengthCm),
+      },
+    };
+  });
+}
+
+export async function updateRoomGeometry(snapshot: RoomSnapshot): Promise<RoomSnapshot> {
+  const supabase = getSupabaseClient();
+  const { error } = await supabase.rpc('update_piece_geometry', {
+    target_piece_id: snapshot.room.id,
+    vertices_data: toGeometryVerticesPayload(snapshot.vertices),
+  });
+  if (error) {
+    throw error;
+  }
+  return loadRoomSnapshot(snapshot.room.id);
+}
+
+export async function createRoomComplete(snapshot: RoomSnapshot): Promise<RoomSnapshot> {
+  const supabase = getSupabaseClient();
+  const defaultThicknessCm = snapshot.walls[0]?.thicknessCm ?? 10;
+  const defaultHeightCm = snapshot.walls[0]?.heightLeftCm ?? snapshot.walls[0]?.heightRightCm ?? 250;
+  const { error } = await supabase.rpc('create_piece_complete', {
+    piece_data: {
+      id: snapshot.room.id,
+      level_id: snapshot.room.levelId,
+      name: snapshot.room.name,
+      room_type: snapshot.room.type,
+      floor_color: snapshot.room.floorColor,
+      wall_thickness_cm: defaultThicknessCm,
+      wall_height_cm: defaultHeightCm,
+      notes: snapshot.room.notes,
+      is_soft_deleted: snapshot.room.isSoftDeleted ?? false,
+      is_locked: snapshot.room.isLocked ?? false,
+    },
+    vertices_data: toGeometryVerticesPayload(snapshot.vertices),
+    walls_data: toCreatePieceWallsPayload(snapshot.vertices, snapshot.walls),
+  });
+  if (error) {
+    throw error;
+  }
+  return loadRoomSnapshot(snapshot.room.id);
 }

@@ -134,13 +134,15 @@ Statut : implémentée le 2026-07-14. L’éditeur global dispose des panneaux r
 
 Créer GlobalEditor2DView, charger projet et niveau, brancher canvas et panneaux, gérer le changement de niveau, l’affichage multi-pièces et les états vide, erreur, lecture seule et verrouillé. Cette tâche ne modifie pas encore la géométrie.
 
-Statut : implémentée le 2026-07-14. GlobalEditor2DView orchestre le chargement du projet, des niveaux et des snapshots multi-pièces, conserve au moins un niveau visible et synchronise le niveau éditable avec le contexte de navigation. La vue distingue les états sans projet, chargement, erreur, consultation selon les droits, verrou collaboratif temporaire et élément manuellement verrouillé ; le canvas, les panneaux et la sélection restent consultables sans exposer d’écriture géométrique.
+Statut : implémentée le 2026-07-14. GlobalEditor2DView orchestre le chargement du projet, des niveaux et des snapshots multi-pièces, conserve au moins un niveau visible et synchronise le niveau éditable avec le contexte de navigation. La vue distingue les états sans projet, chargement, erreur, consultation selon les droits et élément manuellement verrouillé ; le canvas, les panneaux et la sélection restent consultables sans exposer d’écriture géométrique.
+
+Mise à jour 2026-07-14 : démarrage du passage en sauvegarde différée avec brouillon local sur l’éditeur global, auto-sauvegarde toutes les 5 minutes, bouton de sauvegarde forcée, alerte navigateur et confirmation de navigation interne en cas de sortie avec modifications non sauvegardées. Le verrou collaboratif frontend est suspendu temporairement.
 
 ### V1-24 — Implémenter l’édition géométrique globale
 
 Ajouter création et déplacement des pièces et sommets, magnétisme, validation polygonale, mise à jour des murs et relations, jonctions à trois pièces et compatibilité des ouvertures avec sauvegarde transactionnelle. Tester qu’aucune géométrie invalide ou opération partielle n’est persistée.
 
-Statut : implémentée le 2026-07-14. L’éditeur global crée une pièce rectangulaire en deux clics avec les préférences de mur courantes et permet de déplacer les sommets sélectionnés. Le magnétisme cible les sommets du niveau puis la grille, les contours invalides sont refusés avant écriture et la création comme la mise à jour géométrique utilisent des RPC transactionnelles. Les droits, verrous manuels et verrou collaboratif neutralisent les interactions ; une erreur serveur recharge la géométrie persistée et les déplacements réussis alimentent l’historique.
+Statut : implémentée le 2026-07-14. L’éditeur global crée une pièce rectangulaire en deux clics avec les préférences de mur courantes et permet de déplacer les sommets sélectionnés. Le magnétisme cible les sommets du niveau puis la grille, les contours invalides sont refusés avant écriture et la création comme la mise à jour géométrique utilisent des opérations transactionnelles de persistance. Les droits et verrous manuels neutralisent les interactions ; une erreur serveur recharge la géométrie persistée et les déplacements réussis alimentent l’historique.
 
 ### V1-25 — Implémenter les objets secondaires de l’éditeur global
 
@@ -149,6 +151,8 @@ Ajouter les commandes et formulaires de création, modification, suppression et 
 ### V1-26 — Implémenter RoomEditor2DView
 
 Créer le contexte projet/niveau/pièce, réutiliser le canvas et permettre l’édition des sommets, murs, ouvertures, côtes et notes, dont la longueur intérieure d’un mur. Brancher magnétisme, sauvegarde, droits, verrous et historique. Tester la synchronisation globale et l’interdiction de supprimer un mur mitoyen.
+
+Mise à jour 2026-07-14 : RoomEditor2DView est branchée sur le registre global des changements non sauvegardés, passe en brouillon local avec auto-sauvegarde toutes les 5 minutes, bouton de sauvegarde forcée et confirmation de sortie tant que des modifications restent non sauvegardées. Les chemins de persistance géométrique restants utilisent désormais les opérations TypeScript de `saveRoomSnapshot` côté service plutôt que les RPC transactionnelles dédiées.
 
 ### V1-27 — Implémenter WallEditorView en lecture
 

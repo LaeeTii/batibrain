@@ -20,6 +20,7 @@ applyTo: web/src/**/*.{ts,tsx,css}
 - Utiliser React + TypeScript.
 - Utiliser Mantine pour les composants UI generiques.
 - Utiliser react-icons pour les icones.
+- Utiliser React-Konva (`react-konva` + `konva`) pour tout rendu canvas interactif (plan global, pièce, élévation de mur).
 
 ## Regles de composants
 - Utiliser Mantine par defaut pour les composants UI interactifs afin de garantir la coherence visuelle et comportementale.

@@ -49,7 +49,7 @@
 	- les informations toujours visibles sont: nom projet, nom niveau, nom pièce.
 	- aucun horodatage de derniere synchronisation n'est affiche.
 - Zone centrale:
-	- canvas centre sur la pièce courante,
+	- canvas React-Konva centre sur la pièce courante,
 	- rendu de la pièce active en priorite,
 	- rendu des autres pièces du niveau en contexte grise non editable.
 - Panneaux lateraux de travail:
@@ -91,12 +91,16 @@
 	- les noeuds hors pièce courante ne sont pas selectionnables dans RoomEditor2DView.
 	- toute tentative de sélection d'un objet appartenant a une autre pièce visible est ignoree pour l'édition, ne peut pas ouvrir de mode d'édition et ne declenche aucun feedback.
 - Sauvegarde:
-	- les modifications sont en auto-save pendant l'édition.
+	- les modifications sont d'abord conservées en brouillon local pendant l'édition.
+	- une auto-sauvegarde est tentée toutes les 5 minutes tant qu'il reste des changements non sauvegardés.
+	- un bouton `Enregistrer` permet de forcer la persistance immédiate.
 	- un feedback d'etat est visible en continu dans l'en-tete (en cours, synchronise, échec).
 	- pour toute édition d'un mur mitoyen, la persistence est transactionnelle entre les deux pièces impactees.
 	- en cas d'échec de persistence d'une édition de mur mitoyen, un rollback complet est applique sur les deux pièces.
-	- en cas d'échec d'auto-save, la vue conserve le contexte, signale l'erreur et permet de relancer la persistence, sans introduire de mode brouillon explicite.
+	- en cas d'échec d'auto-save, la vue conserve le contexte, signale l'erreur et relance une tentative automatique au cycle suivant.
 	- le message d'erreur d'auto-save est persistant jusqu'au succes d'une nouvelle tentative ou fermeture explicite.
+	- en cas d'échec d'auto-save, la vue affiche un unique message d'erreur non redondant.
+	- aucun message de succès générique n'est affiché après une action standard sans demande explicite.
 - Export PDF:
 	- l'action Export PDF est disponible depuis l'en-tete de la vue.
 	- l'utilisateur choisit entre deux variantes:
@@ -112,24 +116,26 @@
 	- l'ouverture de l'éditeur 2D global (si exposee depuis la vue) conserve le contexte projet/niveau courant et la pièce precedemment selectionnee.
 	- lorsqu'un mur est sélectionné, l'action `Ouvrir la vue Mur` de son bloc d'édition ouvre WallEditorView en conservant les contextes projet, niveau, pièce et mur courants.
 	- WallEditorView affiche initialement la face orientée vers la pièce courante.
-	- si un échec d'auto-save est present au moment de quitter la vue (Retour ou changement de vue), une confirmation explicite est demandee avant de sortir.
+	- si des changements non sauvegardés sont presents au moment de quitter la vue (Retour, changement de vue, fermeture ou rechargement navigateur), une confirmation explicite est demandee avant de sortir.
+	- un changement de contexte interne a RoomEditor2DView (sélection d'objet, panneau ouvert/fermé, mode) ne déclenche pas de confirmation de sortie.
 - Suppression de la pièce courante:
 	- la suppression de la pièce demande une confirmation explicite.
 	- apres confirmation et succes, la vue effectue un retour automatique vers DashboardView.
 	- en cas d'échec, la vue reste sur place avec message d'erreur et etat cohérent.
 - Confirmations:
 	- la suppression de pièce impose une confirmation explicite.
-	- la sortie de la vue avec un échec d'auto-save actif impose une confirmation explicite.
+	- la sortie de la vue avec des changements non sauvegardés impose une confirmation explicite.
 - Comportement degrade:
 	- si des données secondaires echouent a se charger, la vue reste utilisable tant que la pièce cible est disponible.
 	- si la pièce cible n'est pas disponible, la vue affiche l'erreur bloquante locale sans navigation forcee.
 
 ## Règles metier
 - Droits projet:
-	- Le propriétaire et le collaborateur en écriture peuvent modifier la pièce courante, sous réserve du verrou d'édition requis.
+	- Le propriétaire et le collaborateur en écriture peuvent modifier la pièce courante.
 	- Le collaborateur en lecture conserve la consultation, la navigation, les options d'affichage et les exports PDF.
 	- En lecture seule, l'auto-save n'est pas déclenché et les actions de création, d'édition, de suppression, d'annulation et de rétablissement sont désactivées ou masquées.
 	- Un indicateur explicite signale l'état lecture seule et toute tentative d'écriture indirecte est refusée.
+	- Le verrou d'édition collaboratif projet est suspendu temporairement en V1; seuls les verrous manuels restent actifs.
 - Portee d'édition:
 	- une pièce, un mur ou une ouverture verrouillé reste sélectionnable et consultable, mais ne peut être modifié ni supprimé avant son déverrouillage.
 	- le propriétaire et les collaborateurs en écriture peuvent verrouiller ou déverrouiller l'élément; le collaborateur en lecture consulte uniquement son état.
@@ -184,7 +190,7 @@
 - Etat auto-save en échec:
 	- un message d'erreur persistant est affiche.
 	- la vue reste editable tant que la pièce cible est disponible.
-	- la sortie de la vue declenche une confirmation explicite tant que l'échec persiste.
+	- la sortie de la vue declenche une confirmation explicite tant que des changements non sauvegardés persistent.
 - Etat export PDF:
 	- l'utilisateur peut choisir `Plan simple` ou `Plan + détail`.
 	- en cas d'échec, un message explicite est affiche sans perdre l'etat courant.

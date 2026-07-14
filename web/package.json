@@ -17,9 +17,11 @@
     "@mantine/hooks": "^9.4.1",
     "@supabase/supabase-js": "^2.110.0",
     "jspdf": "^4.2.1",
+    "konva": "^9.3.22",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "react-icons": "^5.7.0"
+    "react-icons": "^5.7.0",
+    "react-konva": "^19.2.5"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",

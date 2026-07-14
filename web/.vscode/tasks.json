@@ -1,0 +1,11 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "install-konva-deps",
+			"type": "shell",
+			"command": "npm install react-konva konva --save",
+			"problemMatcher": []
+		}
+	]
+}

@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActionIcon, Button, NativeSelect, NumberInput, TextInput, UnstyledButton } from '@mantine/core';
 import { RoomCanvas } from '../components/RoomCanvas';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { usePreferences } from '../components/PreferencesContext';
+import { useUnsavedChanges } from '../components/UnsavedChangesContext';
 import type { Level, Opening, Project, Room, Vertex, Wall } from '../domain/types';
 import type { DashboardRoomTarget } from './RoomsDashboard';
 import {
@@ -247,6 +248,7 @@ export function RoomEditor({
   onContextChange,
 }: RoomEditorProps) {
   const supabaseConfigured = hasSupabaseConfig();
+  const { setSourceDirty } = useUnsavedChanges();
   const { preferences } = usePreferences();
   const [vertices, setVertices] = useState<Vertex[]>([]);
   const [wallDefinitions, setWallDefinitions] = useState<Wall[]>([]);
@@ -269,6 +271,8 @@ export function RoomEditor({
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'dirty' | 'saving' | 'synced' | 'error'>('idle');
   const [openingFormMessage, setOpeningFormMessage] = useState<string | null>(null);
   const [inspectorTab, setInspectorTab] = useState<'metrics' | 'objects'>('metrics');
 
@@ -335,7 +339,26 @@ export function RoomEditor({
     onContextChange?.(target, historyMode);
   }
 
-  async function runRoomAction(actionLabel: string, action: () => Promise<void>) {
+  const markDirty = useCallback(() => {
+    setHasUnsavedChanges(true);
+    setSaveStatus('dirty');
+  }, []);
+
+  const clearDirty = useCallback(() => {
+    setHasUnsavedChanges(false);
+    setSaveStatus('idle');
+  }, []);
+
+  useEffect(() => {
+    setSourceDirty('room-editor', hasUnsavedChanges);
+    return () => setSourceDirty('room-editor', false);
+  }, [hasUnsavedChanges, setSourceDirty]);
+
+  async function runRoomAction(
+    actionLabel: string,
+    action: () => Promise<void>,
+    options: { propagateError?: boolean } = {},
+  ) {
     setBusyAction(actionLabel);
     setErrorMessage(null);
     setStatusMessage(null);
@@ -344,6 +367,9 @@ export function RoomEditor({
       await action();
     } catch (error) {
       setErrorMessage(formatErrorMessage(error));
+      if (options.propagateError) {
+        throw error;
+      }
     } finally {
       setBusyAction(null);
     }
@@ -365,6 +391,7 @@ export function RoomEditor({
       nextWalls,
       remapOpeningsAfterWallSplit(nextVertices, previousWalls, nextWalls, currentOpenings),
     ));
+    markDirty();
   }
 
   function updateSelectedWall(nextWall: Wall) {
@@ -373,6 +400,7 @@ export function RoomEditor({
     setWallDefinitions((currentWalls) => currentWalls.map((wall, index) => (
       index === selectedWallIndex ? nextWall : wall
     )));
+    markDirty();
   }
 
   function handleSelectedWallThicknessChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -469,14 +497,16 @@ export function RoomEditor({
     setOpenings((currentOpenings) => [...currentOpenings, nextOpening]);
     setOpeningFormMessage(null);
     setErrorMessage(null);
-    setStatusMessage(`Ouverture ajoutée localement sur le mur ${selectedWall.index + 1}. Enregistre la pièce pour la persister.`);
+    markDirty();
+    setStatusMessage(`Ouverture ajoutée sur le mur ${selectedWall.index + 1}.`);
   }
 
   function handleRemoveOpening(openingId: string) {
     setOpenings((currentOpenings) => currentOpenings.filter((opening) => opening.id !== openingId));
     setOpeningFormMessage(null);
     setErrorMessage(null);
-    setStatusMessage('Ouverture supprimée localement. Enregistre la pièce pour confirmer la suppression.');
+    markDirty();
+    setStatusMessage('Ouverture supprimée.');
   }
 
   async function refreshProjects(preferredProjectId?: string): Promise<Project[]> {
@@ -559,6 +589,7 @@ export function RoomEditor({
     setOpeningFormMessage(null);
     applyRoomGeometry([], [], []);
     setSelectedWallIndex(null);
+    clearDirty();
   }
 
   function openDraftRoom(nextRoomName = DEFAULT_ROOM_NAME) {
@@ -579,6 +610,7 @@ export function RoomEditor({
     setOpeningFormMessage(null);
     applyRoomGeometry(snapshot.vertices, snapshot.walls, snapshot.openings);
     setSelectedWallIndex(null);
+    clearDirty();
   }
 
   useEffect(() => {
@@ -849,8 +881,9 @@ export function RoomEditor({
     selectRoom(event.target.value, 'push');
   };
 
-  const handleSaveRoom = () => {
+  const handleSaveRoom = (mode: 'manual' | 'auto' = 'manual') => {
     void runRoomAction('save', async () => {
+      setSaveStatus('saving');
       const draftRoomName = roomNameInput.trim();
       const newRoomDraftName = newRoomNameInput.trim();
       const roomName = draftRoomName || (!activeRoom ? newRoomDraftName : '');
@@ -902,8 +935,26 @@ export function RoomEditor({
         isCreatingRoom ? remapOpeningsToWalls(wallDefinitions, savedWalls, openings) : openings,
       );
 
-      const nextRooms = await refreshRoomsForLevel(savedRoom.levelId);
-      await refreshRoomSnapshotsForRooms(nextRooms);
+      setAvailableRooms((currentRooms) => {
+        const index = currentRooms.findIndex((room) => room.id === savedRoom.id);
+        if (index < 0) return [...currentRooms, savedRoom];
+        const nextRooms = [...currentRooms];
+        nextRooms[index] = savedRoom;
+        return nextRooms;
+      });
+      setLevelRoomSnapshots((currentSnapshots) => {
+        const nextSnapshot: RoomSnapshot = {
+          room: savedRoom,
+          vertices: savedVertices,
+          walls: savedWalls,
+          openings: savedOpenings,
+        };
+        const index = currentSnapshots.findIndex((snapshot) => snapshot.room.id === savedRoom.id);
+        if (index < 0) return [...currentSnapshots, nextSnapshot];
+        const nextSnapshots = [...currentSnapshots];
+        nextSnapshots[index] = nextSnapshot;
+        return nextSnapshots;
+      });
 
       setActiveRoom(savedRoom);
       setSelectedRoomId(savedRoom.id);
@@ -914,13 +965,29 @@ export function RoomEditor({
         levelId: selectedLevelId,
         roomId: savedRoom.id,
       }, 'replace');
+      setHasUnsavedChanges(false);
+      setSaveStatus('synced');
       setStatusMessage(
-        isCreatingRoom
+        mode === 'auto'
+          ? `Auto-sauvegarde effectuée : ${savedRoom.name}.`
+          : isCreatingRoom
           ? `Pièce créée et enregistrée : ${savedRoom.name}.`
           : `Pièce enregistrée : ${savedRoom.name}.`,
       );
+    }, { propagateError: true }).catch(() => {
+      setSaveStatus('error');
     });
   };
+
+  useEffect(() => {
+    if (!supabaseConfigured || !hasUnsavedChanges || isBusy || !selectedLevelId) {
+      return undefined;
+    }
+    const interval = window.setInterval(() => {
+      void handleSaveRoom('auto');
+    }, 300_000);
+    return () => window.clearInterval(interval);
+  }, [handleSaveRoom, hasUnsavedChanges, isBusy, selectedLevelId, supabaseConfigured]);
 
   const handleDeleteRoom = () => {
     void runRoomAction('delete', async () => {
@@ -943,6 +1010,7 @@ export function RoomEditor({
 
       clearActiveRoomSelection();
       notifyContextChange({ projectId: selectedProjectId, levelId: selectedLevelId, roomId: '' }, 'replace');
+      clearDirty();
       setStatusMessage(
         remainingRooms.length === 0
           ? `Pièce supprimée : ${deletedRoom.name}. Aucune pièce restante pour ce niveau.`
@@ -975,6 +1043,12 @@ export function RoomEditor({
 
       {errorMessage ? (
         <div className="dashboard-banner dashboard-banner--error">{errorMessage}</div>
+      ) : null}
+
+      {hasUnsavedChanges && saveStatus === 'error' ? (
+        <div className="dashboard-banner dashboard-banner--error">
+          Échec de l’enregistrement automatique. Nouvelle tentative dans 5 minutes.
+        </div>
       ) : null}
 
       {!supabaseConfigured ? (
@@ -1059,7 +1133,7 @@ export function RoomEditor({
               </div>
               <Button
                 className="dashboard-primaryButton room-editor__toolbarSave"
-                onClick={handleSaveRoom}
+                onClick={() => handleSaveRoom('manual')}
                 disabled={isBusy || !selectedLevelId}
               >
                 {busyAction === 'save' ? 'Enregistrement...' : activeRoom ? 'Enregistrer' : 'Créer la pièce'}
@@ -1071,6 +1145,7 @@ export function RoomEditor({
               wallDefinitions={wallDefinitions}
               openings={openings}
               contextRooms={contextRooms}
+              viewportStateKey={`room:${selectedProjectId}:${selectedLevelId}:${selectedRoomId || 'draft'}`}
               selectedWallIndex={selectedWallIndex}
               showInspector={false}
               height={760}
@@ -1084,6 +1159,7 @@ export function RoomEditor({
                     wallHeightCm: preferences.defaultWallHeightCm,
                   });
                   applyRoomGeometry(geometry.vertices, geometry.walls, []);
+                  markDirty();
                   setStatusMessage('Rectangle défini. Vérifie ses propriétés puis crée la pièce.');
                   setErrorMessage(null);
                 } catch (caught) {

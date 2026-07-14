@@ -6,6 +6,7 @@ import { ActionHistoryProvider } from '../components/ActionHistory';
 import { DEFAULT_CANVAS_DISPLAY_OPTIONS, type CanvasLevelData } from '../components/Canvas2D';
 import { SelectionSyncBridge } from '../components/SelectionSyncBridge';
 import { PreferencesProvider } from '../components/PreferencesContext';
+import { UnsavedChangesProvider } from '../components/UnsavedChangesContext';
 import { DEFAULT_USER_PREFERENCES } from '../domain/userPreferences';
 import type { Project } from '../domain/types';
 import type { GlobalEditorAccess } from '../domain/globalEditorAccess';
@@ -16,7 +17,7 @@ const data: CanvasLevelData = { level: { id: 'l1', projectId: 'p1', name: 'RDC',
 
 function renderContent(access: GlobalEditorAccess = { readOnly: false, reason: null, message: null }) {
   const gateway = { load: vi.fn().mockResolvedValue(DEFAULT_USER_PREFERENCES), save: vi.fn() };
-  return render(<MantineProvider><PreferencesProvider gateway={gateway}><ActionHistoryProvider><SelectionSyncBridge validObjects={new Set(['level:l1', 'room:r1'])}><GlobalEditorContent project={project} levels={[data.level]} levelData={[data]} activeLevelId="l1" visibleLevelIds={['l1']} options={DEFAULT_CANVAS_DISPLAY_OPTIONS} loading={false} error="" access={access} onRetry={vi.fn()} onOptionsChange={vi.fn()} onToggleLevel={vi.fn()} onActiveLevelChange={vi.fn()} /></SelectionSyncBridge></ActionHistoryProvider></PreferencesProvider></MantineProvider>);
+  return render(<MantineProvider><UnsavedChangesProvider><PreferencesProvider gateway={gateway}><ActionHistoryProvider><SelectionSyncBridge validObjects={new Set(['level:l1', 'room:r1'])}><GlobalEditorContent project={project} levels={[data.level]} levelData={[data]} activeLevelId="l1" visibleLevelIds={['l1']} options={DEFAULT_CANVAS_DISPLAY_OPTIONS} loading={false} error="" access={access} onRetry={vi.fn()} onOptionsChange={vi.fn()} onToggleLevel={vi.fn()} onActiveLevelChange={vi.fn()} /></SelectionSyncBridge></ActionHistoryProvider></PreferencesProvider></UnsavedChangesProvider></MantineProvider>);
 }
 
 describe('GlobalEditorContent', () => {

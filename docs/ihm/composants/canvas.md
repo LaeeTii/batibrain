@@ -10,6 +10,14 @@
 - CanvasScaleIndicator
 - WallElevationCanvas
 
+## Technologie de rendu
+- Le moteur de rendu et d'interaction des canvas est React-Konva (`react-konva` + `konva`) pour:
+	- Canvas2D,
+	- WallElevationCanvas,
+	- les canvas de plan de niveau et de pièce.
+- La bascule est directe: aucun nouveau comportement canvas ne doit être implémenté en SVG.
+- Les coordonnées métier restent exprimées en centimètres dans le repère du niveau; le canvas applique uniquement une projection visuelle (zoom, pan, reset) sans modifier les données métier.
+
 ## Responsabilites
 - Canvas2D:
 	- Rendre les objets du niveau actif et des niveaux visibles.
@@ -46,6 +54,7 @@
 - La sélection utilisateur dans le canvas est synchronisee vers panneaux et détail tree.
 - Les mesures en focus restent visibles en édition meme si l'option globale correspondante est decochee.
 - Les controles de zoom restent disponibles en permanence dans la zone canvas.
+- Le viewport est un état visuel de session: aucune interaction d'édition (création, déplacement, sélection) ne doit forcer un recadrage automatique.
 
 ## Iconographie
 - Zoom avant: `LuZoomIn`, icône seule.

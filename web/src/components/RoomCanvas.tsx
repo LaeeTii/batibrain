@@ -16,6 +16,7 @@ export interface RoomCanvasProps {
   wallDefinitions?: Wall[];
   openings?: Opening[];
   contextRooms?: CanvasContextRoom[];
+  viewportStateKey?: string;
   width?: number;
   height?: number;
   selectedWallIndex?: number | null;
@@ -62,6 +63,8 @@ function getViewBox(verticesGroups: Vertex[][], fallbackWidth: number, fallbackH
     height: computedHeight + VIEWBOX_PADDING_CM * 2,
   };
 }
+
+const roomCanvasViewBoxCache = new Map<string, { minX: number; minY: number; width: number; height: number }>();
 
 function openingSegment(start: Vertex, end: Vertex, offsetCm: number, widthCm: number) {
   const dx = end.x - start.x;
@@ -141,6 +144,7 @@ export function RoomCanvas({
   wallDefinitions = [],
   openings = [],
   contextRooms = [],
+  viewportStateKey,
   width = 900,
   height = 700,
   selectedWallIndex = null,
@@ -176,10 +180,11 @@ export function RoomCanvas({
   );
 
   const walls = useMemo(() => wallsFromVertices(sortedVertices), [sortedVertices]);
-  const viewBox = useMemo(
+  const computedViewBox = useMemo(
     () => getViewBox([sortedVertices, ...normalizedContextRooms.map((room) => room.vertices)], width, height),
     [height, normalizedContextRooms, sortedVertices, width],
   );
+  const [viewBox, setViewBox] = useState(() => viewportStateKey ? (roomCanvasViewBoxCache.get(viewportStateKey) ?? computedViewBox) : computedViewBox);
   const openingsByWallId = useMemo(() => {
     const groupedOpenings = new Map<string, Opening[]>();
 
@@ -380,6 +385,19 @@ export function RoomCanvas({
   };
 
   const canDeleteSelectedVertex = selectedVertex !== null && sortedVertices.length > 3;
+
+  useEffect(() => {
+    if (!viewportStateKey) return;
+    const cachedViewBox = roomCanvasViewBoxCache.get(viewportStateKey);
+    if (cachedViewBox) {
+      setViewBox(cachedViewBox);
+    }
+  }, [viewportStateKey]);
+
+  useEffect(() => {
+    if (!viewportStateKey) return;
+    roomCanvasViewBoxCache.set(viewportStateKey, viewBox);
+  }, [viewBox, viewportStateKey]);
 
   useEffect(() => {
     if (editingWallIndex === null) return;

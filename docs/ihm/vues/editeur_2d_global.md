@@ -47,7 +47,7 @@
     - sélecteur du niveau éditable, placé après l'accordéon avec son libellé sur la même ligne que le champ.
   - Corps en zones:
     - zone creation: EditorCreationPanel (repliable),
-    - zone centrale: Canvas2D + overlays + zoom + echelle,
+    - zone centrale: Canvas2D (React-Konva) + overlays + zoom + echelle,
     - zone détail: EditorDetailPanel (ferme par defaut, ouvrable a la demande).
 - Règles de largeur:
   - Creation ouverte, détail ferme: creation 1/6, canvas 5/6.
@@ -99,10 +99,19 @@
 
 ## Règles metier
 - Droits projet:
-  - Le propriétaire et le collaborateur en écriture peuvent utiliser les fonctions de création, d'édition et de suppression, sous réserve du verrou d'édition requis.
+  - Le propriétaire et le collaborateur en écriture peuvent utiliser les fonctions de création, d'édition et de suppression.
   - Le collaborateur en lecture conserve la navigation, la sélection consultative, les options d'affichage, le zoom et les exports.
   - En lecture seule, les contrôles de création, d'édition, de suppression, d'annulation et de rétablissement d'actions métier sont désactivés ou masqués.
   - Une tentative d'écriture indirecte est refusée même si un contrôle obsolète reste affiché.
+ - Sauvegarde:
+  - Les modifications de géométrie et de structure sont d'abord appliquées en brouillon local.
+  - Une auto-sauvegarde est déclenchée toutes les 5 minutes quand des changements non sauvegardés existent.
+  - Un bouton `Sauvegarder` force la persistance immédiate.
+  - En cas d'échec, les changements restent en brouillon local et une nouvelle tentative automatique est relancée au cycle suivant.
+  - En cas d'échec d'auto-sauvegarde, la vue affiche un unique message d'erreur non redondant.
+  - Aucun message de succès générique n'est affiché après une action standard sans demande explicite.
+  - Toute sortie de la vue avec des changements non sauvegardés demande une confirmation explicite.
+  - Un changement de contexte interne à la vue (niveau éditable, sélection, panneau, mode) ne déclenche pas de confirmation de sortie.
 - Verrouillage manuel:
   - Une pièce, un mur ou une ouverture verrouillé reste sélectionnable et consultable dans le canvas et les panneaux.
   - Ses modifications, manipulations et sa suppression sont bloquées jusqu'à son déverrouillage.

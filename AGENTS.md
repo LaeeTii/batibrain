@@ -8,6 +8,10 @@
 - Mettre à jour la documentation concernée dans le même changement lorsqu’un comportement documenté évolue.
 - Ne pas introduire de fonctionnalité au-delà de la version cible validée sans demande explicite.
 - Si la documentation est incomplète, faire l’hypothèse minimale compatible et l’indiquer clairement.
+- Ne pas ajouter de bloc de texte informatif (info, note, astuce, bannière d’aide) dans l’interface ou la documentation produit sans demande explicite de l’utilisateur.
+- Pour les vues d’édition, ne demander une confirmation de navigation que lors d’une sortie effective de la vue (changement d’écran, fermeture d’onglet, rechargement), jamais lors d’un changement de contexte interne à la même vue.
+- En cas d’échec d’auto-sauvegarde, n’afficher qu’un seul message utilisateur non redondant par vue.
+- Ne pas afficher de message de succès générique après une action standard (exemple: « Modification appliquée. ») sans demande explicite de l’utilisateur.
 
 ## Architecture et données
 

@@ -4,9 +4,9 @@ import { AdminProvider } from './components/AdminContext';
 import { AccountModal } from './components/AccountModal';
 import { PreferencesModal } from './components/PreferencesModal';
 import { PreferencesProvider } from './components/PreferencesContext';
+import { UnsavedChangesProvider, useUnsavedChanges } from './components/UnsavedChangesContext';
 import { AppNotifications } from './components/AppNotifications';
 import { ProjectCollaborationModal } from './components/ProjectCollaborationModal';
-import { ProjectEditingLockIndicator } from './components/ProjectEditingLockIndicator';
 import { AppSidebar, type MainRoute } from './components/AppSidebar';
 import { supabaseAccountGateway } from './data/supabase/account';
 import type { UserProfile } from './domain/types';
@@ -227,6 +227,7 @@ function buildAppUrl(screen: AppScreen, dashboardContext: DashboardRoomTarget): 
 
 function AuthenticatedApp() {
   const { session, signOut } = useAuth();
+  const { hasUnsavedChanges } = useUnsavedChanges();
   const initialHistoryStateRef = useRef<AppHistoryState>(getInitialHistoryState());
   const [screen, setScreen] = useState<AppScreen>(initialHistoryStateRef.current.screen);
   const [dashboardContext, setDashboardContext] = useState<DashboardRoomTarget>(
@@ -371,6 +372,16 @@ function AuthenticatedApp() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  useEffect(() => {
+    if (!hasUnsavedChanges) return undefined;
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', beforeUnload);
+    return () => window.removeEventListener('beforeunload', beforeUnload);
+  }, [hasUnsavedChanges]);
+
   function commitNavigation(
     nextScreen: AppScreen,
     nextDashboardContext: DashboardRoomTarget,
@@ -378,6 +389,14 @@ function AuthenticatedApp() {
   ) {
     const normalizedDashboardContext = normalizeDashboardContext(nextDashboardContext);
     const normalizedScreen = syncScreenWithContext(nextScreen, normalizedDashboardContext);
+    const isLeavingCurrentView = normalizedScreen.name !== screen.name;
+
+    if (hasUnsavedChanges
+      && isLeavingCurrentView
+      && !window.confirm('Des changements sont en cours. Voulez-vous quitter cette vue ?')) {
+      return;
+    }
+
     const routeState = createAppHistoryState(normalizedScreen, normalizedDashboardContext);
     const historyMethod = historyMode === 'push'
       && !haveSameRouteCoordinates(screen, dashboardContext, normalizedScreen, normalizedDashboardContext)
@@ -406,6 +425,9 @@ function AuthenticatedApp() {
   }
 
   function goBack() {
+    if (hasUnsavedChanges && !window.confirm('Des changements sont en cours. Voulez-vous quitter cette vue ?')) {
+      return;
+    }
     if (window.history.length > 1) {
       window.history.back();
       return;
@@ -514,7 +536,6 @@ function AuthenticatedApp() {
             </UnstyledButton>
           </div>
         </header>
-        {dashboardContext.projectId && <ProjectEditingLockIndicator projectId={dashboardContext.projectId} />}
         {signOutError && <div className="session-error" role="alert">{signOutError}</div>}
         {projectsStatus === 'loading' ? (
           <main className="auth-loading" aria-live="polite">Chargement des projets…</main>
@@ -580,5 +601,5 @@ function AppGuard() {
 }
 
 export default function App() {
-  return <AuthProvider><AppGuard /></AuthProvider>;
+  return <AuthProvider><UnsavedChangesProvider><AppGuard /></UnsavedChangesProvider></AuthProvider>;
 }
