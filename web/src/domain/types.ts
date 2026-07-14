@@ -109,6 +109,7 @@ export interface Room {
   floorColor: string;
   notes?: string | null;
   isSoftDeleted?: boolean;
+  isLocked?: boolean;
 }
 
 export interface Wall {
@@ -122,6 +123,7 @@ export interface Wall {
   material?: string | null;
   insulation?: string | null;
   notes?: string | null;
+  isLocked?: boolean;
 }
 
 export type WallFaceSide = 'gauche' | 'droite';
@@ -176,6 +178,7 @@ export interface Opening {
   bottomCm: number;
   heightCm: number;
   notes?: string | null;
+  isLocked?: boolean;
 }
 
 export type OpeningKind = 'porte' | 'fenêtre' | 'baie_vitree' | 'autre';

@@ -134,6 +134,8 @@ Statut : implémentée le 2026-07-14. L’éditeur global dispose des panneaux r
 
 Créer GlobalEditor2DView, charger projet et niveau, brancher canvas et panneaux, gérer le changement de niveau, l’affichage multi-pièces et les états vide, erreur, lecture seule et verrouillé. Cette tâche ne modifie pas encore la géométrie.
 
+Statut : implémentée le 2026-07-14. GlobalEditor2DView orchestre le chargement du projet, des niveaux et des snapshots multi-pièces, conserve au moins un niveau visible et synchronise le niveau éditable avec le contexte de navigation. La vue distingue les états sans projet, chargement, erreur, consultation selon les droits, verrou collaboratif temporaire et élément manuellement verrouillé ; le canvas, les panneaux et la sélection restent consultables sans exposer d’écriture géométrique.
+
 ### V1-24 — Implémenter l’édition géométrique globale
 
 Ajouter création et déplacement des pièces et sommets, magnétisme, validation polygonale, mise à jour des murs et relations, jonctions à trois pièces et compatibilité des ouvertures avec sauvegarde transactionnelle. Tester qu’aucune géométrie invalide ou opération partielle n’est persistée.

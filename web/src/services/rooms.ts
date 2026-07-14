@@ -18,6 +18,7 @@ type PieceRow = {
   floor_color: string;
   notes: string | null;
   is_soft_deleted: boolean;
+  is_locked?: boolean;
 };
 
 type PieceVertexRow = {
@@ -39,6 +40,7 @@ type PieceWallRow = {
   material: string | null;
   insulation: string | null;
   notes: string | null;
+  is_locked?: boolean;
 };
 
 type PieceOpeningRow = {
@@ -50,6 +52,7 @@ type PieceOpeningRow = {
   bottom_cm: number | string;
   height_cm: number | string;
   notes: string | null;
+  is_locked?: boolean;
 };
 
 type CurrentWallRow = {
@@ -60,6 +63,7 @@ type CurrentWallRow = {
   material: string | null;
   insulation: string | null;
   notes: string | null;
+  is_locked: boolean;
 };
 
 type WallHeightPointRow = { wall_id: string; face_side: 'gauche' | 'droite'; point_order: number; height_cm: number | string };
@@ -90,6 +94,7 @@ function mapPieceRow(row: PieceRow): Room {
     floorColor: row.floor_color,
     notes: row.notes,
     isSoftDeleted: row.is_soft_deleted,
+    isLocked: row.is_locked === true,
   };
 }
 
@@ -115,6 +120,7 @@ function mapPieceWallRow(row: PieceWallRow): Wall {
     material: row.material,
     insulation: row.insulation,
     notes: row.notes,
+    isLocked: row.is_locked === true,
   };
 }
 
@@ -128,6 +134,7 @@ function mapPieceOpeningRow(row: PieceOpeningRow): Opening {
     bottomCm: Number(row.bottom_cm),
     heightCm: Number(row.height_cm),
     notes: row.notes,
+    isLocked: row.is_locked === true,
   };
 }
 
@@ -204,7 +211,7 @@ export async function getRoom(roomId: string): Promise<Room> {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('pieces')
-    .select('id, level_id, name, room_type, floor_color, notes, is_soft_deleted')
+    .select('id, level_id, name, room_type, floor_color, notes, is_soft_deleted, is_locked')
     .eq('id', roomId)
     .single();
 
@@ -219,7 +226,7 @@ export async function listRoomsByLevel(levelId: string): Promise<Room[]> {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('pieces')
-    .select('id, level_id, name, room_type, floor_color, notes, is_soft_deleted')
+    .select('id, level_id, name, room_type, floor_color, notes, is_soft_deleted, is_locked')
     .eq('level_id', levelId)
     .eq('is_soft_deleted', false)
     .order('created_at');
@@ -257,7 +264,7 @@ export async function loadRoomSnapshot(roomId: string): Promise<RoomSnapshot> {
   const { data: walls, error: wallsError } = wallIds.length === 0
     ? { data: [], error: null }
     : await supabase.from('walls')
-      .select('id, start_vertex_id, end_vertex_id, thickness_cm, material, insulation, notes')
+      .select('id, start_vertex_id, end_vertex_id, thickness_cm, material, insulation, notes, is_locked')
       .in('id', wallIds);
 
   if (wallsError) {
@@ -283,7 +290,7 @@ export async function loadRoomSnapshot(roomId: string): Promise<RoomSnapshot> {
   if (syncedWalls.length > 0) {
     const { data: openings, error: openingsError } = await supabase
       .from('openings')
-      .select('id, wall_id, opening_type, position_cm, width_cm, bottom_cm, height_cm, notes')
+      .select('id, wall_id, opening_type, position_cm, width_cm, bottom_cm, height_cm, notes, is_locked')
       .in('wall_id', syncedWalls.map((wall) => wall.id));
 
     if (openingsError) {
@@ -309,7 +316,7 @@ export async function createRoom(room: CreateRoomInput): Promise<Room> {
   const { data, error } = await supabase
     .from('pieces')
     .insert(toPieceInsertRow(room))
-    .select('id, level_id, name, room_type, floor_color, notes, is_soft_deleted')
+    .select('id, level_id, name, room_type, floor_color, notes, is_soft_deleted, is_locked')
     .single();
 
   if (error) {
