@@ -12,7 +12,7 @@ import { supabaseAccountGateway } from './data/supabase/account';
 import type { UserProfile } from './domain/types';
 import type { Project } from './domain/types';
 import { createProject, listProjects, softDeleteProject, updateProject } from './services/projects';
-import { Button, Modal, TextInput, Textarea } from '@mantine/core';
+import { ActionIcon, Button, Modal, TextInput, Textarea, UnstyledButton } from '@mantine/core';
 import { LuMenu, LuSettings } from 'react-icons/lu';
 import { LoginView } from './views/LoginView';
 import { RoomEditor } from './views/RoomEditor';
@@ -490,9 +490,9 @@ function AuthenticatedApp() {
       <div className="app-shell__content">
         <header className="app-globalActions" aria-label="Actions globales">
           {!sidebarOpen && (
-            <button className="app-iconButton" type="button" onClick={() => setSidebarOpen(true)} aria-label="Ouvrir la barre latérale" title="Ouvrir la barre latérale">
+            <ActionIcon className="app-iconButton" variant="default" onClick={() => setSidebarOpen(true)} aria-label="Ouvrir la barre latérale" title="Ouvrir la barre latérale">
               <LuMenu aria-hidden="true" />
-            </button>
+            </ActionIcon>
           )}
           <div className="app-globalActions__right">
             <AppNotifications onProjectAccepted={(projectId) => {
@@ -501,17 +501,17 @@ function AuthenticatedApp() {
                 updateDashboardContext({ projectId, levelId: '', roomId: '' }, 'push');
               });
             }} />
-            <button className="app-iconButton" type="button" onClick={() => setPreferencesOpen(true)} aria-label="Ouvrir les préférences" title="Ouvrir les préférences">
+            <ActionIcon className="app-iconButton" variant="default" onClick={() => setPreferencesOpen(true)} aria-label="Ouvrir les préférences" title="Ouvrir les préférences">
               <LuSettings aria-hidden="true" />
-            </button>
-            <button type="button" className="app-userProfile" onClick={() => setAccountOpen(true)} aria-label={`Gérer le compte de ${sidebarProfile.displayName}`}>
+            </ActionIcon>
+            <UnstyledButton className="app-userProfile" onClick={() => setAccountOpen(true)} aria-label={`Gérer le compte de ${sidebarProfile.displayName}`}>
               {sidebarProfile.avatarUrl ? (
                 <img className="app-userProfile__avatar" src={sidebarProfile.avatarUrl} alt="" />
               ) : (
                 <div className="app-userProfile__avatar" aria-hidden="true">{profileInitials}</div>
               )}
               <strong>{sidebarProfile.displayName}</strong>
-            </button>
+            </UnstyledButton>
           </div>
         </header>
         {dashboardContext.projectId && <ProjectEditingLockIndicator projectId={dashboardContext.projectId} />}

@@ -1,8 +1,11 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render as testingRender, screen, waitFor } from '@testing-library/react';
+import { MantineProvider } from '@mantine/core';
 import { describe, expect, it, vi } from 'vitest';
 import type { AdminGateway, AdminOverview } from '../data/supabase/admin';
 import { AdminModal } from './AdminModal';
+
+const render = (component: React.ReactNode) => testingRender(<MantineProvider>{component}</MantineProvider>);
 
 const OVERVIEW: AdminOverview = {
   currentUserId: 'admin-1',

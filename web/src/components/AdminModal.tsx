@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ActionIcon, Button, NativeSelect } from '@mantine/core';
 import {
   LuCircleAlert,
   LuCircleCheck,
@@ -94,7 +95,7 @@ export function AdminModal({
       <section className="settings-modal admin-modal" role="dialog" aria-modal="true" aria-labelledby="admin-title">
         <header className="settings-header">
           <div><p className="dashboard-eyebrow">Administration</p><h2 id="admin-title">Comptes</h2></div>
-          <button ref={closeRef} type="button" className="settings-close" aria-label="Fermer l’administration" onClick={onClose}><LuX aria-hidden="true" /></button>
+          <ActionIcon ref={closeRef} variant="subtle" className="settings-close" aria-label="Fermer l’administration" onClick={onClose}><LuX aria-hidden="true" /></ActionIcon>
         </header>
 
         {feedback && <div className={`login-message login-message--${feedback.kind}`} role={feedback.kind === 'error' ? 'alert' : 'status'}>
@@ -109,9 +110,9 @@ export function AdminModal({
                 <div className="admin-list">
                   {overview.requests.map((request) => <article className="admin-row" key={request.id}>
                     <div><strong>{request.displayName}</strong><p>{request.firstName} {request.lastName} · {request.email}</p></div>
-                    <button type="button" className="settings-secondaryButton" disabled={actionId !== null} onClick={() => void approve(request.id)}>
+                    <Button variant="light" className="settings-secondaryButton" disabled={actionId !== null} loading={actionId === request.id} onClick={() => void approve(request.id)}>
                       {actionId === request.id ? <LuLoaderCircle className="is-spinning" aria-hidden="true" /> : <LuUserCheck aria-hidden="true" />} Approuver
-                    </button>
+                    </Button>
                   </article>)}
                 </div>
               )}
@@ -131,13 +132,11 @@ export function AdminModal({
                     return <article className="admin-row admin-userRow" key={user.userId}>
                       <div><strong>{user.displayName}{isSelf ? ' (vous)' : ''}</strong><p>{user.firstName} {user.lastName} · {user.email}</p></div>
                       <div className="admin-role">
-                        <select aria-label={`Rôle de ${user.displayName}`} value={user.role} disabled={isSelf || actionId !== null} onChange={(event) => void changeRole(user, event.target.value as UserRole)}>
-                          <option value="user">Utilisateur</option><option value="admin">Administrateur</option>
-                        </select>
+                        <NativeSelect aria-label={`Rôle de ${user.displayName}`} value={user.role} disabled={isSelf || actionId !== null} onChange={(event) => void changeRole(user, event.target.value as UserRole)} data={[{ value: 'user', label: 'Utilisateur' }, { value: 'admin', label: 'Administrateur' }]} />
                       </div>
-                      <button type="button" className="admin-delete" disabled={isSelf || actionId !== null} onClick={() => setDeleteTarget(user)}>
+                      <Button color="red" variant="light" className="admin-delete" disabled={isSelf || actionId !== null} onClick={() => setDeleteTarget(user)}>
                         <LuUserRoundX aria-hidden="true" /> Supprimer
-                      </button>
+                      </Button>
                     </article>;
                   })}
                 </div>
@@ -151,8 +150,8 @@ export function AdminModal({
             <h3 id="delete-title">Supprimer {deleteTarget.displayName} ?</h3>
             <p id="delete-description">Cette action supprimera définitivement ce compte ainsi que {deleteTarget.ownedProjectCount} projet{deleteTarget.ownedProjectCount > 1 ? 's' : ''} possédé{deleteTarget.ownedProjectCount > 1 ? 's' : ''} et toutes les données associées.</p>
             <div className="dashboard-modalActions">
-              <button type="button" className="settings-secondaryButton" onClick={() => setDeleteTarget(null)}>Annuler</button>
-              <button type="button" className="admin-delete admin-delete--confirm" disabled={actionId !== null} onClick={() => void confirmDelete()}><LuUserRoundX aria-hidden="true" /> Confirmer la suppression</button>
+              <Button variant="default" className="settings-secondaryButton" onClick={() => setDeleteTarget(null)}>Annuler</Button>
+              <Button color="red" className="admin-delete admin-delete--confirm" loading={actionId !== null} onClick={() => void confirmDelete()} leftSection={<LuUserRoundX aria-hidden="true" />}>Confirmer la suppression</Button>
             </div>
           </section>
         </div>}

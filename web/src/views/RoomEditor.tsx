@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { ActionIcon, Button, NativeSelect, NumberInput, TextInput, UnstyledButton } from '@mantine/core';
 import { RoomCanvas } from '../components/RoomCanvas';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { usePreferences } from '../components/PreferencesContext';
@@ -965,9 +966,9 @@ export function RoomEditor({
         </div>
         <div className="room-editor__headerActions">
           {onBack ? (
-            <button type="button" className="dashboard-outlineButton" onClick={onBack}>
+            <Button variant="default" className="dashboard-outlineButton" onClick={onBack}>
               Retour
-            </button>
+            </Button>
           ) : null}
         </div>
       </header>
@@ -989,64 +990,39 @@ export function RoomEditor({
           <aside className="room-editor__roomsPanel">
             <div className="room-editor__panelHeader">
               <h3 className="dashboard-panelTitle">Pièces</h3>
-              <button
-                type="button"
+              <ActionIcon
+                variant="light"
                 className="room-editor__iconAction"
                 onClick={handleCreateRoom}
                 disabled={isBusy || !selectedLevelId || (!activeRoom && vertices.length !== 4)}
                 aria-label="Préparer une nouvelle pièce"
               >
                 +
-              </button>
+              </ActionIcon>
             </div>
 
             <div className="room-editor__filtersRow">
-              <label className="dashboard-field dashboard-field--compact">
-                <span>Projet</span>
-                <select
+              <NativeSelect className="dashboard-field dashboard-field--compact" label="Projet"
                   value={selectedProjectId}
                   onChange={handleSelectedProjectChange}
                   disabled={isBusy || availableProjects.length === 0}
-                >
-                  <option value="">
-                    {availableProjects.length === 0 ? 'Aucun projet' : 'Sélectionner un projet'}
-                  </option>
-                  {availableProjects.map((project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                data={[{ value: '', label: availableProjects.length === 0 ? 'Aucun projet' : 'Sélectionner un projet' }, ...availableProjects.map((project) => ({ value: project.id, label: project.name }))]}
+              />
 
-              <label className="dashboard-field dashboard-field--compact">
-                <span>Niveau</span>
-                <select
+              <NativeSelect className="dashboard-field dashboard-field--compact" label="Niveau"
                   value={selectedLevelId}
                   onChange={handleSelectedLevelChange}
                   disabled={isBusy || !selectedProjectId || availableLevels.length === 0}
-                >
-                  <option value="">
-                    {availableLevels.length === 0 ? 'Aucun niveau' : 'Sélectionner un niveau'}
-                  </option>
-                  {availableLevels.map((level) => (
-                    <option key={level.id} value={level.id}>
-                      {level.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                data={[{ value: '', label: availableLevels.length === 0 ? 'Aucun niveau' : 'Sélectionner un niveau' }, ...availableLevels.map((level) => ({ value: level.id, label: level.name }))]}
+              />
             </div>
 
-            <label className="dashboard-field dashboard-field--compact">
-              <span>Nom de la nouvelle pièce</span>
-              <input
+            <TextInput className="dashboard-field dashboard-field--compact" label="Nom de la nouvelle pièce"
                 value={newRoomNameInput}
                 onChange={(event) => setNewRoomNameInput(event.target.value)}
                 placeholder="Cuisine, salon, chambre..."
                 disabled={isBusy}
-              />
-            </label>
+            />
 
             <div className="room-editor__list">
               {availableRooms.length === 0 ? (
@@ -1058,15 +1034,14 @@ export function RoomEditor({
                   const isSelected = room.id === selectedRoomId;
 
                   return (
-                    <button
+                    <UnstyledButton
                       key={room.id}
-                      type="button"
                       className={`room-editor__roomRow ${isSelected ? 'is-active' : ''}`}
                       onClick={() => selectRoom(room.id, 'push')}
                     >
                       <strong>{room.name}</strong>
                       <span>{roomArea === null ? 'Surface...' : formatAreaM2(roomArea)}</span>
-                    </button>
+                    </UnstyledButton>
                   );
                 })
               )}
@@ -1076,20 +1051,19 @@ export function RoomEditor({
           <div className="room-editor__canvasPanel">
             <div className="room-editor__toolbar">
               <div className="room-editor__toolGroup">
-                <button type="button" className="room-editor__toolButton is-active">Dessiner</button>
-                <button type="button" className="room-editor__toolButton">Sélection</button>
-                <button type="button" className="room-editor__toolButton">Déplacer</button>
-                <button type="button" className="room-editor__toolButton">Mesurer</button>
-                <button type="button" className="room-editor__toolButton">Annoter</button>
+                <Button variant="light" className="room-editor__toolButton is-active">Dessiner</Button>
+                <Button variant="subtle" className="room-editor__toolButton">Sélection</Button>
+                <Button variant="subtle" className="room-editor__toolButton">Déplacer</Button>
+                <Button variant="subtle" className="room-editor__toolButton">Mesurer</Button>
+                <Button variant="subtle" className="room-editor__toolButton">Annoter</Button>
               </div>
-              <button
-                type="button"
+              <Button
                 className="dashboard-primaryButton room-editor__toolbarSave"
                 onClick={handleSaveRoom}
                 disabled={isBusy || !selectedLevelId}
               >
                 {busyAction === 'save' ? 'Enregistrement...' : activeRoom ? 'Enregistrer' : 'Créer la pièce'}
-              </button>
+              </Button>
             </div>
 
             <RoomCanvas
@@ -1125,20 +1099,20 @@ export function RoomEditor({
             </div>
 
             <div className="room-editor__tabs">
-              <button
-                type="button"
+              <Button
+                variant={inspectorTab === 'metrics' ? 'filled' : 'subtle'}
                 className={`room-editor__tab ${inspectorTab === 'metrics' ? 'is-active' : ''}`}
                 onClick={() => setInspectorTab('metrics')}
               >
                 Métriques
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant={inspectorTab === 'objects' ? 'filled' : 'subtle'}
                 className={`room-editor__tab ${inspectorTab === 'objects' ? 'is-active' : ''}`}
                 onClick={() => setInspectorTab('objects')}
               >
                 Objet
-              </button>
+              </Button>
             </div>
 
             {inspectorTab === 'metrics' ? (
@@ -1154,14 +1128,13 @@ export function RoomEditor({
                 <ul className="room-editor__wallList">
                   {walls.map((wall) => (
                     <li key={wall.index}>
-                      <button
-                        type="button"
+                      <UnstyledButton
                         className={`room-editor__wallItem ${selectedWallIndex === wall.index ? 'is-active' : ''}`}
                         onClick={() => setSelectedWallIndex(wall.index)}
                       >
                         <span>{wall.index + 1}</span>
                         <strong>{formatMeters(wall.lengthCm / 100)}</strong>
-                      </button>
+                      </UnstyledButton>
                     </li>
                   ))}
                 </ul>
@@ -1200,62 +1173,40 @@ export function RoomEditor({
 
                     <h5 className="room-editor__sectionTitle">Ouvertures</h5>
                     <div className="room-editor__fieldGrid">
-                      <label className="dashboard-field dashboard-field--compact room-editor__openingTypeField">
-                        <span>Type</span>
-                        <select
+                      <NativeSelect className="dashboard-field dashboard-field--compact room-editor__openingTypeField" label="Type"
                           value={openingDraft.type}
                           onChange={(event) => handleOpeningDraftChange('type', event.target.value)}
-                        >
-                          <option value="door">Porte</option>
-                          <option value="window">Fenêtre</option>
-                          <option value="other">Autre</option>
-                        </select>
-                      </label>
-                      <label className="dashboard-field dashboard-field--compact">
-                        <span>Position (cm)</span>
-                        <input
-                          type="number"
-                          min="0"
-                          step="1"
+                        data={[{ value: 'door', label: 'Porte' }, { value: 'window', label: 'Fenêtre' }, { value: 'other', label: 'Autre' }]}
+                      />
+                      <NumberInput className="dashboard-field dashboard-field--compact" label="Position (cm)"
+                          min={0}
+                          step={1}
                           value={openingDraft.offsetCm}
-                          onChange={(event) => handleOpeningDraftChange('offsetCm', event.target.value)}
+                          onChange={(value) => handleOpeningDraftChange('offsetCm', String(value))}
                         />
-                      </label>
-                      <label className="dashboard-field dashboard-field--compact">
-                        <span>Largeur (cm)</span>
-                        <input
-                          type="number"
-                          min="1"
-                          step="1"
+                      <NumberInput className="dashboard-field dashboard-field--compact" label="Largeur (cm)"
+                          min={1}
+                          step={1}
                           value={openingDraft.widthCm}
-                          onChange={(event) => handleOpeningDraftChange('widthCm', event.target.value)}
+                          onChange={(value) => handleOpeningDraftChange('widthCm', String(value))}
                         />
-                      </label>
-                      <label className="dashboard-field dashboard-field--compact">
-                        <span>Allège (cm)</span>
-                        <input
-                          type="number"
-                          min="0"
-                          step="1"
+                      <NumberInput className="dashboard-field dashboard-field--compact" label="Allège (cm)"
+                          min={0}
+                          step={1}
                           value={openingDraft.bottomCm}
-                          onChange={(event) => handleOpeningDraftChange('bottomCm', event.target.value)}
+                          onChange={(value) => handleOpeningDraftChange('bottomCm', String(value))}
                         />
-                      </label>
-                      <label className="dashboard-field dashboard-field--compact">
-                        <span>Hauteur (cm)</span>
-                        <input
-                          type="number"
-                          min="1"
-                          step="1"
+                      <NumberInput className="dashboard-field dashboard-field--compact" label="Hauteur (cm)"
+                          min={1}
+                          step={1}
                           value={openingDraft.heightCm}
-                          onChange={(event) => handleOpeningDraftChange('heightCm', event.target.value)}
+                          onChange={(value) => handleOpeningDraftChange('heightCm', String(value))}
                         />
-                      </label>
                     </div>
 
-                    <button type="button" className="dashboard-viewButton" onClick={handleAddOpening}>
+                    <Button className="dashboard-viewButton" onClick={handleAddOpening}>
                       Ajouter ouverture
-                    </button>
+                    </Button>
 
                     {openingFormMessage ? (
                       <div className="dashboard-banner dashboard-banner--error">{openingFormMessage}</div>
@@ -1270,15 +1221,16 @@ export function RoomEditor({
                             <span>
                               {openingTypeLabel(opening.type)} - {opening.widthCm} x {opening.heightCm} cm
                             </span>
-                            <button
-                              type="button"
+                            <ActionIcon
+                              color="red"
+                              variant="subtle"
                               className="room-editor__openingDeleteButton"
                               onClick={() => handleRemoveOpening(opening.id)}
                               aria-label={`Supprimer l'ouverture ${openingTypeLabel(opening.type)}`}
                               title="Supprimer"
                             >
                               X
-                            </button>
+                            </ActionIcon>
                           </li>
                         ))}
                       </ul>

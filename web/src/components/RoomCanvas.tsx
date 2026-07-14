@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Button, Input } from '@mantine/core';
 import { centroid, formatLengthCm, insertVertexBetween, polygonAreaCm2, polygonPerimeterCm, removeVertex, snapPointToNearbyAxes, updateVertexPosition, updateWallLength, wallsFromVertices } from '../domain/geometry';
 import type { Opening, Point, Room, Vertex, Wall } from '../domain/types';
 
@@ -580,7 +581,7 @@ export function RoomCanvas({
                   onDoubleClick={(event) => event.stopPropagation()}
                 >
                   <div style={{ width: '100%', height: '100%' }}>
-                    <input
+                    <Input
                       ref={wallLengthInputRef}
                       type="text"
                       inputMode="decimal"
@@ -713,8 +714,8 @@ export function RoomCanvas({
         <p style={{ color: '#57606a', fontSize: 14 }}>
           Pendant le déplacement, un sommet s'aligne automatiquement sur les axes des autres points s'il passe à moins de {SNAP_THRESHOLD_CM} cm.
         </p>
-        <button
-          type="button"
+        <Button
+          color="red"
           onClick={handleDeleteSelectedVertex}
           disabled={!canDeleteSelectedVertex}
           style={{
@@ -729,9 +730,8 @@ export function RoomCanvas({
           }}
         >
           Supprimer le sommet sélectionné
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
           onClick={handleInsertVertexBetweenSelection}
           disabled={!selectedVertexWall}
           style={{
@@ -746,7 +746,7 @@ export function RoomCanvas({
           }}
         >
           Insérer un sommet entre les sommets sélectionnés
-        </button>
+        </Button>
         {selectedVertexIds.length > 0 && (
           <p style={{ color: '#57606a', fontSize: 14 }}>
             Sélection : {selectedVertices.map((vertex) => `v${vertex.order}`).join(', ')}

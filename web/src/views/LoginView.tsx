@@ -1,12 +1,10 @@
 import React, { useEffect, useRef, useState, type FormEvent } from 'react';
+import { Button, Checkbox, PasswordInput, TextInput } from '@mantine/core';
 import {
   LuCircleAlert,
   LuCircleCheck,
-  LuEye,
-  LuEyeOff,
   LuKeyRound,
   LuLoaderCircle,
-  LuLockKeyhole,
   LuLogIn,
   LuMail,
   LuUserRoundPlus,
@@ -22,7 +20,6 @@ export function LoginView({ sessionExpired = false }: { sessionExpired?: boolean
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(true);
-  const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [message, setMessage] = useState(sessionExpired ? 'Votre session a expiré. Veuillez vous reconnecter.' : '');
@@ -118,43 +115,35 @@ export function LoginView({ sessionExpired = false }: { sessionExpired?: boolean
         )}
 
         <form className="login-form" onSubmit={handleSubmit} noValidate>
-          <label htmlFor="login-email"><LuMail aria-hidden="true" /> Adresse e-mail</label>
-          <input ref={emailRef} id="login-email" type="email" autoComplete="email" value={email} disabled={submitting}
+          <TextInput ref={emailRef} id="login-email" type="email" label="Adresse e-mail" leftSection={<LuMail aria-hidden="true" />} autoComplete="email" value={email} disabled={submitting}
             aria-invalid={Boolean(emailError)} aria-describedby={emailError ? 'login-email-error' : undefined}
             onBlur={() => email && setEmailError(EMAIL_PATTERN.test(email.trim()) ? '' : 'Saisissez une adresse e-mail valide.')}
             onChange={(event) => { setEmail(event.target.value); setEmailError(''); }} />
           {emailError && <p id="login-email-error" className="login-fieldError">{emailError}</p>}
 
-          <label htmlFor="login-password"><LuLockKeyhole aria-hidden="true" /> Mot de passe</label>
-          <div className="login-password">
-            <input ref={passwordRef} id="login-password" type={showPassword ? 'text' : 'password'} autoComplete="current-password"
+          <PasswordInput ref={passwordRef} id="login-password" label="Mot de passe" autoComplete="current-password"
               value={password} disabled={submitting} aria-invalid={Boolean(passwordError)}
               aria-describedby={passwordError ? 'login-password-error' : undefined}
               onChange={(event) => { setPassword(event.target.value); setPasswordError(''); }} />
-            <button type="button" className="login-iconButton" aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-              onClick={() => setShowPassword((visible) => !visible)}>
-              {showPassword ? <LuEyeOff aria-hidden="true" /> : <LuEye aria-hidden="true" />}
-            </button>
-          </div>
           {passwordError && <p id="login-password-error" className="login-fieldError">{passwordError}</p>}
 
           <div className="login-options">
-            <label className="login-checkbox"><input type="checkbox" checked={remember} disabled={submitting}
-              onChange={(event) => setRemember(event.target.checked)} /> Se souvenir de moi</label>
-            <button type="button" className="login-link" disabled={submitting} onClick={handlePasswordReset}>
+            <Checkbox className="login-checkbox" checked={remember} disabled={submitting} label="Se souvenir de moi"
+              onChange={(event) => setRemember(event.target.checked)} />
+            <Button variant="subtle" type="button" className="login-link" disabled={submitting} onClick={handlePasswordReset}>
               <LuKeyRound aria-hidden="true" /> Mot de passe oublié ?
-            </button>
+            </Button>
           </div>
 
-          <button className="login-submit" type="submit" disabled={!valid || submitting}>
+          <Button className="login-submit" type="submit" disabled={!valid || submitting} loading={submitting}>
             {submitting ? <LuLoaderCircle className="is-spinning" aria-hidden="true" /> : <LuLogIn aria-hidden="true" />}
             {submitting ? 'Connexion…' : 'Se connecter'}
-          </button>
+          </Button>
         </form>
 
-        <button type="button" className="login-create" onClick={() => setRequestingAccount(true)}>
+        <Button variant="subtle" type="button" className="login-create" onClick={() => setRequestingAccount(true)}>
           <LuUserRoundPlus aria-hidden="true" /> Créer un compte
-        </button>
+        </Button>
         <p className="login-security">Votre session est sécurisée par Supabase Auth.</p>
           </>
         )}

@@ -43,8 +43,8 @@
     - si l'historique correspondant est vide, le bouton associe est grise et non cliquable,
     - action export PDF.
   - Sous-header niveaux:
-    - multi-sélection des niveaux visibles,
-    - selecteur du niveau editable.
+    - accordéon `Niveaux affichés`, fermé par défaut, dont le contenu s'ouvre en superposition et permet la multi-sélection des niveaux visibles,
+    - sélecteur du niveau éditable, placé après l'accordéon avec son libellé sur la même ligne que le champ.
   - Corps en zones:
     - zone creation: EditorCreationPanel (repliable),
     - zone centrale: Canvas2D + overlays + zoom + echelle,

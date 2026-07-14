@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, type FormEvent } from 'react';
+import { ActionIcon, Button, FileInput, PasswordInput, TextInput } from '@mantine/core';
 import {
   LuCircleAlert,
   LuCircleCheck,
@@ -154,7 +155,7 @@ export function SettingsModal({
             <p className="dashboard-eyebrow">Gestion du compte</p>
             <h2 id="settings-title">Compte</h2>
           </div>
-          <button ref={closeRef} type="button" className="settings-close" aria-label="Fermer la gestion du compte" onClick={onClose}><LuX aria-hidden="true" /></button>
+          <ActionIcon ref={closeRef} variant="subtle" className="settings-close" aria-label="Fermer la gestion du compte" onClick={onClose}><LuX aria-hidden="true" /></ActionIcon>
         </header>
 
         {feedback && (
@@ -172,32 +173,30 @@ export function SettingsModal({
 
             <form className="settings-section" onSubmit={saveProfile}>
               <h3>Profil</h3>
-              <label className="settings-avatarPicker"><LuUpload aria-hidden="true" /> Choisir un avatar
-                <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={saving} onChange={(event) => chooseAvatar(event.target.files?.[0])} />
-              </label>
-              <label>Nom d’affichage<input value={values.displayName} disabled={saving} onChange={(event) => setValues({ ...values, displayName: event.target.value })} /></label>
+              <FileInput className="settings-avatarPicker" label="Choisir un avatar" leftSection={<LuUpload aria-hidden="true" />} accept="image/jpeg,image/png,image/webp,image/gif" disabled={saving} onChange={(file) => chooseAvatar(file ?? undefined)} />
+              <TextInput label="Nom d’affichage" value={values.displayName} disabled={saving} onChange={(event) => setValues({ ...values, displayName: event.target.value })} />
               <div className="settings-fieldRow">
-                <label>Prénom<input autoComplete="given-name" value={values.firstName} disabled={saving} onChange={(event) => setValues({ ...values, firstName: event.target.value })} /></label>
-                <label>Nom<input autoComplete="family-name" value={values.lastName} disabled={saving} onChange={(event) => setValues({ ...values, lastName: event.target.value })} /></label>
+                <TextInput label="Prénom" autoComplete="given-name" value={values.firstName} disabled={saving} onChange={(event) => setValues({ ...values, firstName: event.target.value })} />
+                <TextInput label="Nom" autoComplete="family-name" value={values.lastName} disabled={saving} onChange={(event) => setValues({ ...values, lastName: event.target.value })} />
               </div>
-              <button type="submit" className="login-submit" disabled={saving}><LuSave aria-hidden="true" /> Enregistrer le profil</button>
+              <Button type="submit" className="login-submit" loading={saving} leftSection={<LuSave aria-hidden="true" />}>Enregistrer le profil</Button>
             </form>
 
             <form className="settings-section" onSubmit={changeEmail}>
               <h3>Adresse e-mail</h3>
               <p>Adresse active : <strong>{activeEmail}</strong></p>
-              <label>Nouvelle adresse e-mail<input type="email" autoComplete="email" value={newEmail} disabled={saving} onChange={(event) => setNewEmail(event.target.value)} /></label>
-              <button type="submit" className="settings-secondaryButton" disabled={saving || newEmail.trim().toLowerCase() === activeEmail.toLowerCase()}><LuMail aria-hidden="true" /> Demander le changement</button>
+              <TextInput label="Nouvelle adresse e-mail" type="email" autoComplete="email" value={newEmail} disabled={saving} onChange={(event) => setNewEmail(event.target.value)} />
+              <Button type="submit" variant="light" className="settings-secondaryButton" disabled={saving || newEmail.trim().toLowerCase() === activeEmail.toLowerCase()} leftSection={<LuMail aria-hidden="true" />}>Demander le changement</Button>
             </form>
 
             <form className="settings-section" onSubmit={changePassword}>
               <h3>Sécurité</h3>
-              <label>Nouveau mot de passe<input type="password" autoComplete="new-password" value={password} disabled={saving} onChange={(event) => setPassword(event.target.value)} /></label>
-              <label>Confirmer le mot de passe<input type="password" autoComplete="new-password" value={passwordConfirmation} disabled={saving} onChange={(event) => setPasswordConfirmation(event.target.value)} /></label>
-              <button type="submit" className="settings-secondaryButton" disabled={saving}><LuKeyRound aria-hidden="true" /> Modifier le mot de passe</button>
+              <PasswordInput label="Nouveau mot de passe" autoComplete="new-password" value={password} disabled={saving} onChange={(event) => setPassword(event.target.value)} />
+              <PasswordInput label="Confirmer le mot de passe" autoComplete="new-password" value={passwordConfirmation} disabled={saving} onChange={(event) => setPasswordConfirmation(event.target.value)} />
+              <Button type="submit" variant="light" className="settings-secondaryButton" loading={saving} leftSection={<LuKeyRound aria-hidden="true" />}>Modifier le mot de passe</Button>
             </form>
 
-            <button type="button" className="settings-signOut" disabled={saving} onClick={() => void onSignOut()}><LuLogOut aria-hidden="true" /> Se déconnecter</button>
+            <Button color="red" variant="light" className="settings-signOut" disabled={saving} onClick={() => void onSignOut()} leftSection={<LuLogOut aria-hidden="true" />}>Se déconnecter</Button>
           </div>
         )}
       </section>

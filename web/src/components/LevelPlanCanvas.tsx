@@ -1,4 +1,5 @@
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { ActionIcon } from '@mantine/core';
 import { centroid, formatLengthCm, polygonAreaCm2, wallsFromVertices } from '../domain/geometry';
 import type { Opening, Vertex } from '../domain/types';
 import type { RoomSnapshot } from '../services/rooms';
@@ -268,29 +269,32 @@ export function LevelPlanCanvas({
   return (
     <div className="level-planCanvas" style={{ position: 'relative' }}>
       <div className="level-planCanvas__controls">
-        <button
-          type="button"
+        <ActionIcon
+          variant="default"
+          aria-label="Zoom arrière"
           className="level-planCanvas__zoomButton"
           onClick={() => zoomAt(1.18, { x: viewport.x + viewport.width / 2, y: viewport.y + viewport.height / 2 })}
         >
           -
-        </button>
+        </ActionIcon>
 
-        <button
-          type="button"
+        <ActionIcon
+          variant="default"
+          aria-label="Zoom avant"
           className="level-planCanvas__zoomButton"
           onClick={() => zoomAt(0.82, { x: viewport.x + viewport.width / 2, y: viewport.y + viewport.height / 2 })}
         >
           +
-        </button>
+        </ActionIcon>
 
-        <button
-          type="button"
+        <ActionIcon
+          variant="default"
+          aria-label="Réinitialiser le zoom"
           className="level-planCanvas__zoomButton"
           onClick={() => setViewport(baseViewBox)}
         >
           [o]
-        </button>
+        </ActionIcon>
       </div>
 
       <svg

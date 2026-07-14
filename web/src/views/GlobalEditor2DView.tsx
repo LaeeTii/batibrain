@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Button, Checkbox, Menu, NativeSelect } from '@mantine/core';
 import { LuRedo2, LuUndo2 } from 'react-icons/lu';
 import {
   Canvas2D, CanvasDisplayOptionsMenu, DEFAULT_CANVAS_DISPLAY_OPTIONS,
@@ -71,15 +72,21 @@ export function GlobalEditor2DView({ projectId, initialLevelId = '', onLevelChan
   return <DashboardLayout>
     <header className="global-editor__header">
       <div><p className="dashboard-eyebrow">Éditeur 2D global</p><h1 className="dashboard-pageTitle">{project?.name ?? 'Plan du projet'}</h1></div>
-      <div className="dashboard-header__actions"><button type="button" className="dashboard-iconButton" disabled aria-label="Annuler"><LuUndo2 aria-hidden /></button><button type="button" className="dashboard-iconButton" disabled aria-label="Rétablir"><LuRedo2 aria-hidden /></button></div>
+      <div className="dashboard-header__actions"><Button type="button" className="dashboard-iconButton" disabled aria-label="Annuler"><LuUndo2 aria-hidden /></Button><Button type="button" className="dashboard-iconButton" disabled aria-label="Rétablir"><LuRedo2 aria-hidden /></Button></div>
     </header>
-    {error ? <div className="dashboard-banner dashboard-banner--error" role="alert">{error}<button type="button" onClick={() => void load()}>Réessayer</button></div> : null}
+    {error ? <div className="dashboard-banner dashboard-banner--error" role="alert">{error}<Button type="button" onClick={() => void load()}>Réessayer</Button></div> : null}
     <section className="global-editor__levelBar">
-      <label className="dashboard-field dashboard-field--compact"><span>Niveau éditable</span><select value={activeLevelId} onChange={(event) => { const id = event.currentTarget.value; setActiveLevelId(id); setVisibleLevelIds((current) => current.includes(id) ? current : [...current, id]); onLevelChange?.(id); }}>{levels.map((level) => <option key={level.id} value={level.id}>{level.name}</option>)}</select></label>
-      <fieldset><legend>Niveaux visibles</legend><div className="global-editor__visibleLevels">{levels.map((level) => <label key={level.id}><input type="checkbox" checked={visibleLevelIds.includes(level.id)} onChange={(event) => toggleLevel(level.id, event.currentTarget.checked)} /> {level.name}</label>)}</div></fieldset>
+      <Menu position="bottom-start" withinPortal shadow="md">
+        <Menu.Target><Button variant="default" size="md">Niveaux affichés</Button></Menu.Target>
+        <Menu.Dropdown><div className="global-editor__visibleLevels">{levels.map((level) => <Checkbox key={level.id} label={level.name} checked={visibleLevelIds.includes(level.id)} onChange={(event) => toggleLevel(level.id, event.currentTarget.checked)} />)}</div></Menu.Dropdown>
+      </Menu>
+      <div className="global-editor__editableLevel"><span>Niveau éditable</span><NativeSelect size="md" aria-label="Niveau éditable" value={activeLevelId} data={levels.map((level) => ({ value: level.id, label: level.name }))} onChange={(event) => { const id = event.currentTarget.value; setActiveLevelId(id); setVisibleLevelIds((current) => current.includes(id) ? current : [...current, id]); onLevelChange?.(id); }} /></div>
+      <Menu position="bottom-end" withinPortal shadow="md">
+        <Menu.Target><Button className="global-editor__displayMenu" variant="default" size="md">Affichage</Button></Menu.Target>
+        <Menu.Dropdown><CanvasDisplayOptionsMenu value={options} onChange={setOptions} /></Menu.Dropdown>
+      </Menu>
     </section>
     <section className="global-editor__body">
-      <aside className="global-editor__displayPanel"><h2>Affichage</h2><CanvasDisplayOptionsMenu value={options} onChange={setOptions} /></aside>
       <div className="global-editor__canvasArea">{loading ? <div className="dashboard-loading" aria-live="polite">Chargement du plan…</div> : !activeLevel ? <div className="dashboard-emptyState"><h2>Aucun niveau</h2><p>Le projet doit contenir au moins un niveau visible.</p></div> : <Canvas2D levels={levelData} activeLevelId={activeLevel.id} visibleLevelIds={visibleLevelIds} options={options} />}</div>
     </section>
   </DashboardLayout>;

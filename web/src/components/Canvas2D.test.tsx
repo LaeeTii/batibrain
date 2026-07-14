@@ -1,7 +1,10 @@
 import React from 'react';
+import { MantineProvider } from '@mantine/core';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { Canvas2D, CanvasDisplayOptionsMenu, DEFAULT_CANVAS_DISPLAY_OPTIONS, type CanvasLevelData } from './Canvas2D';
+
+const renderWithMantine = (component: React.ReactNode) => render(<MantineProvider>{component}</MantineProvider>);
 
 const levels: CanvasLevelData[] = [{
   level: { id: 'niveau-rdc', projectId: 'projet-1', name: 'RDC', number: 0, isVisible: true },
@@ -19,7 +22,7 @@ const levels: CanvasLevelData[] = [{
 
 describe('Canvas2D', () => {
   it('affiche le nom, la surface, l’icône métier, le repère et l’échelle', () => {
-    render(<Canvas2D levels={levels} activeLevelId="niveau-rdc" visibleLevelIds={['niveau-rdc']} />);
+    renderWithMantine(<Canvas2D levels={levels} activeLevelId="niveau-rdc" visibleLevelIds={['niveau-rdc']} />);
     expect(screen.getByText('Cuisine')).toBeInTheDocument();
     expect(screen.getByText('6.00 m²')).toBeInTheDocument();
     expect(screen.getByText('0,0')).toBeInTheDocument();
@@ -29,7 +32,7 @@ describe('Canvas2D', () => {
 
   it('respecte les options masquant surfaces, icônes et grille', () => {
     const options = { ...DEFAULT_CANVAS_DISPLAY_OPTIONS, grid: false, surfaces: false, roomIcons: false };
-    const { container } = render(<Canvas2D levels={levels} activeLevelId="niveau-rdc" visibleLevelIds={['niveau-rdc']} options={options} />);
+    const { container } = renderWithMantine(<Canvas2D levels={levels} activeLevelId="niveau-rdc" visibleLevelIds={['niveau-rdc']} options={options} />);
     expect(screen.queryByText('6.00 m²')).not.toBeInTheDocument();
     expect(container.querySelector('foreignObject')).not.toBeInTheDocument();
     expect(container.querySelector('.canvas2d-background')).toHaveAttribute('fill', '#fff');
@@ -39,7 +42,7 @@ describe('Canvas2D', () => {
 describe('CanvasDisplayOptionsMenu', () => {
   it('expose toutes les options avec un état accessible', () => {
     const onChange = vi.fn();
-    render(<CanvasDisplayOptionsMenu value={DEFAULT_CANVAS_DISPLAY_OPTIONS} onChange={onChange} />);
+    renderWithMantine(<CanvasDisplayOptionsMenu value={DEFAULT_CANVAS_DISPLAY_OPTIONS} onChange={onChange} />);
     fireEvent.click(screen.getByRole('checkbox', { name: 'Notes' }));
     expect(onChange).toHaveBeenCalledWith({ ...DEFAULT_CANVAS_DISPLAY_OPTIONS, notes: false });
     expect(screen.getAllByRole('checkbox')).toHaveLength(7);

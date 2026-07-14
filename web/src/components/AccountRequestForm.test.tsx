@@ -1,7 +1,10 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render as testingRender, screen, waitFor } from '@testing-library/react';
+import { MantineProvider } from '@mantine/core';
 import { describe, expect, it, vi } from 'vitest';
 import { AccountRequestForm } from './AccountRequestForm';
+
+const render = (component: React.ReactNode) => testingRender(<MantineProvider>{component}</MantineProvider>);
 
 function fillValidForm() {
   fireEvent.change(screen.getByLabelText('Adresse e-mail'), { target: { value: ' Camille@Example.com ' } });

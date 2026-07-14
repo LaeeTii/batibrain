@@ -18,6 +18,14 @@
 - Utiliser un système de coordonnées commun au niveau et les centimètres comme unité métier.
 - Calculer les angles, métriques et projections à partir des données sources plutôt que de les persister.
 
+## Composants d’interface
+
+- Utiliser systématiquement les composants Mantine disponibles avant de créer un composant HTML/CSS personnalisé.
+- Réutiliser le thème Mantine pour les couleurs, tailles, espacements, typographies et rayons.
+- Vérifier les composants déjà présents dans `web/src/components/` avant d’ajouter un nouveau composant d’interface.
+- N’utiliser un contrôle HTML natif ou un composant personnalisé que lorsque Mantine ne couvre pas le besoin ou qu’une contrainte technique l’impose.
+- Documenter dans le code la contrainte technique qui justifie toute dérogation à Mantine.
+
 ## Langue
 
 - Toujours utiliser les accents en français dans le Markdown, les commentaires, les libellés, les messages et les chaînes, sauf contrainte technique explicite.

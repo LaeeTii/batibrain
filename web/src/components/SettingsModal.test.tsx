@@ -1,10 +1,13 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render as testingRender, screen, waitFor } from '@testing-library/react';
+import { MantineProvider } from '@mantine/core';
 import { describe, expect, it, vi } from 'vitest';
 import type { UserProfile } from '../domain/types';
 import type { AccountGateway } from '../data/supabase/account';
 import { MAX_AVATAR_SIZE_BYTES, validateAvatar } from '../data/supabase/account';
 import { SettingsModal } from './SettingsModal';
+
+const render = (component: React.ReactNode) => testingRender(<MantineProvider>{component}</MantineProvider>);
 
 const PROFILE: UserProfile = {
   userId: 'user-1',
@@ -68,7 +71,9 @@ describe('SettingsModal', () => {
   it('refuse un fichier qui n’est pas une image autorisée', async () => {
     await renderModal();
     const file = new File(['contenu'], 'avatar.txt', { type: 'text/plain' });
-    fireEvent.change(screen.getByLabelText('Choisir un avatar'), { target: { files: [file] } });
+    const fileInput = document.querySelector<HTMLInputElement>('input[type="file"]');
+    expect(fileInput).not.toBeNull();
+    fireEvent.change(fileInput!, { target: { files: [file] } });
     expect(await screen.findByRole('alert')).toHaveTextContent('JPEG, PNG, WebP ou GIF');
   });
 

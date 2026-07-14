@@ -1,7 +1,10 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render as testingRender, screen } from '@testing-library/react';
+import { MantineProvider } from '@mantine/core';
 import { describe, expect, it, vi } from 'vitest';
 import { AppSidebar } from './AppSidebar';
+
+const render = (component: React.ReactNode) => testingRender(<MantineProvider>{component}</MantineProvider>);
 
 const defaultProps = {
   projects: [],

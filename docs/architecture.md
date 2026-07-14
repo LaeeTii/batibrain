@@ -2,6 +2,7 @@
 
 ## Stack cible
 - **Web** : React + TypeScript + Vite
+- **Design system web** : Mantine, utilisé par défaut pour les composants interactifs et leur thème
 - **Mobile** : PWA (Progressive Web App) basée sur l'application web
 - **Backend** : Supabase
 - **Base de données** : PostgreSQL
@@ -22,6 +23,7 @@ Le socle de tests frontend repose sur Vitest, Testing Library et jsdom. `npm run
 ## Principes d'architecture
 - la logique métier géométrique vit dans `web/src/domain/`
 - l'UI vit dans `web/`, avec adaptation responsive et capacités PWA pour les usages mobiles
+- les contrôles interactifs de l'interface utilisent en priorité les composants Mantine et le thème global; un contrôle natif ou personnalisé n'est conservé que pour un besoin non couvert ou une contrainte technique explicitement documentée dans le code
 - la spec est la source de vérité pour le produit (docs/ihm/ihm.md)
 - les projections (métriques, angles, vues dérivées) sont calculées
 - les préférences utilisateur (unités, thème, hauteur et épaisseur de mur par défaut) sont persistées côté Supabase/PostgreSQL et relues à l'ouverture de session pour initialiser l'interface

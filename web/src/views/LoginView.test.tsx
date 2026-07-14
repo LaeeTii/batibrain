@@ -1,10 +1,13 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render as testingRender, screen, waitFor } from '@testing-library/react';
+import { MantineProvider } from '@mantine/core';
 import type { AuthChangeEvent, Session, Subscription } from '@supabase/supabase-js';
 import { describe, expect, it, vi } from 'vitest';
 import { AuthProvider, useAuth } from '../components/AuthProvider';
 import type { AuthGateway } from '../data/supabase/auth';
 import { LoginView } from './LoginView';
+
+const render = (component: React.ReactNode) => testingRender(<MantineProvider>{component}</MantineProvider>);
 
 function createGateway(overrides: Partial<AuthGateway> = {}): AuthGateway {
   const emptyListener = vi.fn();

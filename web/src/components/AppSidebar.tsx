@@ -1,4 +1,5 @@
 import React from 'react';
+import { ActionIcon, Button, NativeSelect } from '@mantine/core';
 import type { IconType } from 'react-icons';
 import logoUrl from '../assets/logo.svg';
 import {
@@ -74,38 +75,35 @@ export function AppSidebar({
           <img className="dashboard-brandLogo" src={logoUrl} alt="" />
           <h1 className="dashboard-brandTitle">BatiBrain</h1>
         </div>
-        <button className="app-iconButton app-iconButton--sidebar" type="button" onClick={onClose} aria-label="Fermer la barre latérale" title="Fermer la barre latérale">
+        <ActionIcon className="app-iconButton app-iconButton--sidebar" variant="subtle" size="lg" onClick={onClose} aria-label="Fermer la barre latérale" title="Fermer la barre latérale">
           <LuPanelLeftClose aria-hidden="true" />
-        </button>
+        </ActionIcon>
       </div>
 
       <div className="app-projectSelector">
-        <label htmlFor="app-project-select" className="sr-only">Projet courant</label>
-        <select
+        <NativeSelect
           id="app-project-select"
           value={currentProjectId}
           onChange={(event) => onSelectProject(event.target.value)}
           aria-label="Projet courant"
-        >
-          <option value="">{projects.length === 0 ? 'Aucun projet' : 'Sélectionner un projet'}</option>
-          {projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
-        </select>
+          data={[{ value: '', label: projects.length === 0 ? 'Aucun projet' : 'Sélectionner un projet' }, ...projects.map((project) => ({ value: project.id, label: project.name }))]}
+        />
         <div className="app-projectActions">
           {currentProject && canManageCurrentProject && (
-            <button type="button" onClick={onEditProject} aria-label="Modifier le projet" title="Modifier le projet">
+            <ActionIcon variant="light" color="gray" size="lg" onClick={onEditProject} aria-label="Modifier le projet" title="Modifier le projet">
               <LuPencil aria-hidden="true" />
-            </button>
+            </ActionIcon>
           )}
-          <button className="app-projectActions__add" type="button" onClick={onCreateProject} aria-label="Créer un projet" title="Créer un projet">
+          <ActionIcon variant="filled" color="green" size="lg" onClick={onCreateProject} aria-label="Créer un projet" title="Créer un projet">
             <LuPlus aria-hidden="true" />
-          </button>
+          </ActionIcon>
           {currentProject && canManageCurrentProject && (
-            <button className="app-projectActions__delete" type="button" onClick={onDeleteProject} aria-label="Supprimer le projet" title="Supprimer le projet">
+            <ActionIcon variant="filled" color="red" size="lg" onClick={onDeleteProject} aria-label="Supprimer le projet" title="Supprimer le projet">
               <LuTrash2 aria-hidden="true" />
-            </button>
+            </ActionIcon>
           )}
         </div>
-        {currentProject && canManageCurrentProject && <button className="app-projectCollaborators" type="button" onClick={onManageCollaborators}><LuUsers aria-hidden="true" /> Gérer les collaborateurs</button>}
+        {currentProject && canManageCurrentProject && <Button className="app-projectCollaborators" variant="light" color="cyan" onClick={onManageCollaborators} leftSection={<LuUsers aria-hidden="true" />}>Gérer les collaborateurs</Button>}
       </div>
 
       <nav className="dashboard-nav" aria-label="Navigation principale">
@@ -133,9 +131,9 @@ export function AppSidebar({
       </nav>
 
       {isAdmin && (
-        <button type="button" className="dashboard-adminButton" onClick={openAdmin}>
+        <Button variant="subtle" className="dashboard-adminButton" onClick={openAdmin}>
           <LuShieldCheck aria-hidden="true" /> Admin
-        </button>
+        </Button>
       )}
     </aside>
   );

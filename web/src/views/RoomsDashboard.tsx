@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button, Menu, Modal, Textarea } from '@mantine/core';
+import { ActionIcon, Button, Menu, Modal, NativeSelect, TextInput, Textarea } from '@mantine/core';
 import { LuFileDown, LuFolderPlus, LuLayers3, LuPencilRuler, LuRedo2, LuSearch, LuUndo2 } from 'react-icons/lu';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { RoomCard, type RoomPdfMode } from '../components/RoomCard';
@@ -92,26 +92,26 @@ export function RoomsDashboard({ projectId, onCreateProject, onOpenGlobalEditor,
 
   if (!hasSupabaseConfig()) return <DashboardLayout><div className="dashboard-emptyState" role="alert"><h2>Configuration requise</h2><p>Configure Supabase pour charger le tableau de bord.</p></div></DashboardLayout>;
 
-  if (!projectId) return <DashboardLayout><section className="dashboard-welcome"><h1>Bienvenue dans BatiBrain</h1><p>Crée ton premier projet pour commencer à structurer ton habitation.</p><button type="button" className="dashboard-primaryButton" onClick={onCreateProject}><LuFolderPlus aria-hidden /> Créer un nouveau projet</button></section></DashboardLayout>;
+  if (!projectId) return <DashboardLayout><section className="dashboard-welcome"><h1>Bienvenue dans BatiBrain</h1><p>Crée ton premier projet pour commencer à structurer ton habitation.</p><Button className="dashboard-primaryButton" onClick={onCreateProject} leftSection={<LuFolderPlus aria-hidden />}>Créer un nouveau projet</Button></section></DashboardLayout>;
 
   return <DashboardLayout>
     <header className="dashboard-header">
       <div><h1 className="dashboard-pageTitle">{project?.name ?? 'Tableau de bord'}</h1></div>
       <div className="dashboard-header__actions">
-        <button type="button" className="dashboard-iconButton" disabled aria-label="Annuler" title="Aucune action à annuler"><LuUndo2 aria-hidden /></button>
-        <button type="button" className="dashboard-iconButton" disabled aria-label="Rétablir" title="Aucune action à rétablir"><LuRedo2 aria-hidden /></button>
-        <button type="button" className="dashboard-primaryButton" onClick={onOpenGlobalEditor}><LuPencilRuler aria-hidden /> Éditeur 2D global</button>
+        <ActionIcon variant="default" className="dashboard-iconButton" disabled aria-label="Annuler" title="Aucune action à annuler"><LuUndo2 aria-hidden /></ActionIcon>
+        <ActionIcon variant="default" className="dashboard-iconButton" disabled aria-label="Rétablir" title="Aucune action à rétablir"><LuRedo2 aria-hidden /></ActionIcon>
+        <Button className="dashboard-primaryButton" onClick={onOpenGlobalEditor} leftSection={<LuPencilRuler aria-hidden />}>Éditeur 2D global</Button>
       </div>
     </header>
 
-    {error ? <div className="dashboard-banner dashboard-banner--error" role="alert">{error}<button type="button" onClick={() => void load()}>Réessayer</button></div> : null}
+    {error ? <div className="dashboard-banner dashboard-banner--error" role="alert">{error}<Button variant="light" onClick={() => void load()}>Réessayer</Button></div> : null}
     {feedback ? <div className="dashboard-banner dashboard-banner--success" role="status">{feedback}</div> : null}
 
     <section className="dashboard-contentPanel">
       <div className="dashboard-filters" aria-label="Filtres des pièces">
-        <label className="dashboard-field dashboard-field--compact"><span><LuLayers3 aria-hidden /> Niveau</span><select value={filterLevelId} onChange={(event) => setFilterLevelId(event.currentTarget.value)}><option value="all">Tous les niveaux</option>{visibleLevels.map((level) => <option key={level.id} value={level.id}>{level.name}</option>)}</select></label>
-        <label className="dashboard-field dashboard-search"><span>Rechercher par nom</span><span className="dashboard-search__control"><LuSearch aria-hidden /><input value={search} onChange={(event) => setSearch(event.currentTarget.value)} placeholder="Rechercher une pièce" /></span></label>
-        <Menu position="bottom-end" withinPortal><Menu.Target><button type="button" className="dashboard-exportButton" disabled={filteredSnapshots.length === 0}><LuFileDown aria-hidden /> PDF</button></Menu.Target><Menu.Dropdown><Menu.Item onClick={() => runExport(filteredSnapshots, 'plan')}>Chaque plan de pièce</Menu.Item><Menu.Item onClick={() => runExport(filteredSnapshots, 'détail')}>Chaque plan de pièce + détail</Menu.Item></Menu.Dropdown></Menu>
+        <NativeSelect className="dashboard-field dashboard-field--compact" label="Niveau" leftSection={<LuLayers3 aria-hidden />} value={filterLevelId} onChange={(event) => setFilterLevelId(event.currentTarget.value)} data={[{ value: 'all', label: 'Tous les niveaux' }, ...visibleLevels.map((level) => ({ value: level.id, label: level.name }))]} />
+        <TextInput className="dashboard-field dashboard-search" label="Rechercher par nom" leftSection={<LuSearch aria-hidden />} value={search} onChange={(event) => setSearch(event.currentTarget.value)} placeholder="Rechercher une pièce" />
+        <Menu position="bottom-end" withinPortal><Menu.Target><Button className="dashboard-exportButton" disabled={filteredSnapshots.length === 0} leftSection={<LuFileDown aria-hidden />}>PDF</Button></Menu.Target><Menu.Dropdown><Menu.Item onClick={() => runExport(filteredSnapshots, 'plan')}>Chaque plan de pièce</Menu.Item><Menu.Item onClick={() => runExport(filteredSnapshots, 'détail')}>Chaque plan de pièce + détail</Menu.Item></Menu.Dropdown></Menu>
       </div>
 
       {loading ? <div className="dashboard-loading" aria-live="polite">Chargement des pièces…</div>

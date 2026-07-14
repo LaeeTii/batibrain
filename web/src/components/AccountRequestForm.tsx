@@ -1,4 +1,5 @@
 import React, { useRef, useState, type FormEvent, type RefObject } from 'react';
+import { Button, TextInput } from '@mantine/core';
 import { LuArrowLeft, LuCircleAlert, LuCircleCheck, LuLoaderCircle, LuMail, LuSend, LuUserRound } from 'react-icons/lu';
 import {
   submitAccountRequest,
@@ -33,11 +34,12 @@ function RequestField({
   const errorId = `account-request-${field}-error`;
   return (
     <>
-      <label htmlFor={`account-request-${field}`}>{icon} {label}</label>
-      <input
+      <TextInput
         ref={inputRef}
         id={`account-request-${field}`}
         type={type}
+        label={label}
+        leftSection={icon}
         autoComplete={field === 'email' ? 'email' : field === 'firstName' ? 'given-name' : field === 'lastName' ? 'family-name' : 'nickname'}
         value={value}
         disabled={disabled}
@@ -119,16 +121,16 @@ export function AccountRequestForm({
         <LuCircleCheck aria-hidden="true" />
         <h2>Demande envoyée</h2>
         <p>Votre demande est en attente. Un administrateur doit l’approuver avant que vous puissiez définir votre mot de passe.</p>
-        <button type="button" className="login-submit" onClick={onBack}><LuArrowLeft aria-hidden="true" /> Retour à la connexion</button>
+        <Button className="login-submit" onClick={onBack} leftSection={<LuArrowLeft aria-hidden="true" />}>Retour à la connexion</Button>
       </div>
     );
   }
 
   return (
     <div className="account-request">
-      <button type="button" className="account-request__back" onClick={onBack} disabled={submitting}>
+      <Button variant="subtle" className="account-request__back" onClick={onBack} disabled={submitting}>
         <LuArrowLeft aria-hidden="true" /> Retour
-      </button>
+      </Button>
       <h2>Créer un compte</h2>
       <p className="account-request__intro">Envoyez une demande d’accès. Aucun mot de passe ne vous est demandé.</p>
 
@@ -143,10 +145,10 @@ export function AccountRequestForm({
           inputRef={refs.firstName} value={values.firstName} error={errors.firstName} disabled={submitting} onChange={(value) => update('firstName', value)} />
         <RequestField field="lastName" label="Nom" icon={<LuUserRound aria-hidden="true" />}
           inputRef={refs.lastName} value={values.lastName} error={errors.lastName} disabled={submitting} onChange={(value) => update('lastName', value)} />
-        <button className="login-submit" type="submit" disabled={submitting}>
+        <Button className="login-submit" type="submit" loading={submitting} disabled={submitting}>
           {submitting ? <LuLoaderCircle className="is-spinning" aria-hidden="true" /> : <LuSend aria-hidden="true" />}
           {submitting ? 'Envoi…' : 'Envoyer la demande'}
-        </button>
+        </Button>
       </form>
     </div>
   );

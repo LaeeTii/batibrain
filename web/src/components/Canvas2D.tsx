@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ActionIcon, Checkbox } from '@mantine/core';
 import {
   LuBetweenHorizontalStart, LuDraftingCompass, LuEyeOff, LuGrid3X3, LuRuler,
   LuScan, LuShapes, LuStickyNote, LuZoomIn, LuZoomOut,
@@ -67,7 +68,7 @@ export function CanvasOverlayMeasurements({ snapshot, options }: { snapshot: Roo
 }
 
 export function CanvasZoomControls({ onZoomIn, onZoomOut, onReset }: { onZoomIn(): void; onZoomOut(): void; onReset(): void }) {
-  return <div className="canvas2d-zoomControls" aria-label="Contrôles de zoom"><button type="button" onClick={onZoomIn} aria-label="Zoom avant" title="Zoom avant"><LuZoomIn aria-hidden /></button><button type="button" onClick={onZoomOut} aria-label="Zoom arrière" title="Zoom arrière"><LuZoomOut aria-hidden /></button><button type="button" onClick={onReset} aria-label="Réinitialiser le zoom" title="Réinitialiser le zoom"><LuScan aria-hidden /></button></div>;
+  return <div className="canvas2d-zoomControls" aria-label="Contrôles de zoom"><ActionIcon variant="default" size="lg" onClick={onZoomIn} aria-label="Zoom avant" title="Zoom avant"><LuZoomIn aria-hidden /></ActionIcon><ActionIcon variant="default" size="lg" onClick={onZoomOut} aria-label="Zoom arrière" title="Zoom arrière"><LuZoomOut aria-hidden /></ActionIcon><ActionIcon variant="default" size="lg" onClick={onReset} aria-label="Réinitialiser le zoom" title="Réinitialiser le zoom"><LuScan aria-hidden /></ActionIcon></div>;
 }
 
 export function CanvasScaleIndicator({ viewportWidth, renderedWidth }: { viewportWidth: number; renderedWidth: number }) {
@@ -81,7 +82,7 @@ export function CanvasDisplayOptionsMenu({ value, onChange }: { value: CanvasDis
     ['grid', 'Grille', LuGrid3X3], ['rulers', 'Règles', LuRuler], ['dimensions', 'Côtes', LuBetweenHorizontalStart],
     ['angles', 'Angles', LuDraftingCompass], ['notes', 'Notes', LuStickyNote], ['surfaces', 'Surfaces', LuScan], ['roomIcons', 'Icônes de pièces', LuShapes],
   ] as const;
-  return <div className="canvas2d-options" aria-label="Options d’affichage">{items.map(([key, label, Icon]) => <label key={key}><input type="checkbox" checked={value[key]} onChange={(event) => onChange({ ...value, [key]: event.currentTarget.checked })} /><Icon aria-hidden /><span>{label}</span>{!value[key] ? <LuEyeOff aria-label="Masqué" /> : null}</label>)}</div>;
+  return <div className="canvas2d-options" aria-label="Options d’affichage">{items.map(([key, label, Icon]) => <div className="canvas2d-options__item" key={key}><Checkbox checked={value[key]} onChange={(event) => onChange({ ...value, [key]: event.currentTarget.checked })} aria-label={label} /><Icon aria-hidden /><span>{label}</span>{!value[key] ? <LuEyeOff aria-label="Masqué" /> : null}</div>)}</div>;
 }
 
 export function Canvas2D({ levels, activeLevelId, visibleLevelIds, options = DEFAULT_CANVAS_DISPLAY_OPTIONS, height = 700 }: Canvas2DProps) {
