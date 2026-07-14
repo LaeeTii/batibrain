@@ -1195,8 +1195,18 @@ body {
 .global-editor__visibleLevels label { white-space: nowrap; }
 .global-editor__displayMenu { margin-left: auto; }
 
-.global-editor__body { min-width: 0; }
+.global-editor__body { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 12px; min-width: 0; }
 .global-editor__canvasArea { min-width: 0; }
+.canvas2d-selectable { cursor: pointer; vector-effect: non-scaling-stroke; }
+.editor-panel { width: 290px; min-height: 700px; padding: 14px; border: 1px solid var(--border-soft); border-radius: 18px; background: var(--bg-surface-strong); }
+.editor-panel--collapsed { width: auto; min-height: 0; padding: 6px; }
+.editor-panel__header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.detail-tree, .detail-tree ul { margin: 0; padding: 0; list-style: none; }
+.detail-tree ul { padding-left: 18px; }
+.detail-tree__row { display: grid; grid-template-columns: 28px minmax(0, 1fr); align-items: center; border-radius: 10px; }
+.detail-tree__row.is-selected { background: rgba(103, 87, 255, .12); }
+.detail-tree__row .mantine-Button-root { min-width: 0; height: auto; padding: 7px; color: var(--text-strong); text-align: left; white-space: normal; }
+.detail-tree__spacer { width: 28px; }
 
 .room-card__area,
 .room-card__finish,
@@ -1734,6 +1744,8 @@ body {
   .global-editor__displayMenu { width: 100%; margin-left: 0; }
   .global-editor__editableLevel { width: 100%; }
   .global-editor__editableLevel select { flex: 1; }
+  .global-editor__body { grid-template-columns: 1fr; }
+  .editor-panel { width: 100%; min-height: 0; }
 
   .dashboard-header__actions {
     width: 100%;

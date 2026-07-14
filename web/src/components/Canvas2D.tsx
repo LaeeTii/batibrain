@@ -8,6 +8,7 @@ import { centroid, polygonAreaCm2, polygonInteriorAnglesDegrees, sortVertices } 
 import { MAX_CANVAS_ZOOM, MIN_CANVAS_ZOOM, panViewport, zoomViewport, type CanvasViewport } from '../domain/canvasViewport';
 import type { Level, Point } from '../domain/types';
 import type { RoomSnapshot } from '../services/rooms';
+import type { EditorSelection } from '../domain/editorSelection';
 import { RoomTypeIcon } from './RoomTypeIcon';
 
 export interface CanvasDisplayOptions {
@@ -28,6 +29,8 @@ interface Canvas2DProps {
   visibleLevelIds: string[];
   options?: CanvasDisplayOptions;
   height?: number;
+  selection?: EditorSelection | null;
+  onSelect?(selection: EditorSelection): void;
 }
 
 const PADDING_CM = 120;
@@ -47,7 +50,7 @@ function levelAppearance(levelNumber: number, activeNumber: number) {
   return { stroke: difference < 0 ? '#9b6472' : '#637d9f', fill: difference < 0 ? 'rgba(155,100,114,.1)' : 'rgba(99,125,159,.1)', opacity: Math.max(.2, 1 - Math.abs(difference) * .2) };
 }
 
-function OpeningLines({ snapshot, stroke }: { snapshot: RoomSnapshot; stroke: string }) {
+function OpeningLines({ snapshot, stroke, levelId, selection, onSelect }: { snapshot: RoomSnapshot; stroke: string; levelId: string; selection: EditorSelection | null; onSelect?(selection: EditorSelection): void }) {
   const vertices = new Map(snapshot.vertices.map((vertex) => [vertex.id, vertex]));
   const walls = new Map(snapshot.walls.map((wall) => [wall.id, wall]));
   return <>{snapshot.openings.map((opening) => {
@@ -55,7 +58,8 @@ function OpeningLines({ snapshot, stroke }: { snapshot: RoomSnapshot; stroke: st
     if (!start || !end) return null;
     const length = Math.hypot(end.x - start.x, end.y - start.y); if (!length) return null;
     const from = opening.offsetCm / length; const to = (opening.offsetCm + opening.widthCm) / length;
-    return <line key={opening.id} x1={start.x + (end.x - start.x) * from} y1={start.y + (end.y - start.y) * from} x2={start.x + (end.x - start.x) * to} y2={start.y + (end.y - start.y) * to} stroke={stroke} strokeWidth={10} />;
+    const selected = selection?.type === 'opening' && selection.id === opening.id;
+    return <line className="canvas2d-selectable" key={opening.id} x1={start.x + (end.x - start.x) * from} y1={start.y + (end.y - start.y) * from} x2={start.x + (end.x - start.x) * to} y2={start.y + (end.y - start.y) * to} stroke={selected ? '#6757ff' : stroke} strokeWidth={selected ? 14 : 10} onClick={(event) => { event.stopPropagation(); onSelect?.({ source: 'canvas', type: 'opening', id: opening.id, levelId }); }} />;
   })}</>;
 }
 
@@ -85,7 +89,7 @@ export function CanvasDisplayOptionsMenu({ value, onChange }: { value: CanvasDis
   return <div className="canvas2d-options" aria-label="Options d’affichage">{items.map(([key, label, Icon]) => <div className="canvas2d-options__item" key={key}><Checkbox checked={value[key]} onChange={(event) => onChange({ ...value, [key]: event.currentTarget.checked })} aria-label={label} /><Icon aria-hidden /><span>{label}</span>{!value[key] ? <LuEyeOff aria-label="Masqué" /> : null}</div>)}</div>;
 }
 
-export function Canvas2D({ levels, activeLevelId, visibleLevelIds, options = DEFAULT_CANVAS_DISPLAY_OPTIONS, height = 700 }: Canvas2DProps) {
+export function Canvas2D({ levels, activeLevelId, visibleLevelIds, options = DEFAULT_CANVAS_DISPLAY_OPTIONS, height = 700, selection = null, onSelect }: Canvas2DProps) {
   const visibleIds = useMemo(() => new Set(visibleLevelIds), [visibleLevelIds]); const resetViewport = useMemo(() => initialViewport(levels, visibleIds), [levels, visibleIds]);
   const [viewport, setViewport] = useState(resetViewport); const [drag, setDrag] = useState<{ x: number; y: number } | null>(null); const svgRef = useRef<SVGSVGElement>(null);
   useEffect(() => setViewport(resetViewport), [resetViewport]);
@@ -102,7 +106,7 @@ export function Canvas2D({ levels, activeLevelId, visibleLevelIds, options = DEF
     <rect className="canvas2d-background" x={viewport.x} y={viewport.y} width={viewport.width} height={viewport.height} fill={options.grid ? 'url(#canvas2d-grid)' : '#fff'} />
     <g className="canvas2d-origin"><line x1={viewport.x} y1={0} x2={viewport.x + viewport.width} y2={0} /><line x1={0} y1={viewport.y} x2={0} y2={viewport.y + viewport.height} /><text x={8} y={-8}>0,0</text></g>
     {levels.filter(({ level }) => visibleIds.has(level.id)).sort((a, b) => a.level.number - b.level.number).map(({ level, rooms, notes = [], dimensions = [] }) => { const appearance = levelAppearance(level.number, activeNumber); return <g key={level.id} opacity={appearance.opacity} data-editable={level.id === activeLevelId}>
-      {rooms.map((snapshot) => { const vertices = sortVertices(snapshot.vertices); const center = centroid(vertices); return <g key={snapshot.room.id}><polygon points={vertices.map(({ x, y }) => `${x},${y}`).join(' ')} fill={appearance.fill} stroke={appearance.stroke} strokeWidth={6} /><OpeningLines snapshot={snapshot} stroke="#fff" /><CanvasOverlayMeasurements snapshot={snapshot} options={options} /><text className="canvas2d-roomName" x={center.x} y={center.y}>{snapshot.room.name}</text>{options.surfaces ? <text className="canvas2d-roomSurface" x={center.x} y={center.y + 22}>{(polygonAreaCm2(vertices) / 10000).toFixed(2)} m²</text> : null}{options.roomIcons && snapshot.room.type !== 'autre' ? <foreignObject x={center.x - 10} y={center.y + 28} width={20} height={20}><span className="canvas2d-roomIcon"><RoomTypeIcon type={snapshot.room.type} /></span></foreignObject> : null}</g>; })}
+      {rooms.map((snapshot) => { const vertices = sortVertices(snapshot.vertices); const center = centroid(vertices); const roomSelected = selection?.type === 'room' && selection.id === snapshot.room.id; return <g key={snapshot.room.id} className={roomSelected ? 'is-selected' : ''}><polygon className="canvas2d-selectable" points={vertices.map(({ x, y }) => `${x},${y}`).join(' ')} fill={appearance.fill} stroke={roomSelected ? '#6757ff' : appearance.stroke} strokeWidth={roomSelected ? 10 : 6} onClick={(event) => { event.stopPropagation(); if (level.id === activeLevelId) onSelect?.({ source: 'canvas', type: 'room', id: snapshot.room.id, levelId: level.id }); }} />{snapshot.walls.map((wall) => { const start = snapshot.vertices.find(({ id }) => id === wall.startVertexId); const end = snapshot.vertices.find(({ id }) => id === wall.endVertexId); if (!start || !end) return null; const selected = selection?.type === 'wall' && selection.id === wall.id; return <line key={wall.id} className="canvas2d-selectable" x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke={selected ? '#6757ff' : 'transparent'} strokeWidth={selected ? 12 : 18} onClick={(event) => { event.stopPropagation(); if (level.id === activeLevelId) onSelect?.({ source: 'canvas', type: 'wall', id: wall.id, levelId: level.id }); }} />; })}<OpeningLines snapshot={snapshot} stroke="#fff" levelId={level.id} selection={selection} onSelect={level.id === activeLevelId ? onSelect : undefined} /><CanvasOverlayMeasurements snapshot={snapshot} options={options} /><text className="canvas2d-roomName" x={center.x} y={center.y}>{snapshot.room.name}</text>{options.surfaces ? <text className="canvas2d-roomSurface" x={center.x} y={center.y + 22}>{(polygonAreaCm2(vertices) / 10000).toFixed(2)} m²</text> : null}{options.roomIcons && snapshot.room.type !== 'autre' ? <foreignObject x={center.x - 10} y={center.y + 28} width={20} height={20}><span className="canvas2d-roomIcon"><RoomTypeIcon type={snapshot.room.type} /></span></foreignObject> : null}</g>; })}
       {options.dimensions ? dimensions.map((dimension) => <g key={dimension.id} className="canvas2d-manualDimension"><line x1={dimension.start.x} y1={dimension.start.y} x2={dimension.end.x} y2={dimension.end.y} /><text x={(dimension.start.x + dimension.end.x) / 2} y={(dimension.start.y + dimension.end.y) / 2 - 8}>{dimension.label ?? `${Math.hypot(dimension.end.x - dimension.start.x, dimension.end.y - dimension.start.y).toFixed(1)} cm`}</text></g>) : null}
       {options.notes ? notes.map((note) => <g key={note.id} className="canvas2d-note"><circle cx={note.position.x} cy={note.position.y} r={12} /><text x={note.position.x + 18} y={note.position.y + 4}>🗒 {note.text}</text></g>) : null}
     </g>; })}

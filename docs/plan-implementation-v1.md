@@ -128,6 +128,8 @@ Statut : implémentée le 2026-07-13. Le canvas partagé rend les niveaux visibl
 
 Créer les panneaux de création et détail, DetailTree, les sections métier, SelectionSyncBridge et la sélection synchronisée canvas/arbre/panneau. Ajouter l’historique limité à 20 actions avec boutons et raccourcis Annuler/Rétablir, puis tester les états lecture seule et verrouillé.
 
+Statut : implémentée le 2026-07-14. L’éditeur global dispose des panneaux repliables, des sections métier consultatives et du DetailTree synchronisés avec la sélection du canvas ; SelectionSyncBridge purge les objets disparus et conserve les changements de niveau. L’historique transverse limite l’annulation à 20 commandes, partage les piles entre boutons et raccourcis et vide le rétablissement après une nouvelle action. Les mutations restent volontairement indisponibles jusqu’aux étapes V1-24 et V1-25.
+
 ### V1-23 — Implémenter l’affichage de l’éditeur 2D global
 
 Créer GlobalEditor2DView, charger projet et niveau, brancher canvas et panneaux, gérer le changement de niveau, l’affichage multi-pièces et les états vide, erreur, lecture seule et verrouillé. Cette tâche ne modifie pas encore la géométrie.
