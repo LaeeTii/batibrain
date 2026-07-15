@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { EMPTY_ACTION_HISTORY, moveHistoryAction, recordHistoryAction, type HistoryAction } from '../domain/actionHistory';
 
 interface ActionHistoryContextValue {
@@ -8,14 +8,21 @@ const ActionHistoryContext = createContext<ActionHistoryContextValue | null>(nul
 
 export function ActionHistoryProvider({ children }: React.PropsWithChildren) {
   const [history, setHistory] = useState(EMPTY_ACTION_HISTORY);
-  const record = useCallback((action: HistoryAction) => setHistory((current) => recordHistoryAction(current, action)), []);
+  const historyRef = useRef(history);
+  historyRef.current = history;
+  const record = useCallback((action: HistoryAction) => {
+    const next = recordHistoryAction(historyRef.current, action);
+    historyRef.current = next;
+    setHistory(next);
+  }, []);
   const run = useCallback((direction: 'undo' | 'redo') => {
-    setHistory((current) => {
-      const action = direction === 'undo' ? current.undoStack.at(-1) : current.redoStack.at(-1);
-      if (!action) return current;
-      void (direction === 'undo' ? action.undo() : action.redo());
-      return moveHistoryAction(current, direction);
-    });
+    const current = historyRef.current;
+    const action = direction === 'undo' ? current.undoStack.at(-1) : current.redoStack.at(-1);
+    if (!action) return;
+    const next = moveHistoryAction(current, direction);
+    historyRef.current = next;
+    setHistory(next);
+    void (direction === 'undo' ? action.undo() : action.redo());
   }, []);
   const undo = useCallback(() => run('undo'), [run]); const redo = useCallback(() => run('redo'), [run]);
   useEffect(() => {

@@ -714,18 +714,28 @@ export function Canvas2D({
                   stroke="#0f172a"
                   strokeWidth={2}
                   draggable
-                  dragBoundFunc={(position) => snapPoint?.(position, selectedEditableRoom.room.id, vertex.id) ?? position}
                   onDragMove={(event) => {
-                    onVertexMove?.(selectedEditableRoom.room.id, vertex.id, {
+                    const position = snapPoint?.({
                       x: event.target.x(),
                       y: event.target.y(),
-                    });
+                    }, selectedEditableRoom.room.id, vertex.id) ?? {
+                      x: event.target.x(),
+                      y: event.target.y(),
+                    };
+                    event.target.position(position);
+                    onVertexMove?.(selectedEditableRoom.room.id, vertex.id, position);
                   }}
                   onDragEnd={(event) => {
-                    onVertexMoveEnd?.(selectedEditableRoom.room.id, vertex.id, {
+                    const position = snapPoint?.({
                       x: event.target.x(),
                       y: event.target.y(),
-                    });
+                    }, selectedEditableRoom.room.id, vertex.id) ?? {
+                      x: event.target.x(),
+                      y: event.target.y(),
+                    };
+                    event.target.position(position);
+                    onVertexMove?.(selectedEditableRoom.room.id, vertex.id, position);
+                    onVertexMoveEnd?.(selectedEditableRoom.room.id, vertex.id, position);
                   }}
                 />
               ))}

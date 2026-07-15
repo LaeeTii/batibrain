@@ -31,6 +31,17 @@ export function uniqueLevelOpenings(snapshots: readonly RoomGeometrySnapshot[]):
   return uniqueById(snapshots.flatMap(({ openings }) => openings));
 }
 
+export function reconcilePersistedRoomIds(
+  currentIds: ReadonlySet<string>,
+  replacedIds: readonly string[],
+  resultIds: readonly string[],
+): Set<string> {
+  const next = new Set(currentIds);
+  replacedIds.forEach((id) => next.delete(id));
+  resultIds.forEach((id) => next.add(id));
+  return next;
+}
+
 function snapshotPolygon(snapshot: RoomGeometrySnapshot): Polygon {
   const ring: Ring = sortVertices(snapshot.vertices).map(({ x, y }) => [x, y]);
   return [[...ring, ring[0]]];

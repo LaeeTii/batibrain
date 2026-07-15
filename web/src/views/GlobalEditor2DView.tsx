@@ -15,7 +15,7 @@ import { getGlobalEditorAccess, type GlobalEditorAccess } from '../domain/global
 import type { Level, Project } from '../domain/types';
 import type { Point } from '../domain/types';
 import { snapGlobalPoint, translateRoomVertices, validateRoomPolygon } from '../domain/globalGeometry';
-import { linkCoincidentWalls, linkedVertexIds, moveLinkedVertex, moveRoomWithLinkedVertices, normalizeCreatedRoomOverlaps, type RoomGeometrySnapshot } from '../domain/roomOverlap';
+import { linkCoincidentWalls, linkedVertexIds, moveLinkedVertex, moveRoomWithLinkedVertices, normalizeCreatedRoomOverlaps, reconcilePersistedRoomIds, type RoomGeometrySnapshot } from '../domain/roomOverlap';
 import { hasSupabaseConfig } from '../lib/supabase';
 import { listLevelsByProject } from '../services/levels';
 import { canWriteProject, getProject } from '../services/projects';
@@ -152,7 +152,7 @@ export function GlobalEditorContent({ project, levels, levelData, activeLevelId,
   const unsavedSnapshotsRef = useRef<Record<string, RoomSnapshot>>({});
   const pendingTopologiesRef = useRef<Map<string, PendingTopology>>(new Map());
   const savePromiseRef = useRef<Promise<void> | null>(null);
-  const persistedRoomIdsRef = useRef<Set<string>>(new Set());
+  const persistedRoomIdsRef = useRef<Set<string>>(new Set(levelData.flatMap((level) => level.rooms.map((snapshot) => snapshot.room.id))));
   const previousLevelDataRef = useRef(levelData);
   const selectionLocked = workingLevelData.some(({ rooms }) => rooms.some(({ room, walls, openings }) => (selection?.type === 'room' && room.id === selection.id && room.isLocked) || (selection?.type === 'wall' && walls.some(({ id, isLocked }) => id === selection.id && isLocked)) || (selection?.type === 'opening' && openings.some(({ id, isLocked }) => id === selection.id && isLocked))));
   const allVertices = workingLevelData.flatMap(({ rooms }) => rooms.flatMap(({ vertices }) => vertices));
@@ -192,7 +192,9 @@ export function GlobalEditorContent({ project, levels, levelData, activeLevelId,
       nextRooms[roomIndex] = snapshot;
       return { ...level, rooms: nextRooms };
     }));
-    setUnsavedSnapshots((current) => ({ ...current, [snapshot.room.id]: snapshot }));
+    const nextUnsavedSnapshots = { ...unsavedSnapshotsRef.current, [snapshot.room.id]: snapshot };
+    unsavedSnapshotsRef.current = nextUnsavedSnapshots;
+    setUnsavedSnapshots(nextUnsavedSnapshots);
     setSaveStatus('dirty');
   }, []);
 
@@ -202,12 +204,11 @@ export function GlobalEditorContent({ project, levels, levelData, activeLevelId,
       ...level,
       rooms: [...level.rooms.filter(({ room }) => !removedIds.has(room.id)), ...snapshots],
     }));
-    setUnsavedSnapshots((current) => {
-      const next = { ...current };
-      removedIds.forEach((id) => delete next[id]);
-      snapshots.forEach((snapshot) => { next[snapshot.room.id] = snapshot; });
-      return next;
-    });
+    const nextUnsavedSnapshots = { ...unsavedSnapshotsRef.current };
+    removedIds.forEach((id) => delete nextUnsavedSnapshots[id]);
+    snapshots.forEach((snapshot) => { nextUnsavedSnapshots[snapshot.room.id] = snapshot; });
+    unsavedSnapshotsRef.current = nextUnsavedSnapshots;
+    setUnsavedSnapshots(nextUnsavedSnapshots);
     const previous = pendingTopologiesRef.current.get(levelId);
     pendingTopologiesRef.current.set(levelId, {
       levelId,
@@ -252,11 +253,14 @@ export function GlobalEditorContent({ project, levels, levelData, activeLevelId,
           const topologySnapshots = topology.resultRoomIds.map((id) => capturedByRoomId[id]).filter((snapshot): snapshot is RoomSnapshot => Boolean(snapshot));
           if (topologySnapshots.length !== topology.resultRoomIds.length) throw new Error('Le brouillon topologique est incomplet. Rechargez le plan avant de réessayer.');
           const persisted = await replaceRoomGeometriesAtomically(topology.levelId, topology.replacedRoomIds, topologySnapshots);
+          persistedRoomIdsRef.current = reconcilePersistedRoomIds(
+            persistedRoomIdsRef.current,
+            topology.replacedRoomIds,
+            persisted.map((snapshot) => snapshot.room.id),
+          );
           persisted.forEach((snapshot) => {
-            persistedRoomIdsRef.current.add(snapshot.room.id);
             persistedByRoomId[snapshot.room.id] = snapshot;
           });
-          topology.replacedRoomIds.forEach((id) => persistedRoomIdsRef.current.delete(id));
         }
         for (const snapshot of snapshots.filter(({ room }) => !topologyIds.has(room.id))) {
           const alreadyPersisted = persistedRoomIdsRef.current.has(snapshot.room.id);

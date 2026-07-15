@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createRectangleRoomGeometry } from './geometry';
-import { linkCoincidentWalls, linkedVertexIds, moveLinkedVertex, moveRoomWithLinkedVertices, normalizeCreatedRoomOverlaps, uniqueLevelWalls } from './roomOverlap';
+import { linkCoincidentWalls, linkedVertexIds, moveLinkedVertex, moveRoomWithLinkedVertices, normalizeCreatedRoomOverlaps, reconcilePersistedRoomIds, uniqueLevelWalls } from './roomOverlap';
 import type { RoomSnapshot } from '../services/rooms';
 
 function room(id: string, x: number, y: number, width: number, height: number): RoomSnapshot {
@@ -85,5 +85,10 @@ describe('normalisation des chevauchements de pièces', () => {
   it('utilise la précision au centième de la base pour reconnaître une mitoyenneté', () => {
     const snapshots = linkCoincidentWalls([room('A', 0, 0, 100, 100), room('B', 100.004, 0, 100, 100)]);
     expect(uniqueLevelWalls(snapshots)).toHaveLength(7);
+  });
+
+  it('conserve les identifiants réutilisés après un remplacement topologique', () => {
+    expect(reconcilePersistedRoomIds(new Set(['A', 'B']), ['A', 'B'], ['A', 'B', 'C']))
+      .toEqual(new Set(['A', 'B', 'C']));
   });
 });

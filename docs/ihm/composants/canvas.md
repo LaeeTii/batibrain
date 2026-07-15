@@ -52,6 +52,7 @@
 ## Etats et interactions
 - Le niveau actif est editable; les autres niveaux visibles sont en contexte non editable.
 - La sélection utilisateur dans le canvas est synchronisee vers panneaux et détail tree.
+- Une poignée de sommet reste centrée sur le sommet métier correspondant pendant et après son déplacement, y compris avec zoom, panoramique et magnétisme actifs.
 - Les mesures en focus restent visibles en édition meme si l'option globale correspondante est decochee.
 - Les controles de zoom restent disponibles en permanence dans la zone canvas.
 - Lorsqu'elle est active, la grille couvre toute la surface visible du canvas, quel que soit son ratio largeur/hauteur.
