@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Accordion, ActionIcon, Badge, Button, ScrollArea, Stack, Text } from '@mantine/core';
 import { LuArrowLeft, LuBrickWall, LuChevronDown, LuChevronRight, LuDoorOpen, LuLayers3, LuListTree, LuPanelLeftClose, LuPanelLeftOpen, LuPanelRightClose, LuRuler, LuSquareDashed, LuStickyNote } from 'react-icons/lu';
 import { polygonAreaCm2, sortVertices } from '../domain/geometry';
+import { uniqueLevelOpenings, uniqueLevelWalls } from '../domain/roomOverlap';
 import type { Level } from '../domain/types';
 import type { CanvasLevelData } from './Canvas2D';
 import { useEditorSelection } from './SelectionSyncBridge';
@@ -22,8 +23,8 @@ export function EditorCreationPanel({ levels, levelData, activeLevelId, readOnly
   const items: Record<SectionType, { id: string; label: string; levelId: string }[]> = {
     level: levels.map((level) => ({ id: level.id, label: `${level.name} (niveau ${level.number})`, levelId: level.id })),
     room: (data?.rooms ?? []).map(({ room }) => ({ id: room.id, label: room.name, levelId: activeLevelId })),
-    wall: (data?.rooms ?? []).flatMap(({ walls }) => walls.map((wall) => ({ id: wall.id, label: `Mur ${shortId(wall.id)}`, levelId: activeLevelId }))),
-    opening: (data?.rooms ?? []).flatMap(({ openings }) => openings.map((opening) => ({ id: opening.id, label: `${opening.type === 'door' ? 'Porte' : opening.type === 'window' ? 'Fenêtre' : 'Ouverture'} ${shortId(opening.id)}`, levelId: activeLevelId }))),
+    wall: uniqueLevelWalls(data?.rooms ?? []).map((wall) => ({ id: wall.id, label: `Mur ${shortId(wall.id)}`, levelId: activeLevelId })),
+    opening: uniqueLevelOpenings(data?.rooms ?? []).map((opening) => ({ id: opening.id, label: `${opening.type === 'door' ? 'Porte' : opening.type === 'window' ? 'Fenêtre' : 'Ouverture'} ${shortId(opening.id)}`, levelId: activeLevelId })),
     dimension: (data?.dimensions ?? []).map((item) => ({ id: item.id, label: item.label ?? `Côte ${shortId(item.id)}`, levelId: activeLevelId })),
     note: (data?.notes ?? []).map((item) => ({ id: item.id, label: item.text, levelId: activeLevelId })),
   };

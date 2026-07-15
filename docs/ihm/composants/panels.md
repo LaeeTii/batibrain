@@ -65,6 +65,7 @@
 - Les règles de synchronisation de sélection sont sourcees dans le document logique dedie.
 - Les règles geometriques et validations metier des objets ne sont pas redefinies dans ce document.
 - Les panneaux doivent rester compatibles avec les modes creation/édition exposes par la vue GlobalEditor2DView.
+- Les listes des sections Murs et Ouvertures dédupliquent les relations par identifiant afin qu’un élément partagé n’y apparaisse qu’une seule fois.
 - La fermeture du panneau détail ne doit pas invalider la sélection active.
 - La fermeture du panneau creation ne doit pas supprimer l'etat des données en cours, uniquement masquer la zone UI.
 

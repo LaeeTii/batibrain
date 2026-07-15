@@ -13,16 +13,19 @@ import {
   LuZoomOut,
 } from 'react-icons/lu';
 import { Layer, Line, Rect, Stage, Text, Circle, Group } from 'react-konva';
+import type { Stage as KonvaStage } from 'konva/lib/Stage';
 import { centroid, polygonAreaCm2, polygonInteriorAnglesDegrees, sortVertices } from '../domain/geometry';
 import {
   MAX_CANVAS_ZOOM,
   MIN_CANVAS_ZOOM,
+  expandViewportToCanvas,
   panViewport,
   zoomViewport,
   type CanvasViewport,
 } from '../domain/canvasViewport';
 import type { Level, Point } from '../domain/types';
 import type { EditorSelection } from '../domain/editorSelection';
+import { uniqueLevelOpenings, uniqueLevelWalls } from '../domain/roomOverlap';
 import type { RoomSnapshot } from '../services/rooms';
 
 type DragState = { x: number; y: number; viewport: CanvasViewport };
@@ -84,13 +87,50 @@ interface Canvas2DProps {
   creationActive?: boolean;
   onCanvasPoint?(point: Point): void;
   onCanvasHover?(point: Point | null): void;
+  snapPoint?(point: Point, roomId: string, vertexId: string): Point;
   onVertexMove?(roomId: string, vertexId: string, point: Point): void;
+  onVertexMoveEnd?(roomId: string, vertexId: string, point: Point): void;
   onRoomMove?(roomId: string, delta: Point): void;
 }
 
 const PADDING_CM = 120;
 const MIN_VIEW_SIZE_CM = 500;
+const GRID_STEP_CM = 5;
+const MEASUREMENT_OFFSET_CM = 24;
 const viewportStateCache = new Map<string, CanvasViewport>();
+
+function gridLines(viewport: CanvasViewport, stepCm = GRID_STEP_CM) {
+  const firstX = Math.floor(viewport.x / stepCm) * stepCm;
+  const firstY = Math.floor(viewport.y / stepCm) * stepCm;
+  const lastX = viewport.x + viewport.width;
+  const lastY = viewport.y + viewport.height;
+  const vertical = [] as number[];
+  const horizontal = [] as number[];
+
+  for (let x = firstX; x <= lastX; x += stepCm) {
+    vertical.push(x);
+  }
+  for (let y = firstY; y <= lastY; y += stepCm) {
+    horizontal.push(y);
+  }
+
+  return { vertical, horizontal };
+}
+
+function segmentMeasurementPosition(start: Point, end: Point, roomCenter: Point): Point {
+  const length = Math.hypot(end.x - start.x, end.y - start.y);
+  const midpoint = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+  if (length === 0) {
+    return midpoint;
+  }
+
+  const normal = { x: -(end.y - start.y) / length, y: (end.x - start.x) / length };
+  const first = { x: midpoint.x + normal.x * MEASUREMENT_OFFSET_CM, y: midpoint.y + normal.y * MEASUREMENT_OFFSET_CM };
+  const second = { x: midpoint.x - normal.x * MEASUREMENT_OFFSET_CM, y: midpoint.y - normal.y * MEASUREMENT_OFFSET_CM };
+  return Math.hypot(first.x - roomCenter.x, first.y - roomCenter.y) >= Math.hypot(second.x - roomCenter.x, second.y - roomCenter.y)
+    ? first
+    : second;
+}
 
 function initialViewport(levels: CanvasLevelData[], visibleIds: Set<string>): CanvasViewport {
   const vertices = levels
@@ -193,6 +233,7 @@ function roomIcon(roomType: string): string {
 export function CanvasOverlayMeasurements({ snapshot, options }: { snapshot: RoomSnapshot; options: CanvasDisplayOptions }) {
   const vertices = sortVertices(snapshot.vertices);
   const angles = polygonInteriorAnglesDegrees(vertices);
+  const roomCenter = centroid(vertices);
 
   return (
     <>
@@ -218,11 +259,14 @@ export function CanvasOverlayMeasurements({ snapshot, options }: { snapshot: Roo
             }
 
             const length = Math.hypot(next.x - vertex.x, next.y - vertex.y);
+            const labelPosition = segmentMeasurementPosition(vertex, next, roomCenter);
             return (
               <Text
                 key={`length-${vertex.id}`}
-                x={(vertex.x + next.x) / 2}
-                y={(vertex.y + next.y) / 2 - 8}
+                x={labelPosition.x - 35}
+                y={labelPosition.y - 6}
+                width={70}
+                align="center"
                 text={`${length.toFixed(1)} cm`}
                 fontSize={11}
                 fill="#57606a"
@@ -307,7 +351,9 @@ export function Canvas2D({
   creationActive = false,
   onCanvasPoint,
   onCanvasHover,
+  snapPoint,
   onVertexMove,
+  onVertexMoveEnd,
   onRoomMove,
 }: Canvas2DProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -359,16 +405,24 @@ export function Canvas2D({
   const scale = Math.min(canvasWidth / viewport.width, height / viewport.height);
   const offsetX = (canvasWidth - viewport.width * scale) / 2;
   const offsetY = (height - viewport.height * scale) / 2;
+  const visibleViewport = useMemo(
+    () => expandViewportToCanvas(viewport, canvasWidth, height),
+    [canvasWidth, height, viewport],
+  );
+  const grid = useMemo(() => gridLines(visibleViewport), [visibleViewport]);
 
   const activeLevel = levels.find(({ level }) => level.id === activeLevelId)?.level;
   const activeNumber = activeLevel?.number ?? 0;
+  const selectedEditableRoom = selection?.type === 'room' && selection.levelId === activeLevelId && editingEnabled
+    ? levels.find(({ level }) => level.id === activeLevelId)?.rooms.find(({ room }) => room.id === selection.id)
+    : undefined;
 
   const stageToWorld = (stagePoint: Point): Point => ({
     x: (stagePoint.x - offsetX) / scale + viewport.x,
     y: (stagePoint.y - offsetY) / scale + viewport.y,
   });
 
-  const getPointerWorldPoint = (stage: import('konva/lib/Stage').default | null): Point | null => {
+  const getPointerWorldPoint = (stage: KonvaStage | null): Point | null => {
     const pointer = stage?.getPointerPosition();
     if (!pointer) {
       return null;
@@ -407,6 +461,14 @@ export function Canvas2D({
       <Stage
         width={canvasWidth}
         height={height}
+        onMouseDown={(event) => {
+          if (!creationActive) {
+            return;
+          }
+
+          pointerMovedRef.current = false;
+          pointerStartRef.current = { x: event.evt.clientX, y: event.evt.clientY };
+        }}
         onMouseMove={(event) => {
           const start = pointerStartRef.current;
           if (start && Math.hypot(event.evt.clientX - start.x, event.evt.clientY - start.y) > 3) {
@@ -418,6 +480,16 @@ export function Canvas2D({
           }
 
           updatePan(event.evt.clientX, event.evt.clientY);
+        }}
+        onClick={(event) => {
+          if (!creationActive || pointerMovedRef.current || !onCanvasPoint) {
+            return;
+          }
+
+          const point = getPointerWorldPoint(event.target.getStage());
+          if (point) {
+            onCanvasPoint(point);
+          }
         }}
         onMouseUp={(event) => {
           setDrag(null);
@@ -446,10 +518,10 @@ export function Canvas2D({
         <Layer scaleX={scale} scaleY={scale} x={offsetX - viewport.x * scale} y={offsetY - viewport.y * scale}>
           <Rect
             name="canvas-background"
-            x={viewport.x}
-            y={viewport.y}
-            width={viewport.width}
-            height={viewport.height}
+            x={visibleViewport.x}
+            y={visibleViewport.y}
+            width={visibleViewport.width}
+            height={visibleViewport.height}
             fill={options.grid ? '#f8fafc' : '#fff'}
             onMouseDown={(event) => {
               pointerMovedRef.current = false;
@@ -459,17 +531,28 @@ export function Canvas2D({
                 startPan(event.evt.clientX, event.evt.clientY);
               }
             }}
-            onClick={(event) => {
-              if (!creationActive || pointerMovedRef.current || !onCanvasPoint) {
-                return;
-              }
-
-              const point = getPointerWorldPoint(event.target.getStage());
-              if (point) {
-                onCanvasPoint(point);
-              }
-            }}
           />
+
+          {options.grid ? (
+            <Group name="canvas-grid" listening={false}>
+              {grid.vertical.map((x) => (
+                <Line
+                  key={`vertical-${x}`}
+                  points={[x, visibleViewport.y, x, visibleViewport.y + visibleViewport.height]}
+                  stroke={x === 0 ? '#cbd5e1' : '#e2e8f0'}
+                  strokeWidth={x === 0 ? 1.5 : 1}
+                />
+              ))}
+              {grid.horizontal.map((y) => (
+                <Line
+                  key={`horizontal-${y}`}
+                  points={[visibleViewport.x, y, visibleViewport.x + visibleViewport.width, y]}
+                  stroke={y === 0 ? '#cbd5e1' : '#e2e8f0'}
+                  strokeWidth={y === 0 ? 1.5 : 1}
+                />
+              ))}
+            </Group>
+          ) : null}
 
           {options.rulers ? (
             <Group>
@@ -495,6 +578,9 @@ export function Canvas2D({
             .sort((a, b) => a.level.number - b.level.number)
             .map(({ level, rooms, notes = [], dimensions = [] }) => {
               const appearance = levelAppearance(level.number, activeNumber);
+              const walls = uniqueLevelWalls(rooms);
+              const openings = uniqueLevelOpenings(rooms);
+              const isActiveLevel = level.id === activeLevelId;
               return (
                 <Group key={level.id} opacity={appearance.opacity}>
                   {rooms.map((snapshot) => {
@@ -502,7 +588,6 @@ export function Canvas2D({
                     const points = vertices.flatMap((vertex) => [vertex.x, vertex.y]);
                     const center = centroid(vertices);
                     const isRoomSelected = selection?.type === 'room' && selection.id === snapshot.room.id;
-                    const isActiveLevel = level.id === activeLevelId;
 
                     return (
                       <Group key={snapshot.room.id}>
@@ -510,8 +595,8 @@ export function Canvas2D({
                           points={points}
                           closed
                           fill={appearance.fill}
-                          stroke={isRoomSelected ? '#6757ff' : appearance.stroke}
-                          strokeWidth={isRoomSelected ? 8 : 4}
+                          stroke={isRoomSelected ? '#6757ff' : snapshot.walls.length === 0 ? appearance.stroke : 'rgba(0,0,0,0)'}
+                          strokeWidth={isRoomSelected ? 8 : snapshot.walls.length === 0 ? 4 : 0}
                           onClick={() => {
                             if (isActiveLevel) {
                               onSelect?.({ source: 'canvas', type: 'room', id: snapshot.room.id, levelId: level.id });
@@ -529,51 +614,6 @@ export function Canvas2D({
                           }}
                         />
 
-                        {snapshot.walls.map((wall) => {
-                          const start = snapshot.vertices.find(({ id }) => id === wall.startVertexId);
-                          const end = snapshot.vertices.find(({ id }) => id === wall.endVertexId);
-                          if (!start || !end) {
-                            return null;
-                          }
-
-                          const isWallSelected = selection?.type === 'wall' && selection.id === wall.id;
-                          return (
-                            <Line
-                              key={wall.id}
-                              points={[start.x, start.y, end.x, end.y]}
-                              stroke={isWallSelected ? '#6757ff' : 'rgba(0,0,0,0)'}
-                              strokeWidth={isWallSelected ? 10 : 14}
-                              onClick={() => {
-                                if (isActiveLevel) {
-                                  onSelect?.({ source: 'canvas', type: 'wall', id: wall.id, levelId: level.id });
-                                }
-                              }}
-                            />
-                          );
-                        })}
-
-                        {snapshot.openings.map((opening) => {
-                          const segment = openingSegment(snapshot, opening.id);
-                          if (!segment) {
-                            return null;
-                          }
-
-                          const isOpeningSelected = selection?.type === 'opening' && selection.id === opening.id;
-                          return (
-                            <Line
-                              key={opening.id}
-                              points={[segment.x1, segment.y1, segment.x2, segment.y2]}
-                              stroke={isOpeningSelected ? '#6757ff' : '#ffffff'}
-                              strokeWidth={isOpeningSelected ? 12 : 8}
-                              onClick={() => {
-                                if (isActiveLevel) {
-                                  onSelect?.({ source: 'canvas', type: 'opening', id: opening.id, levelId: level.id });
-                                }
-                              }}
-                            />
-                          );
-                        })}
-
                         <Text x={center.x - 26} y={center.y - 12} text={snapshot.room.name} fontSize={14} fill="#0f172a" />
                         {options.surfaces ? (
                           <Text
@@ -590,27 +630,47 @@ export function Canvas2D({
 
                         <CanvasOverlayMeasurements snapshot={snapshot} options={options} />
 
-                        {isRoomSelected && isActiveLevel && editingEnabled
-                          ? vertices.map((vertex) => (
-                              <Circle
-                                key={vertex.id}
-                                x={vertex.x}
-                                y={vertex.y}
-                                radius={7}
-                                fill="#ffffff"
-                                stroke="#0f172a"
-                                strokeWidth={2}
-                                draggable
-                                onDragMove={(event) => {
-                                  onVertexMove?.(snapshot.room.id, vertex.id, {
-                                    x: event.target.x(),
-                                    y: event.target.y(),
-                                  });
-                                }}
-                              />
-                            ))
-                          : null}
                       </Group>
+                    );
+                  })}
+
+                  {walls.map((wall) => {
+                    const owner = rooms.find((snapshot) => snapshot.walls.some(({ id }) => id === wall.id));
+                    const localWall = owner?.walls.find(({ id }) => id === wall.id);
+                    const start = owner?.vertices.find(({ id }) => id === localWall?.startVertexId);
+                    const end = owner?.vertices.find(({ id }) => id === localWall?.endVertexId);
+                    if (!start || !end) return null;
+                    const isWallSelected = selection?.type === 'wall' && selection.id === wall.id;
+                    return (
+                      <Line
+                        key={wall.id}
+                        name="canvas-level-wall"
+                        points={[start.x, start.y, end.x, end.y]}
+                        stroke={isWallSelected ? '#6757ff' : appearance.stroke}
+                        strokeWidth={isWallSelected ? 10 : 4}
+                        onClick={() => {
+                          if (isActiveLevel) onSelect?.({ source: 'canvas', type: 'wall', id: wall.id, levelId: level.id });
+                        }}
+                      />
+                    );
+                  })}
+
+                  {openings.map((opening) => {
+                    const owner = rooms.find((snapshot) => snapshot.openings.some(({ id }) => id === opening.id));
+                    const segment = owner ? openingSegment(owner, opening.id) : null;
+                    if (!segment) return null;
+                    const isOpeningSelected = selection?.type === 'opening' && selection.id === opening.id;
+                    return (
+                      <Line
+                        key={opening.id}
+                        name="canvas-level-opening"
+                        points={[segment.x1, segment.y1, segment.x2, segment.y2]}
+                        stroke={isOpeningSelected ? '#6757ff' : '#ffffff'}
+                        strokeWidth={isOpeningSelected ? 12 : 8}
+                        onClick={() => {
+                          if (isActiveLevel) onSelect?.({ source: 'canvas', type: 'opening', id: opening.id, levelId: level.id });
+                        }}
+                      />
                     );
                   })}
 
@@ -640,6 +700,37 @@ export function Canvas2D({
                 </Group>
               );
             })}
+
+          {selectedEditableRoom ? (
+            <Group name="canvas-vertex-handles">
+              {sortVertices(selectedEditableRoom.vertices).map((vertex) => (
+                <Circle
+                  key={vertex.id}
+                  name="canvas-vertex-handle"
+                  x={vertex.x}
+                  y={vertex.y}
+                  radius={7}
+                  fill="#ffffff"
+                  stroke="#0f172a"
+                  strokeWidth={2}
+                  draggable
+                  dragBoundFunc={(position) => snapPoint?.(position, selectedEditableRoom.room.id, vertex.id) ?? position}
+                  onDragMove={(event) => {
+                    onVertexMove?.(selectedEditableRoom.room.id, vertex.id, {
+                      x: event.target.x(),
+                      y: event.target.y(),
+                    });
+                  }}
+                  onDragEnd={(event) => {
+                    onVertexMoveEnd?.(selectedEditableRoom.room.id, vertex.id, {
+                      x: event.target.x(),
+                      y: event.target.y(),
+                    });
+                  }}
+                />
+              ))}
+            </Group>
+          ) : null}
 
           {creationFirstPoint && creationPreviewPoint ? (
             <Line

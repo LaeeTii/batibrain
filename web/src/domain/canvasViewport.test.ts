@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { panViewport, zoomViewport } from './canvasViewport';
+import { expandViewportToCanvas, panViewport, zoomViewport } from './canvasViewport';
 
 describe('navigation visuelle du canvas', () => {
   it('zoome autour du point d’ancrage sans modifier ce point métier', () => {
@@ -14,5 +14,23 @@ describe('navigation visuelle du canvas', () => {
     const pointMetier = { x: 25, y: 75 };
     expect(panViewport(viewport, { x: -20, y: 35 })).toEqual({ x: -20, y: 35, width: 400, height: 300 });
     expect(pointMetier).toEqual({ x: 25, y: 75 });
+  });
+
+  it('étend le viewport sur toute la largeur du canvas', () => {
+    expect(expandViewportToCanvas({ x: 0, y: 0, width: 500, height: 500 }, 1000, 500)).toEqual({
+      x: -250,
+      y: 0,
+      width: 1000,
+      height: 500,
+    });
+  });
+
+  it('étend le viewport sur toute la hauteur du canvas', () => {
+    expect(expandViewportToCanvas({ x: 0, y: 0, width: 500, height: 250 }, 500, 500)).toEqual({
+      x: 0,
+      y: -125,
+      width: 500,
+      height: 500,
+    });
   });
 });

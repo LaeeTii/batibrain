@@ -6,6 +6,7 @@ import { RoomCard, type RoomPdfMode } from '../components/RoomCard';
 import type { Level, Project } from '../domain/types';
 import { exportDashboardPdf } from '../lib/dashboardPdf';
 import { getRoomAreaM2 } from '../lib/roomMetrics';
+import { uniqueLevelOpenings, uniqueLevelWalls } from '../domain/roomOverlap';
 import { hasSupabaseConfig } from '../lib/supabase';
 import { listLevelsByProject } from '../services/levels';
 import { canWriteProject, getProject } from '../services/projects';
@@ -63,8 +64,8 @@ export function RoomsDashboard({ projectId, onCreateProject, onOpenGlobalEditor,
   }, [filterLevelId, search, snapshots]);
   const levelsById = useMemo(() => new Map(levels.map((level) => [level.id, level])), [levels]);
   const totalAreaM2 = filteredSnapshots.reduce((sum, snapshot) => sum + getRoomAreaM2(snapshot.vertices), 0);
-  const totalWalls = filteredSnapshots.reduce((sum, snapshot) => sum + snapshot.walls.length, 0);
-  const totalOpenings = filteredSnapshots.reduce((sum, snapshot) => sum + snapshot.openings.length, 0);
+  const totalWalls = uniqueLevelWalls(filteredSnapshots).length;
+  const totalOpenings = uniqueLevelOpenings(filteredSnapshots).length;
 
   const runExport = (targets: RoomSnapshot[], mode: RoomPdfMode) => {
     if (!project) return;

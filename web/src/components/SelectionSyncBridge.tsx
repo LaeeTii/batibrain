@@ -9,14 +9,14 @@ interface SelectionContextValue {
 
 const SelectionContext = createContext<SelectionContextValue | null>(null);
 
-export function SelectionSyncBridge({ validObjects, onLevelChange, children }: React.PropsWithChildren<{ validObjects: ReadonlySet<string>; onLevelChange?(levelId: string): void }>) {
+export function SelectionSyncBridge({ validObjects, allowDraftObjects = false, onLevelChange, children }: React.PropsWithChildren<{ validObjects: ReadonlySet<string>; allowDraftObjects?: boolean; onLevelChange?(levelId: string): void }>) {
   const [selection, setSelection] = useState<EditorSelection | null>(null);
   useEffect(() => setSelection((current) => reconcileEditorSelection(current, validObjects)), [validObjects]);
   const select = useCallback((next: EditorSelection) => {
-    if (!validObjects.has(`${next.type}:${next.id}`)) { setSelection(null); return; }
+    if (!allowDraftObjects && !validObjects.has(`${next.type}:${next.id}`)) { setSelection(null); return; }
     if (next.levelId) onLevelChange?.(next.levelId);
     setSelection(next);
-  }, [onLevelChange, validObjects]);
+  }, [allowDraftObjects, onLevelChange, validObjects]);
   const value = useMemo(() => ({ selection, select, clear: () => setSelection(null) }), [select, selection]);
   return <SelectionContext.Provider value={value}>{children}</SelectionContext.Provider>;
 }

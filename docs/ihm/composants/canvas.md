@@ -54,6 +54,8 @@
 - La sélection utilisateur dans le canvas est synchronisee vers panneaux et détail tree.
 - Les mesures en focus restent visibles en édition meme si l'option globale correspondante est decochee.
 - Les controles de zoom restent disponibles en permanence dans la zone canvas.
+- Lorsqu'elle est active, la grille couvre toute la surface visible du canvas, quel que soit son ratio largeur/hauteur.
+- Le pas de la grille est fixe et représente `5 cm` dans le repère métier.
 - Le viewport est un état visuel de session: aucune interaction d'édition (création, déplacement, sélection) ne doit forcer un recadrage automatique.
 
 ## Iconographie
@@ -85,6 +87,7 @@
 - Les longueurs et annotations doivent suivre les règles du contrat géométrique.
 - Les règles de synchronisation de sélection ne sont pas redefinies ici et sont referencees depuis la logique dediee.
 - Les icônes de pièces sont affichées par défaut sur tous les canvas.
+- Un mur mitoyen est rendu une seule fois à partir de son identifiant unique, même lorsqu’il apparaît dans les relations de ses deux pièces.
 - L'icône est dérivée du type par le frontend avec `react-icons` et n'est pas persistée.
 - Elle est affichée sous le nom et la surface; le type `autre` ne produit aucune icône.
 - L'option Icônes de pièces masque ou réaffiche toutes les icônes du canvas courant.
@@ -128,6 +131,7 @@
 - Given une ouverture est en cours d'édition, When les options de côtes sont masquees, Then les distances directement liees a l'ouverture restent visibles.
 - Given un template d'ouverture est en cours de pose, When un mur incompatible est survolé, Then aucun aperçu ni mesure de positionnement n'est affiché.
 - Given l'utilisateur clique sur un objet visible, When la sélection est appliquee, Then l'objet est surligne dans le canvas et propage vers les autres zones.
+- Given un mur est lié à deux pièces visibles, When le niveau est rendu, Then un seul segment mural interactif est affiché pour cet identifiant.
 - Given l'utilisateur clique sur reset zoom, When l'action est terminee, Then le niveau de zoom revient a sa valeur initiale.
 - Given WallEditorView affiche une face, When l'utilisateur choisit l'autre face, Then le canvas rend le profil propre à cette face sans changer le mur sélectionné.
 - Given une ouverture dépasse la hauteur disponible sur une face, When une modification de profil est validée, Then la modification est refusée avec un message explicite.

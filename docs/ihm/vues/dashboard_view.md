@@ -273,6 +273,7 @@
 - Données agregees:
 	- Nombre de pièces visibles apres filtres.
 	- Surface totale visible apres filtres.
+	- Nombre de murs et d’ouvertures distincts après filtres; un mur mitoyen ou son ouverture ne sont comptés qu’une seule fois.
 	- Autres indicateurs globaux retenus par la vue sur le sous-ensemble visible.
 - Données d'etat:
 	- Etat de chargement des données.
