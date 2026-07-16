@@ -9,7 +9,7 @@
 - In-scope:
   - Description des exports PDF côtes vues et actions utilisateur.
   - Contrat minimal de paramètres d'entree et de sortie pour chaque template.
-  - Règles communes de feedback utilisateur (succes, erreur, conservation du contexte).
+  - Règles communes d'erreur et de conservation du contexte.
 - Out-of-scope:
   - Implementation technique de la generation PDF.
   - Moteur de rendu, styles d'impression et pagination avancee.
@@ -19,7 +19,9 @@
 - Les exports PDF sont des actions explicites declenchees par l'utilisateur.
 - En cas d'échec, la vue conserve son contexte (filtres, sélection, panneau actif).
 - Les messages d'erreur doivent etre explicites et actionnables.
-- Les mesures affichees dans les PDF suivent l'unite metier du projet (cm), sauf evolution documentaire explicite.
+- Les mesures affichées dans les PDF suivent les préférences de l'utilisateur au moment de l'export, préconfigurées en `cm` pour les longueurs et `m2` pour les surfaces.
+- Les données internes restent normalisées en centimètres et centimètres carrés avant conversion pour le document.
+- Aucun message de succès générique n'est affiché après la génération standard d'un export.
 
 ## Convention de nommage
 - Nom technique (cle): prefixe `pdf_` + vue + portee + variante.
@@ -101,14 +103,16 @@
 - Declencheur: action export PDF dans le header de la vue, mode Détail.
 - Portee de données:
   - plan du contexte éditeur courant,
-  - détail structure des objets du niveau (selon la vue).
+  - tous les niveaux visibles au moment de l'export,
+  - détail structuré des objets de ces niveaux visibles.
 - Paramètres d'entree minimaux:
   - id projet courant,
-  - niveau editable,
-  - objets selectionnables du niveau (pièces, murs, ouvertures, côtes, notes),
+  - niveaux visibles et niveau éditable,
+  - objets sélectionnables des niveaux visibles (pièces, murs, ouvertures, côtes, notes),
   - options d'affichage (affichage/masquage) actives.
 - Sortie attendue:
-  - un document PDF contenant le plan et un détail exploitable du niveau.
+  - un document PDF contenant le plan et un détail exploitable de tous les niveaux visibles.
+  - le détail est regroupé par niveau visible puis par pièce; la structure standard est répétée pour chaque pièce applicable.
 - Points a completer plus tard:
   - niveau de granularite du détail par type d'objet,
   - sections obligatoires du détail,
@@ -205,7 +209,7 @@
     - date generation,
     - reference template.
 - Regles de rendu:
-  - Toutes les dimensions sont exprimees en cm.
+  - Toutes les dimensions et surfaces utilisent les unités préférées au déclenchement de l'export.
   - Les valeurs derivees sont arrondies a 1 decimale pour la lecture humaine.
   - Les sections sans donnee peuvent etre masqueees sauf `Contexte document`, `Plan de la pièce` et `Meta export` qui restent obligatoires.
 - Regles de fallback:

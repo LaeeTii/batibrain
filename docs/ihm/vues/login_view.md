@@ -36,8 +36,6 @@
 	- Bouton primaire "Se connecter".
 - Zone de message contextuel dans la carte:
 	- Affichage des erreurs de validation ou d'authentification.
-- Pied de carte:
-	- Mention courte de securite/session (texte informatif non bloquant).
 - Comportement de layout:
 	- Affichage desktop: carte centree horizontalement et verticalement.
 	- Affichage mobile: carte en largeur fluide avec marges laterales, sans perte de lisibilite.
@@ -51,7 +49,7 @@
 - Se connecter: `LuLogIn`, icône + texte.
 - Mot de passe oublié: `LuKeyRound`, icône + texte.
 - Créer un compte: `LuUserRoundPlus`, icône + texte.
-- Les états de chargement, d'erreur et de succès utilisent respectivement `LuLoaderCircle`, `LuCircleAlert` et `LuCircleCheck`, toujours accompagnés d'un texte visible.
+- Les états de chargement et d'erreur utilisent respectivement `LuLoaderCircle` et `LuCircleAlert`, toujours accompagnés d'un texte visible.
 - Saisie email:
 	- L'utilisateur renseigne son adresse email.
 	- La validation de format peut se faire au blur et au submit.
@@ -116,8 +114,8 @@
 - Etat de soumission:
 	- Bouton Se connecter passe en etat de chargement.
 	- Le formulaire est temporairement non interactif pour eviter les doubles soumissions.
-- Etat succes:
-	- Message de succes optionnel tres bref, puis redirection automatique vers l'ecran cible.
+- État post-connexion:
+	- Redirection automatique vers l'écran cible sans message de succès générique.
 - Etat échec authentification:
 	- Message global non technique (identifiants invalides ou session impossible).
 	- Champ email conserve, champ mot de passe vide.
@@ -252,4 +250,4 @@
 
 ## References
 - Referentiel global : [ihm.md](../ihm.md)
-- Contexte de déconnexion : [ihm_side_bar_menu.md](../composants/ihm_side_bar_menu.md)
+- Contexte de déconnexion : [sidebar_menu.md](../composants/sidebar_menu.md)

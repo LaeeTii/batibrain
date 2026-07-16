@@ -63,11 +63,8 @@
 	- Le bouton principal d'acces a l'Éditeur 2D global est visible dans cette zone.
 - Cas aucun projet:
 	- Pas de bandeau de contexte.
-	- Affichage d'une zone de bienvenue dans la zone principale.
-	- Cette zone contient uniquement:
-		- un texte de bienvenue,
-		- une action de creation de nouveau projet,
-		- la sidebar applicative reste disponible, dans son état ouvert ou fermé courant.
+	- La zone principale affiche uniquement l'action de création du premier projet.
+	- La sidebar applicative reste disponible, dans son état ouvert ou fermé courant.
 - Barre de filtres:
 	- Select de niveau avec option Tous les niveaux.
 	- Champ de recherche par nom de pièce.
@@ -97,7 +94,7 @@
 - Zone de synthese:
 	- Indicateurs agreges calcules sur les pièces visibles apres application des filtres.
 - Etats alternatifs dans la zone de contenu:
-	- Etat aucun projet avec zone de bienvenue.
+	- État aucun projet avec l'action de création du premier projet.
 	- Etat chargement.
 	- Etat aucune pièce.
 	- Etat aucun resultat apres filtres.
@@ -106,7 +103,7 @@
 ## Interactions utilisateur
 - Arrivee sur la vue:
 	- Si un projet courant existe, le dashboard charge ses pièces et applique par defaut le filtre Tous les niveaux.
-	- Si aucun projet n'existe, l'utilisateur voit la zone de bienvenue avec l'action de creation de projet.
+	- Si aucun projet n'existe, l'utilisateur voit uniquement l'action de création du premier projet.
 - Navigation principale:
 	- L'utilisateur peut ouvrir l'Éditeur 2D global via le bouton principal de l'en-tete.
 	- L'utilisateur peut cliquer sur `Annuler` et `Retablir` depuis le header principal quand les actions sont disponibles.
@@ -169,7 +166,7 @@
 		- chaque plan de pièce + détail.
 	- Les pièces supprimees logiquement sont exclues par defaut des exports PDF globaux.
 - Etats d'affichage:
-	- Si aucun projet n'existe, le dashboard bascule sur l'etat de bienvenue.
+	- Si aucun projet n'existe, le dashboard bascule sur l'état vide avec l'action de création du premier projet.
 	- Si les filtres n'ont aucun resultat, le dashboard affiche un etat vide specifique sans perdre les filtres saisis.
 - Evolution future:
 	- Les actions futures (tache, document, photo) ne modifient pas le périmètre courant tant qu'elles ne sont pas specifiees dans une vue ou un composant dedie.
@@ -213,8 +210,7 @@
 	- Si un projet courant existe, la vue charge les cartes de pièces et les indicateurs associes.
 	- Pendant ce chargement, la grille et les indicateurs affichent un etat de chargement lisible.
 - Etat aucun projet:
-	- La zone principale affiche un message de bienvenue.
-	- Une seule action principale est proposee: créer un nouveau projet.
+	- La zone principale affiche uniquement l'action principale `Créer un nouveau projet`.
 - Etat aucun niveau correspondant:
 	- Si le filtre de niveau ne retourne aucune pièce visible, la vue affiche un etat vide lie aux filtres actifs.
 - Etat aucun resultat de recherche:
@@ -231,7 +227,7 @@
 - Etat suppression logique:
 	- Avant execution, une confirmation explicite est demandee.
 	- Apres confirmation, la pièce disparait de l'affichage par defaut.
-	- Un feedback de succes ou d'erreur est affiche.
+	- En cas d'échec uniquement, une erreur explicite est affichée; aucun succès générique n'est ajouté.
 - Etat ajout de note:
 	- L'ouverture de l'action de note affiche un contexte clair sur la pièce ciblee.
 	- En cas d'échec d'enregistrement, le message d'erreur reste local a l'action engagee.
@@ -286,7 +282,7 @@
 
 ## Cas limites
 - Aucun projet existant:
-	- La vue affiche uniquement la zone de bienvenue et l'action de creation de projet.
+	- La vue affiche uniquement l'action de création du premier projet.
 - Projet courant introuvable ou supprime:
 	- La vue retombe sur un etat vide controle plutot que sur une erreur bloquante.
 - Aucun resultat avec les filtres:
@@ -313,7 +309,7 @@
 - Scenario 1 - Aucun projet:
 	- Given aucun projet n'existe pour l'utilisateur
 	- When il ouvre DashboardView
-	- Then la zone principale affiche uniquement un message de bienvenue et l'action de creation de projet
+	- Then la zone principale affiche uniquement l'action de création du premier projet
 - Scenario 2 - Projet courant:
 	- Given plusieurs projets existent
 	- When l'utilisateur ouvre DashboardView
@@ -385,7 +381,7 @@
 	- Le dashboard affiche toutes les pièces du projet courant, avec filtre Tous les niveaux par defaut.
 	- La recherche par nom fonctionne sur une sous-chaine et reste insensible a la casse.
 	- Le nom du projet courant est le titre principal de la page; il n'y a pas de bandeau de contexte.
-	- En absence de projet, la vue affiche une zone de bienvenue avec une seule action de creation de projet.
+	- En absence de projet, la vue affiche uniquement l'action de création du premier projet.
 	- Le bouton principal de la vue ouvre l'Éditeur 2D global.
 	- Le bouton d'export PDF global est place a droite dans la barre de filtres.
 	- Les actions de carte sont visibles sous forme d'icones uniquement.

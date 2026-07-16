@@ -1,5 +1,7 @@
 # Contrat géométrique
 
+Date de mise à jour: 2026-07-15
+
 ## Périmètre du document
 - Ce document decrit les objets geometriques, leurs invariants, leurs calculs, leurs transformations et leurs cas limites.
 - Les parcours utilisateur, les panneaux, les modes d'édition et les règles d'interaction appartiennent a [editeur_2d_global.md](../vues/editeur_2d_global.md).
@@ -19,7 +21,8 @@
 - Les pièces et les murs sont deux entites geometriques de premier rang.
 - Une pièce est modelisee comme un polygone ordonne de sommets.
 - Le rectangle dessine en 2 clics dans l'IHM est une modalite de creation initiale d'une pièce polygonale a 4 sommets.
-- Un mur est modelise comme un segment epais defini par deux points.
+- Un mur est une entité topologique autonome modélisée comme un segment épais ordonné défini par deux points.
+- Chaque segment entre deux sommets consécutifs du contour d'une pièce référence le mur qui matérialise cette frontière; le mur peut néanmoins exister sans liaison à une pièce.
 - Une ouverture est definie relativement a son mur support.
 - Une cote est rattachee a un niveau et a deux references de mesure.
 
@@ -34,6 +37,7 @@
 - Un mur lie a une seule pièce est extérieur pour cette pièce.
 - Un mur lie a deux pièces differentes est intérieur pour les deux pièces.
 - Un mur sans liaison est qualifié de détaché; cette qualification complète les états extérieur et intérieur sans être persistée.
+- Une transformation topologique est refusée dans son ensemble si elle doit modifier, scinder, détacher ou supprimer une pièce, un mur ou une ouverture verrouillé.
 - Chaque mur possède exactement deux faces et deux profils de hauteur propres, liés par défaut et dissociables.
 - Les faces stables sont toujours ordonnées `gauche`, puis `droite`, relativement au segment orienté du sommet de début vers le sommet de fin.
 - Chaque profil est une liste de points ordonnée par leur distance depuis le début du segment; à la création, sa hauteur est uniforme et provient de la hauteur de mur par défaut de l'utilisateur courant.
@@ -107,9 +111,11 @@
 - L'operation "Couper en deux" créé deux segments colineaires partageant le point de coupe. Le mur de gauche garde le focus fonctionnel, le mur de droite reprend les memes proprietes.
 - Si des murs se croisent sur un meme niveau, ils doivent etre scindes au point d'intersection pour produire des segments elementaires.
 - Si des pièces se chevauchent sur un meme niveau, les murs concernes sont scindes aux intersections necessaires et la zone de chevauchement devient une nouvelle pièce.
+- Avant toute scission, intersection ou création de pièce issue d'un chevauchement, tous les objets affectés sont contrôlés; la présence d'un verrou manuel annule l'opération avant toute persistance.
 - Si une pièce est supprimee, chaque mur precedemment mitoyen perd uniquement le lien vers cette pièce et conserve ses liens restants.
 - Apres suppression d'une pièce, un mur conserve est requalifie extérieur/intérieur selon son nouveau nombre de pièces liees.
-- Après toute modification topologique, les ouvertures du mur sont revérifiées; toute ouverture dont la caractéristique intérieur/extérieur ne correspond plus à la qualification du mur est supprimée.
+- Après toute modification topologique, les ouvertures du mur sont revérifiées; toute ouverture non verrouillée dont la caractéristique intérieur/extérieur ne correspond plus à la qualification du mur est supprimée.
+- Si une ouverture incompatible est verrouillée, la modification topologique entière est refusée et l'état précédent est conservé.
 
 ## Cas limites et validations
 - Refuser une ouverture hors du mur support.
@@ -124,7 +130,8 @@
 - Recalculer les segments elementaires apres toute coupe, intersection ou creation d'ancrage sur mur.
 - Recalculer les relations mur-pièce apres toute modification topologique.
 - Refuser toute topologie qui lierait un même mur à trois pièces; appliquer la scission au point de jonction avant persistance.
-- Supprimer les ouvertures devenues incompatibles après le recalcul des relations mur-pièce.
+- Refuser atomiquement toute topologie affectant un objet verrouillé.
+- Supprimer les ouvertures non verrouillées devenues incompatibles après le recalcul des relations mur-pièce; refuser l'opération si l'une d'elles est verrouillée.
 
 ## Algorithmes attendus
 - Distance entre deux points.
@@ -148,5 +155,9 @@
 - Les angles intérieurs tiennent compte de la concavité et sont compris entre `0` et `360` degrés; ils valent `0` lorsque le polygone est dégénéré.
 - La longueur intérieure ne peut pas être négative après déduction des épaisseurs des murs liés aux deux extrémités.
 
-## Unite metier
-Le centimetre est l'unite metier de reference pour la base, les calculs et les affichages de mesure. Le m2 est l'unite metier de reference pour les surfaces. Les conversions d'unite sont effectuees a l'affichage selon le contexte utilisateur.
+## Unités
+
+- Les coordonnées et longueurs sont normalisées en centimètres dans la base et les calculs.
+- Les surfaces sont calculées et normalisées en centimètres carrés.
+- Les préférences de l'utilisateur déterminent les unités de saisie et d'affichage, avec `cm` pour les longueurs et `m2` pour les surfaces comme valeurs initiales.
+- Toute saisie est convertie vers l'unité interne avant calcul ou persistance; changer de préférence ne réinterprète jamais les données existantes.

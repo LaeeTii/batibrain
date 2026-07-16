@@ -103,6 +103,7 @@
   - Le collaborateur en lecture conserve la navigation, la sélection consultative, les options d'affichage, le zoom et les exports.
   - En lecture seule, les contrôles de création, d'édition, de suppression, d'annulation et de rétablissement d'actions métier sont désactivés ou masqués.
   - Une tentative d'écriture indirecte est refusée même si un contrôle obsolète reste affiché.
+  - Pendant l'implémentation des autres fonctions V1, le verrou collaboratif projet reste suspendu; il est réactivé et recetté avant la publication 1.0.
  - Sauvegarde:
   - Les modifications de géométrie et de structure sont d'abord appliquées en brouillon local.
   - Une auto-sauvegarde est déclenchée toutes les 5 minutes quand des changements non sauvegardés existent.
@@ -144,9 +145,10 @@
 - Topologie des murs:
   - Un mur peut être lié à deux pièces au maximum.
   - Lorsqu'une troisième pièce rejoint l'intérieur d'un mur existant, la vue crée un sommet au point de jonction, scinde le mur existant en deux et conserve le mur aboutissant: trois murs distincts se rencontrent alors au sommet.
+  - Toute transformation topologique est refusée avant persistance si elle affecte une pièce, un mur ou une ouverture verrouillé.
 - Export PDF:
   - L'export Plan prend en compte les niveaux visibles et les options d'affichage actives.
-  - L'export Détail ajoute un niveau de détail structure en plus du plan exporte.
+  - L'export Détail ajoute le détail structuré de tous les niveaux visibles au plan exporté.
 - Separation documentaire:
   - Les invariants geometriques restent definis dans [geometry.md](../logique/geometry.md).
   - Les règles fines de synchronisation restent definies dans [edition_2D_synchronisation_selection.md](../logique/edition_2D_synchronisation_selection.md).
@@ -163,7 +165,6 @@
   - Les boutons `Annuler` et `Retablir` restent visibles en haut a droite du header principal.
   - Chaque bouton est grise et non cliquable si son historique est vide.
 - Etat mode creation:
-  - La vue affiche des aides contextuelles liees au domaine actif.
   - Le canvas montre une previsualisation lorsque la creation se fait en plusieurs etapes.
 - Etat mode édition:
   - La zone d'édition correspondante s'ouvre automatiquement apres sélection d'un objet.
@@ -174,7 +175,7 @@
 - Etat repli panneaux:
   - Le repli du panneau creation ou détail ne supprime ni la sélection ni le contexte de travail.
 - Etat erreur:
-  - En cas d'échec d'ecriture, la vue applique un rollback visuel et affiche un message explicite.
+  - En cas d'échec d'écriture, la vue conserve le brouillon local, l'état visuel courant et affiche un unique message explicite non redondant.
   - En cas d'échec d'export PDF, la vue conserve le contexte et affiche une erreur explicite.
 - Etat chargement:
   - Les zones dependantes des données affichent un etat de chargement sans bloquer l'ensemble de la navigation.
@@ -240,7 +241,7 @@
 - Panneau détail replie avec sélection active:
   - La fermeture du panneau détail ne doit pas annuler la sélection ni casser les autres zones synchronisees.
 - Échec d'ecriture persistant:
-  - La vue applique un rollback visuel et affiche une erreur explicite sans laisser d'etat partiellement applique.
+  - La vue conserve le brouillon local, affiche une erreur explicite et ne laisse aucune écriture persistée partiellement appliquée.
 - Échec d'export PDF:
   - Le contexte courant est conserve et un message d'erreur explicite est affiche.
 - Données partielles ou retardees:
@@ -285,12 +286,12 @@
 - Scenario 8 - Export Détail:
   - Given un contexte de vue charge
   - When l'utilisateur lance un export PDF Détail
-  - Then l'export inclut le plan et un niveau de détail structure
+  - Then l'export inclut le plan et le détail structuré de tous les niveaux visibles
 - Scenario 9 - Échec d'ecriture:
   - Given une modification utilisateur ne peut pas etre persistee
   - When l'échec devient persistant
-  - Then la vue applique un rollback visuel
-  - And un message d'erreur explicite est affiche
+  - Then la vue conserve le brouillon local et son état visuel
+  - And un unique message d'erreur explicite est affiché
 - Scenario 10 - Sélection invalide:
   - Given un objet selectionne disparait
   - When la vue rafraichit son etat
@@ -319,7 +320,7 @@
   - Au moins un niveau doit toujours rester visible.
   - Si le niveau editable est masque, la vue bascule automatiquement sur le niveau visible immediatement en dessous, sinon sur le niveau visible immediatement au-dessus.
   - L'export Plan depend des niveaux visibles et des options d'affichage actives.
-  - L'export Détail inclut un niveau de détail structure en plus du plan.
+  - L'export Détail inclut le détail structuré de tous les niveaux visibles en plus du plan.
 - Hypotheses explicites (a confirmer si necessaire lors de l'implementation):
   - Les modalites exactes d'affichage des etats de chargement (skeleton, spinner, placeholders) restent un choix d'implementation frontend.
   - Le format precis du document PDF exporte reste detaille au niveau des composants d'export et non dans la presente vue.

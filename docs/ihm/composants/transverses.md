@@ -17,8 +17,8 @@
 - AppNotifications
 
 ### Statut du verrou d'édition collaboratif
-- Le verrou d'édition collaboratif projet est suspendu temporairement en V1.
-- La gestion de conflit entre éditeurs simultanés est différée à une itération ultérieure.
+- Le verrou d'édition collaboratif projet est suspendu pendant l'implémentation et le débogage des autres fonctions V1.
+- Il est réactivé et recetté avec deux sessions à la fin de la V1, avant la publication 1.0.
 - Les contrôles d'écriture reposent uniquement sur les droits projet et les verrous manuels durant cette phase.
 - La suspension est appliquée côté frontend et dans la couche SQL de persistance pour éviter toute acquisition implicite du verrou collaboratif.
 
@@ -34,6 +34,7 @@
 	- En cas d'échec, le brouillon local est conservé et une nouvelle tentative automatique intervient au cycle suivant.
 	- En cas d'échec d'auto-sauvegarde, la vue n'affiche qu'un seul message utilisateur non redondant.
 	- Aucun message de succès générique n'est affiché après une action standard sans demande explicite.
+	- Aucun bloc d'information, d'aide ou d'astuce n'est ajouté sans demande explicite; les erreurs, états indispensables et confirmations destructives restent autorisés.
 - Sortie de vue:
 	- Une confirmation explicite est affichée seulement lors d'une sortie effective de la vue (changement d'écran, fermeture/rechargement du navigateur) s'il reste des changements non sauvegardés.
 	- Un changement de contexte interne à la même vue (sélection, niveau, panneau, mode) ne doit pas déclencher cette confirmation.
@@ -55,7 +56,7 @@
 	- Le transfert de propriété n'est pas proposé.
 - Etats et feedback:
 	- Chargement des invitations et collaborateurs.
-	- Confirmation après chaque action réussie.
+	- Après une action réussie, les listes et droits affichés sont actualisés sans message de succès générique.
 	- Erreur explicite si le compte n'existe pas ou si une opération échoue.
 	- Etat vide distinct pour les invitations et les collaborateurs.
 - Critères d'acceptation testables:
@@ -103,6 +104,13 @@
 	- choix du thème UI;
 	- hauteur et épaisseur de mur par défaut;
 	- action d'enregistrement des préférences.
+- Contrat de données:
+	- unités de longueur: `cm` par défaut, `m`, `mm`;
+	- unités de surface: `m2` par défaut, `cm2`, `mm2`;
+	- thème: `clair`, `foncé`, `system` par défaut;
+	- hauteur de mur par défaut: valeur strictement positive, initialisée à `250 cm`;
+	- épaisseur de mur par défaut: valeur strictement positive, initialisée à `10 cm`;
+	- les préférences pilotent les saisies et affichages; les longueurs sont converties en centimètres et les surfaces en centimètres carrés avant calcul ou persistance.
 
 ### Contrat AccountModal
 - Objectif:
@@ -124,24 +132,6 @@
 		- avatar image téléversé dans Supabase Storage;
 		- avatar limité à 5 Mio et aux formats JPEG, PNG, WebP ou GIF;
 		- adresse e-mail active fournie par Supabase Auth.
-	- Unités de longueur disponibles:
-		- `cm` (par défaut)
-		- `m`
-		- `mm`
-	- Unités de surface disponibles:
-		- `m2` (par défaut)
-		- `cm2`
-		- `mm2`
-	- Thème disponible:
-		- `clair`
-		- `foncé`
-		- `system` (par défaut)
-	- Hauteur de mur par défaut:
-		- valeur initiale `250 cm`
-		- valeur strictement positive
-	- Épaisseur de mur par défaut:
-		- valeur initiale `10 cm`
-		- valeur strictement positive
 - Règles métier:
 	- PreferencesModal ne contient aucune action de profil, d'adresse e-mail, de mot de passe ou de déconnexion.
 	- AccountModal ne contient aucune préférence d'unité, de thème ou de valeur de mur par défaut.
@@ -163,7 +153,7 @@
 	- Conflit de nom d'affichage signalé explicitement sans perdre les autres valeurs saisies.
 	- Téléversement de l'avatar en cours, réussi ou échoué signalé explicitement.
 	- Changement d'adresse e-mail en attente de confirmation signalé sans présenter la nouvelle adresse comme active.
-	- Confirmation visuelle après prise en compte de chaque changement.
+	- Les valeurs affichées sont actualisées après prise en compte, sans message de succès générique.
 - Critères d'acceptation testables:
 	- Given l'application est affichée, When l'utilisateur active le bouton icône roue crantée, Then PreferencesModal s'ouvre sans action de compte ni déconnexion.
 	- Given la side bar est fermée, When l'utilisateur veut accéder aux préférences, Then le bouton icône roue crantée reste disponible en haut à droite de l'application.
@@ -198,7 +188,8 @@
 	- Toute action doit conserver au moins un administrateur.
 	- La suppression d'un compte propriétaire est autorisée après confirmation et supprime tous ses projets et leurs données dépendantes.
 - États et feedback:
-	- Chargement, liste vide, action en cours, succès et erreur explicite.
+	- Chargement, liste vide, action en cours et erreur explicite.
+	- Après réussite, la liste concernée est actualisée sans message de succès générique.
 	- Conflit d'adresse e-mail ou de nom d'affichage lors d'une approbation affiché sans créer de compte partiel.
 	- Confirmation de suppression indiquant le nombre de projets et leur suppression irréversible.
 - Critères d'acceptation testables:
@@ -361,7 +352,7 @@
 - Les composants transverses ne redefinissent pas les invariants geometriques.
 - Les composants transverses doivent respecter le projet courant comme contexte principal de consultation et d'action.
 - L'export Plan inclut uniquement les niveaux et affichages selectionnes.
-- L'export Détail inclut les memes affichages que Plan et le tableau du panneau détail.
+- L'export Détail inclut les mêmes niveaux visibles et affichages que Plan, puis le détail structuré des objets de chaque niveau visible.
 
 ## Cas limites
 - Objet selectionne depuis DetailTree non visible localement: la sélection globale reste active sans exigence de surbrillance locale.

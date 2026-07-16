@@ -3,7 +3,7 @@
 ## Récupération du legacy
 - Sources legacy utilisées:
 	- `docs/product.md` (module prioritaire Documents et photos),
-	- `docs/spec.md` (Phase 5.2 Documents).
+	- `docs/spec.md` (DocumentsView, cible V2).
 - Intention produit historique à conserver:
 	- Centraliser les documents utiles au chantier.
 - Règles fonctionnelles legacy explicites:

@@ -17,6 +17,7 @@
 	- les canvas de plan de niveau et de pièce.
 - La bascule est directe: aucun nouveau comportement canvas ne doit être implémenté en SVG.
 - Les coordonnées métier restent exprimées en centimètres dans le repère du niveau; le canvas applique uniquement une projection visuelle (zoom, pan, reset) sans modifier les données métier.
+- Les valeurs visibles et saisies sont converties dans les unités préférées par l'utilisateur; cette conversion n'altère jamais les coordonnées internes en centimètres ni les surfaces internes en centimètres carrés.
 
 ## Responsabilites
 - Canvas2D:
@@ -84,7 +85,7 @@
 	- une note est representee par une bulle et un icone relies a son objet.
 
 ## Règles metier
-- Les unites de mesure affichees sont en cm pour les longueurs et en m2 pour les surfaces.
+- Les unités de mesure affichées suivent les préférences utilisateur, préconfigurées en `cm` pour les longueurs et `m2` pour les surfaces.
 - Les longueurs et annotations doivent suivre les règles du contrat géométrique.
 - Les règles de synchronisation de sélection ne sont pas redefinies ici et sont referencees depuis la logique dediee.
 - Les icônes de pièces sont affichées par défaut sur tous les canvas.
@@ -120,7 +121,7 @@
 ## Cas limites
 - Tentative de creation/édition hors mode actif: aucune modification persistante ne doit etre appliquee.
 - Objet devenu invalide pendant interaction: retour a un etat stable avec message d'erreur.
-- Échec persistance apres action: rollback visuel conforme a la vue globale.
+- Échec de persistance après action: le brouillon local et le contexte visuel sont conservés; un seul message d'erreur non redondant est affiché et la persistance est retentée selon le contrat transverse.
 - Si l'objet selectionne appartient a un niveau non editable, le canvas conserve l'affichage contextuel sans autoriser l'édition directe.
 - Si aucune option de mesure n'est activee, l'echelle graphique reste visible en continu.
 

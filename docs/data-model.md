@@ -1,6 +1,6 @@
 # Modèle de données BatiBrain
 
-Date de mise à jour: 2026-07-12
+Date de mise à jour: 2026-07-15
 
 ## Objectif
 Ce document décrit le modèle de données métier actuel, reconstruit à partir des spécifications dans `docs/ihm/`.
@@ -49,7 +49,7 @@ Ce document ne remplace pas les sources fonctionnelles principales (`docs/ihm/`)
 | Photos | Legacy minimal | Intention uniquement, détail IHM à compléter. |
 | Travaux | Legacy minimal | Intention uniquement, détail IHM à compléter. |
 | Planning | Legacy minimal | Intention uniquement, détail IHM à compléter. |
-| Métriques projet avancées | Legacy minimal | Orientation globale définie, KPIs détaillés à arbitrer. |
+| Métriques projet avancées | Stabilisé | Trois projections, filtres, tris et périmètre d'export définis; le contrat détaillé des formats d'export reste un prérequis d'implémentation. |
 
 ## Entités coeur (stabilisées)
 
@@ -88,6 +88,7 @@ Règles:
 - Un projet possède un propriétaire unique.
 - Un utilisateur accède à un projet s'il en est propriétaire ou si une collaboration acceptée le lui autorise.
 - Le verrou d'édition collaboratif porte sur le projet entier et n'est actif que si `editingLockUserId` est renseigné et si `editingLockLastActivityAt` date de moins de deux minutes selon l'heure du serveur.
+- Pendant l'implémentation et le débogage des autres fonctions V1, ce verrou reste suspendu; il est réactivé et recetté avec deux sessions avant la publication 1.0.
 - La première modification persistée sur un projet libre ou dont le verrou a expiré attribue atomiquement le verrou à son auteur autorisé.
 - Chaque modification effectivement persistée par le détenteur met à jour `editingLockLastActivityAt`; une tentative refusée ou invalide ne le renouvelle pas.
 - Pendant les deux minutes suivant la dernière modification, les autres utilisateurs conservent la lecture mais aucune écriture sur les objets du projet.
@@ -219,6 +220,7 @@ Règles:
 - Les correspondances sont: toque, lit, sofa, baignoire, WC, bureau, voiture, porte ouverte, pion et livre; `autre` ne produit aucune icône.
 - La suppression dans le dashboard est logique (`isSoftDeleted = true`).
 - Les pièces supprimées logiquement sont masquées par défaut et exclues des exports globaux par défaut.
+- Le passage à l'état supprimé est une transformation topologique: les relations actives mur-pièce sont recalculées et l'opération entière est refusée si elle affecte un élément verrouillé.
 - Une pièce verrouillée reste sélectionnable et consultable, mais ne peut être ni modifiée ni supprimée avant son déverrouillage.
 
 ### Vertex
@@ -240,7 +242,7 @@ Segment support et propriétés métier associées.
 
 Champs minimaux:
 - `id`
-- `roomId` (ou liaison topologique équivalente)
+- `linkedRoomIds` (association topologique contenant zéro, un ou deux identifiants de pièce)
 - `startVertexId`
 - `endVertexId`
 - `thicknessCm`
@@ -252,6 +254,7 @@ Champs minimaux:
 Règles:
 - La longueur métier de référence est la longueur intérieure.
 - Un mur peut être lié à 0, 1 ou 2 pièces.
+- Un mur est une entité autonome: son existence ne dépend pas d'une pièce unique, tandis que chaque segment de contour d'une pièce référence le mur qui matérialise cette frontière.
 - Un mur ne peut jamais être lié à 3 pièces.
 - Lorsqu'une troisième pièce rejoint l'intérieur d'un mur existant, un sommet est créé au point de jonction: le mur existant est remplacé par deux murs partageant ce sommet et le mur aboutissant de la troisième pièce constitue le troisième mur de la jonction.
 - Mur lié à 1 pièce: extérieur pour cette pièce.
@@ -312,6 +315,7 @@ Règles:
 - Une ouverture extérieure est compatible uniquement avec un mur lié à une pièce.
 - Après une modification topologique, une ouverture devenue incompatible avec la qualification calculée du mur est supprimée.
 - Une ouverture verrouillée reste sélectionnable et consultable, mais ne peut être ni modifiée ni supprimée avant son déverrouillage.
+- Si un recalcul topologique devrait supprimer ou déplacer une ouverture verrouillée, le recalcul entier est refusé avant persistance.
 
 ### OpeningTemplate
 Modèle sélectionnable utilisé pour créer une ouverture.
@@ -414,6 +418,8 @@ Champs minimaux:
 Règles:
 - Les préférences sont spécifiques à l'utilisateur authentifié.
 - Les valeurs par défaut sont `cm` pour les longueurs et `m2` pour les surfaces.
+- Les préférences déterminent les unités de saisie et d'affichage, sans modifier l'unité interne des données déjà enregistrées.
+- Les coordonnées et longueurs sont normalisées en centimètres, et les surfaces en centimètres carrés, avant calcul ou persistance.
 - Les valeurs initiales sont `250 cm` pour `defaultWallHeightCm` et `10 cm` pour `defaultWallThicknessCm`.
 - La hauteur et l'épaisseur de mur par défaut sont strictement positives et persistées en centimètres, quelle que soit l'unité d'affichage.
 - Leur modification s'applique uniquement aux pièces et murs créés ensuite et ne modifie aucune donnée métier existante.
@@ -507,7 +513,7 @@ Chaque colonne est filtrable et triable selon son type. Une valeur sans objet es
 - `Project` 1..n `ProjectInvitation`
 - `Level` 1..n `Room`
 - `Room` 1..n `Vertex`
-- `Room` 1..n `Wall` (ou liaison topologique équivalente)
+- `Room` n..n `Wall` via une association topologique limitée à deux pièces par mur
 - `Wall` 4..n `WallFaceHeightProfilePoint` (au moins deux points ordonnés sur chacune des deux faces)
 - `Wall` 1..n `Opening`
 - `OpeningTemplate` 1..n `Opening`
@@ -532,17 +538,19 @@ Chaque colonne est filtrable et triable selon son type. Une valeur sans objet es
 - Seul un administrateur peut lire l'ensemble des profils, modifier les rôles, consulter ou approuver les demandes de compte et supprimer un utilisateur.
 - La suppression d'un utilisateur propriétaire supprime physiquement ses projets puis, par cascade, l'ensemble des données qui en dépendent.
 - La gestion des collaborateurs est réservée au propriétaire du projet.
-- Unités métier: centimètre pour géométrie et mesures; m2 pour surfaces.
+- Unités internes: centimètre pour la géométrie et les longueurs, centimètre carré pour les surfaces.
+- Unités de saisie et d'affichage: préférences de l'utilisateur courant, avec `cm` et `m2` comme valeurs initiales.
 - Les coordonnées partagent le même repère au sein d'un niveau.
 - Les valeurs dérivées (surface, angle, périmètre, orientation) sont calculées, pas stockées comme source primaire.
 - Après modification topologique (coupe/intersection), recalculer segments élémentaires et relations mur-pièce.
+- Refuser avant persistance toute modification topologique qui affecterait une pièce, un mur ou une ouverture verrouillé; ce refus est atomique et conserve l'état précédent complet.
 - Une jonction entre trois pièces est représentée par trois murs distincts autour d'un sommet partagé; elle ne crée jamais une troisième liaison sur un même mur.
 - En cas d'édition d'un mur mitoyen, la cohérence des deux pièces doit être conservée.
 - La qualification intérieure ou extérieure d'un mur est dérivée de son nombre de pièces liées et n'est pas persistée comme source primaire.
 - L'orientation d'une face vers une pièce ou vers l'extérieur est dérivée de la topologie; seule sa position stable gauche/droite et son profil sont persistés.
 - Une ouverture doit respecter la hauteur disponible sur les deux faces du mur à toute position qu'elle occupe.
 - Lorsque `heightProfilesLinked` est actif, les deux profils sont enregistrés atomiquement et restent strictement identiques.
-- Après recalcul topologique, supprimer toute ouverture dont `placementType` est incompatible avec la qualification de son mur support.
+- Après recalcul topologique, supprimer toute ouverture non verrouillée dont `placementType` est incompatible avec la qualification de son mur support; si l'ouverture est verrouillée, refuser le recalcul entier.
 - Les verrous manuels d'une pièce, d'un mur et d'une ouverture sont persistés indépendamment et ne se propagent pas en cascade.
 - Le propriétaire et les collaborateurs en écriture peuvent verrouiller ou déverrouiller ces ressources; un collaborateur en lecture consulte leur état sans pouvoir le modifier.
 - Le contrôle du droit d'écriture précède le changement de verrou manuel; le verrou manuel est contrôlé avant toute autre modification ou suppression de la ressource et ne remplace pas le verrou d'édition collaboratif.
@@ -552,6 +560,7 @@ Chaque colonne est filtrable et triable selon son type. Une valeur sans objet es
 - La source de vérité des règles métier et des valeurs initiales est `web/src/domain/`; PostgreSQL stocke le résultat explicitement fourni par l'application.
 - PostgreSQL ne porte pas de valeur par défaut fonctionnelle ni de validation métier évolutive.
 - Les écritures liées qui ne peuvent pas être partiellement appliquées utilisent une transaction, notamment la mise à jour de deux profils de hauteur liés.
+- Une transformation topologique vérifie les verrous de tous les objets affectés avant la première écriture et s'exécute dans une transaction unique.
 - Suppression logique explicitement définie pour les pièces dans le dashboard.
 - Les suppressions physiques et politiques d'archivage des autres domaines restent à arbitrer.
 

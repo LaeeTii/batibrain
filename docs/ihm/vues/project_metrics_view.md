@@ -33,6 +33,7 @@ Fournir une lecture tabulaire exhaustive des pièces, murs et ouvertures du proj
 - Seuls les objets actifs du projet courant sont affichés.
 - Les valeurs dérivées utilisent les fonctions partagées de `web/src/domain/` et ne sont pas persistées.
 - Les unités suivent les préférences utilisateur.
+- Les valeurs internes restent calculées en centimètres et centimètres carrés, puis sont converties pour la saisie, l'affichage et l'export.
 - Une métrique non applicable est affichée `Non applicable`, jamais zéro.
 - Les valeurs sont identiques à celles des éditeurs et des exports.
 - Le rôle lecture peut consulter, filtrer, trier et exporter.
@@ -67,6 +68,25 @@ Fournir une lecture tabulaire exhaustive des pièces, murs et ouvertures du proj
 - surface de l'ouverture.
 
 Toute autre propriété source ou métrique calculable ajoutée au domaine doit rejoindre le tableau correspondant lorsqu'elle apporte une information distincte et compréhensible.
+
+## Contrat des exports à compléter avant implémentation
+
+Invariants déjà validés:
+
+- chaque export reprend uniquement les lignes visibles après application des filtres;
+- l'ordre des lignes suit le tri actif de chaque tableau;
+- les valeurs et libellés d'unité sont identiques à ceux affichés au déclenchement;
+- les objets supprimés logiquement restent exclus;
+- le rôle lecture peut produire les mêmes exports que le propriétaire sans modifier les données.
+
+Décisions encore à documenter avant V1-31:
+
+- structure et pagination du PDF;
+- nombre, nom et ordre des feuilles Excel;
+- conditionnement CSV en un ou plusieurs fichiers;
+- convention de nommage des fichiers et métadonnées communes.
+
+V1-31 ne peut commencer tant que ces décisions ne sont pas inscrites dans cette vue ou dans un composant d'export dédié.
 
 ## États et feedback
 

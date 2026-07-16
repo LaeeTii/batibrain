@@ -43,21 +43,18 @@
 		- liste des niveaux avec affichage/masquage et suppression (archivage en cascade),
 		- niveau 0 nommé `RDC`, créé automatiquement avec chaque projet et non supprimable.
 	- RoomsSection:
-		- message d'aide de creation: Cliquez sur le plan et deplacez-vous pour dessiner une pièce,
 		- champs de creation et d'édition: Nom (par defaut Nouvelle pièce si vide), Type (liste déroulante obligatoire, `autre` par défaut), Couleur du sol (par defaut #E5FFFC), Epaisseur et Hauteur,
 		- à l'ouverture du bloc de création, Epaisseur et Hauteur sont préremplies avec les préférences de mur par défaut de l'utilisateur courant; elles restent modifiables avant validation,
 		- action contextuelle `Verrouiller` ou `Déverrouiller` dans le bloc d'édition de la pièce sélectionnée,
 		- types disponibles: cuisine, chambre, salon, salle de bain, toilettes, bureau, garage, hall, salle de jeu, bibliothèque, autre,
 		- liste des pièces selectionnable avec action de suppression.
 	- WallsSection:
-		- message d'aide de creation: Cliquez sur le plan et deplacez-vous pour dessiner un mur,
 		- champs de creation/édition: Epaisseur, Materiau (optionnel), Isolation (optionnel),
 		- à l'ouverture du bloc de création, Epaisseur est préremplie avec la préférence de mur par défaut de l'utilisateur courant; elle reste modifiable avant validation,
 		- actions édition: Ouvrir la vue Mur, Couper en deux, Detacher, Supprimer,
 		- action contextuelle `Verrouiller` ou `Déverrouiller` dans le bloc d'édition du mur sélectionné,
 		- liste des murs avec suppression.
 	- OpeningsSection:
-		- message d'aide de creation: Choisissez une ouverture template, survolez un mur puis cliquez pour poser,
 		- filtre de templates: porte, fenêtre, baie vitree, autre,
 		- aucun filtre actif par defaut,
 		- la liste des templates affiche au minimum un schema de face et le nom de l'ouverture,
@@ -67,14 +64,12 @@
 		- actions édition: Inverser le sens, Ouvrant gauche/droite si applicable, Supprimer,
 		- liste des ouvertures selectionnable avec suppression.
 	- DimensionsSection:
-		- message d'aide de creation: placer deux points puis regler le decalage et valider,
 		- types de mesure supportes: point a point, mur a mur, point sur mur,
 		- nom de cote par defaut Nouvelle cote si vide,
 		- la distance est calculee automatiquement apres sélection des references de mesure,
 		- le decalage de la cote est defini dans une etape distincte avant validation finale,
 		- actions édition: Renommer, Repositionner decalage, Supprimer.
 	- NotesSection:
-		- message d'aide de creation: Selectionnez l'objet de votre note. Sans sélection, note attribuee au projet,
 		- champ Texte en textarea sans limite de longueur,
 		- origine dynamique avant validation (pièce, mur, point, ouverture ou projet),
 		- actions édition: Modifier texte, Changer origine, Supprimer,
@@ -109,6 +104,8 @@
 ## Règles metier
 - Tout projet est systématiquement créé avec un niveau 0 nommé `RDC`; ce niveau est obligatoire et non supprimable.
 - Les champs de longueur/hauteur/epaisseur attendent des valeurs numeriques positives selon le domaine.
+- Les champs dimensionnels utilisent les unités préférées par l'utilisateur et convertissent leurs valeurs en centimètres avant calcul ou persistance.
+- Les sections n'affichent aucun bloc d'aide, d'information ou d'astuce sans demande explicite; les libellés de champs, prévisualisations et erreurs de validation suffisent à guider l'action.
 - Les valeurs par defaut metier sont appliquees lors de creation (ex: nom de pièce par defaut si vide).
 - La hauteur et l'épaisseur de mur proposées à la création proviennent des préférences de l'utilisateur courant; en l'absence de préférences enregistrées, elles valent respectivement `250 cm` et `10 cm`.
 - Les préférences sont lues à l'entrée dans un nouveau formulaire de création; leur modification ne change ni un formulaire déjà commencé ni un mur existant.
@@ -200,6 +197,7 @@
 	- l'action Ouvrir la vue Mur ouvre WallEditorView avec les contextes projet, niveau et mur courants; le contexte de pièce est transmis uniquement depuis RoomEditor2DView,
 	- l'action Couper en deux lance un mode de coupe centre sur un point de coupe valide,
 	- lorsqu'un mur créé rejoint l'intérieur d'un mur existant à la jonction d'une troisième pièce, le mur existant est automatiquement scindé au nouveau sommet afin d'obtenir trois murs distincts, chacun lié à deux pièces au maximum,
+	- toute coupe, scission, intersection ou création issue d'un chevauchement est refusée atomiquement si elle affecte une pièce, un mur ou une ouverture verrouillé,
 	- l'action Detacher place l'utilisateur dans un mode de choix du point d'ancrage a deplacer,
 	- en scope RoomEditor2DView, la suppression d'un mur mitoyen est refusee,
 	- en scope RoomEditor2DView, la creation d'un mur est refusee si sa géométrie sort de la pièce courante,

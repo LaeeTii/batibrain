@@ -3,7 +3,7 @@
 ## Récupération du legacy
 - Sources legacy utilisées:
 	- `docs/product.md` (module prioritaire Tâches par pièce / mur / étage),
-	- `docs/spec.md` (Phase 5.1 Tâches).
+	- `docs/spec.md` (TasksView, cible V3).
 
 - Intention produit historique à conserver:
 	- Gérer les actions de travaux rattachées au projet, à la pièce ou au mur.

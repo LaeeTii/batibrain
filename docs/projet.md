@@ -1,6 +1,6 @@
 # Projet BatiBrain — Point d'entrée
 
-Date de mise à jour: 2026-07-13
+Date de mise à jour: 2026-07-15
 
 ## Objectif du document
 Ce document est le point d'entrée pour développer l'application avec une approche humaine + Copilot.
@@ -26,9 +26,14 @@ Sources fiables actuelles:
 - [docs/spec.md](spec.md)
 - Tout le dossier [docs/ihm/](ihm/)
 
+Source unique de statut de livraison de la V1:
+- [docs/matrice-livraison-v1.md](matrice-livraison-v1.md)
+
 Règle pratique:
 - La source fonctionnelle principale par défaut est le dossier IHM.
 - [docs/spec.md](spec.md) reste une source active temporaire (phase de transition).
+- Les mentions de validation dans les spécifications qualifient le contrat fonctionnel, jamais son implémentation.
+- Aucun autre document ne doit porter un statut concurrent à la matrice de livraison V1.
 
 ## Règle d'arbitrage en cas de conflit
 Il n'y a pas d'ordre d'arbitrage automatique entre les sources fiables.
@@ -57,14 +62,15 @@ Synthèse du plan:
 ## Workflow standard de développement d'une feature
 1. Lire ce document [docs/projet.md](projet.md).
 2. Lire les specs IHM concernées (vue et composants) dans [docs/ihm/](ihm/).
-3. Vérifier la cohérence avec:
+3. Consulter [docs/matrice-livraison-v1.md](matrice-livraison-v1.md) pour connaître l'état réel et les prérequis restants.
+4. Vérifier la cohérence avec:
    - [docs/product.md](product.md)
    - [docs/spec.md](spec.md)
    - [docs/architecture.md](architecture.md)
-4. Poser les questions nécessaires pour lever les doutes ou manques d'information.
-5. Coder.
-6. Exécuter les tests pertinents.
-7. Mettre à jour la documentation impactée dans le même changement.
+5. Poser les questions nécessaires pour lever les doutes ou manques d'information.
+6. Coder.
+7. Exécuter les tests pertinents.
+8. Mettre à jour la documentation impactée et la matrice de livraison dans le même changement.
 
 ## Definition of Done (checklist légère)
 Une feature est considérée terminée si:
@@ -72,6 +78,7 @@ Une feature est considérée terminée si:
 - Les conflits documentaires éventuels ont été arbitrés explicitement.
 - Le code compile et les tests pertinents passent.
 - Les impacts documentaires sont mis à jour (au minimum IHM + doc de cadrage concernée).
+- La matrice de livraison référence les preuves de validation et ne déclare la tâche terminée que lorsque tous ses critères sont vérifiés.
 - La version cible (1.0, 2.0, 2.1, 3.0, 4.0, 5.0) est explicite.
 
 ## Alerte fraîcheur documentaire et technique

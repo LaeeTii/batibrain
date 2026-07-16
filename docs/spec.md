@@ -1,14 +1,15 @@
 # SPEC PRODUIT ET TECHNIQUE — BATIBRAIN (registre features consolidé)
 
-Date de mise à jour: 2026-07-12
+Date de mise à jour: 2026-07-15
 
 ## Statut du document
 - Ce document remplace l'ancien format par phases et tâches.
 - Les prompts de génération ont été retirés volontairement.
 - Le document décrit uniquement les features, leur niveau de priorité et leur définition fonctionnelle.
+- Ce document ne porte aucun statut d'implémentation; l'état réel, les preuves et les prérequis sont tenus uniquement dans [matrice-livraison-v1.md](./matrice-livraison-v1.md).
 - La numérotation du backlog est conservée pour traçabilité legacy et ne constitue pas, à elle seule, le plan de versions.
 - La source de vérité de l'IHM reste `docs/ihm/`.
-- Les fichiers historiques `docs/product.md` et ancienne version de `docs/spec.md` sont conservés comme contexte legacy.
+- `docs/product.md` reste une source active du périmètre versionné; l'historique de l'ancien format de `docs/spec.md` n'est qu'un contexte legacy.
 
 ## Décisions de priorisation validées
 - Priorité immédiate:
@@ -28,6 +29,7 @@ Date de mise à jour: 2026-07-12
 	- Vue Mur dédiée (vue de face).
 	- Profils de hauteur multiples sur un mur.
 	- ProjectMetricsView avec tableau, filtres et exports PDF/Excel/CSV.
+	- Verrouillage d'édition simple réactivé et recetté après les autres fonctions V1, avant la publication 1.0.
 - V2:
 	- DocumentsView.
 	- PhotosView.
@@ -49,7 +51,7 @@ Date de mise à jour: 2026-07-12
 
 ### Contrat iconographique transverse
 - Version cible validée: V1.
-- Statut: terminée.
+- Spécification fonctionnelle: validée.
 - Objectif:
 	- Uniformiser les icônes des vues et composants afin d'améliorer la lisibilité de l'application.
 - Portée fonctionnelle cible:
@@ -69,7 +71,7 @@ Date de mise à jour: 2026-07-12
 
 ### Navigation de la side bar par liens avec icônes
 - Version cible validée: V1.
-- Statut: terminée.
+- Spécification fonctionnelle: validée.
 - Objectif:
 	- Présenter les destinations de la navigation principale comme des liens reconnaissables, accompagnés d'icônes explicites.
 - Portée fonctionnelle cible:
@@ -94,7 +96,7 @@ Date de mise à jour: 2026-07-12
 
 ### Fermeture de la side bar
 - Version cible validée: V1.
-- Statut: terminée.
+- Spécification fonctionnelle: validée.
 - Objectif:
 	- Permettre à l'utilisateur de masquer la side bar afin de libérer l'espace de la zone principale, puis de la rouvrir sans perdre son contexte.
 - Portée fonctionnelle cible:
@@ -113,7 +115,7 @@ Date de mise à jour: 2026-07-12
 
 ### 0) Paramètres d'application
 - Version cible validée: V1.
-- Statut: terminée.
+- Spécification fonctionnelle: validée.
 - Objectif:
 	- Permettre à l'utilisateur de configurer ses préférences et de gérer les actions de son compte depuis un accès global indépendant de la side bar.
 - Portée fonctionnelle cible:
@@ -150,6 +152,7 @@ Date de mise à jour: 2026-07-12
 	- La déconnexion est accessible depuis la modale de compte ouverte par le profil du header.
 	- Le thème appliqué reste cohérent sur l'interface courante après sélection.
 	- La hauteur et l'épaisseur de mur par défaut sont des valeurs strictement positives, enregistrées en centimètres et affichées dans l'unité de longueur choisie.
+	- Toutes les saisies et valeurs visibles utilisent les unités préférées; les longueurs sont converties en centimètres et les surfaces en centimètres carrés avant calcul ou persistance.
 	- Les valeurs initiales sont `250 cm` pour la hauteur et `10 cm` pour l'épaisseur.
 	- Une modification s'applique aux pièces et murs créés ensuite, sans modifier les murs existants.
 - Critères d'acceptation:
@@ -180,7 +183,7 @@ Date de mise à jour: 2026-07-12
 
 ### 1) Collaboration projet asynchrone simple (legacy #7)
 - Version cible validée: V1.
-- Statut: terminée.
+- Spécification fonctionnelle: validée.
 - Objectif:
 	- Permettre le partage de projet sans temps réel complexe.
 - Portée fonctionnelle cible:
@@ -194,7 +197,7 @@ Date de mise à jour: 2026-07-12
 	- Seul le propriétaire gère les collaborateurs.
 	- Un collaborateur en lecture peut consulter, naviguer et exporter, mais ne peut ni créer, ni modifier, ni supprimer de donnée du projet.
 	- Un collaborateur en écriture dispose des droits d'édition sur tout le projet, mais ne gère ni les collaborateurs ni le projet lui-même.
-	- Le droit d'écriture est vérifié avant le verrouillage d'édition; détenir ce droit ne dispense pas d'obtenir le verrou requis.
+	- Le droit d'écriture est toujours vérifié; le verrou collaboratif requis pour la publication 1.0 est activé après l'implémentation des autres fonctions V1.
 	- Une invitation ne donne accès au projet qu'après son acceptation.
 	- Les invitations n'ont ni action de refus ni date d'expiration.
 	- La collaboration temps réel complexe et le transfert de propriété restent hors périmètre.
@@ -209,7 +212,7 @@ Date de mise à jour: 2026-07-12
 
 ### 2) Validation d'adjacence pour ouvertures intérieures (legacy #8)
 - Version cible validée: V1.
-- Statut: terminée.
+- Spécification fonctionnelle: validée.
 - Objectif:
 	- Éviter les incohérences métier de pose d'ouvertures intérieures et extérieures.
 - Portée fonctionnelle cible:
@@ -222,7 +225,7 @@ Date de mise à jour: 2026-07-12
 	- Un template intérieur est refusé sur un mur extérieur et un template extérieur est refusé sur un mur intérieur.
 	- Il n'existe pas de détection d'adjacence entre deux murs distincts, de tolérance géométrique ni de recouvrement partiel pour cette règle.
 	- Au survol d'un mur incompatible, aucune prévisualisation de l'ouverture n'est affichée.
-	- Après une modification topologique, toute ouverture devenue incompatible avec la nouvelle qualification de son mur est supprimée.
+	- Après une modification topologique, toute ouverture devenue incompatible avec la nouvelle qualification de son mur est supprimée, sauf si elle est verrouillée: dans ce cas, la transformation topologique entière est refusée avant persistance.
 - Critères d'acceptation:
 	- Un template intérieur peut être posé sur un mur lié à deux pièces et ne peut pas être posé sur un mur lié à une pièce.
 	- Un template extérieur peut être posé sur un mur lié à une pièce et ne peut pas être posé sur un mur lié à deux pièces.
@@ -231,7 +234,7 @@ Date de mise à jour: 2026-07-12
 
 ### Topologie d'une jonction entre trois pièces
 - Version cible validée: V1.
-- Statut: terminée.
+- Spécification fonctionnelle: validée.
 - Objectif:
 	- Garantir qu'un mur représente toujours la frontière d'au plus deux pièces, y compris lorsqu'une troisième pièce rejoint un mur existant.
 - Portée fonctionnelle cible:
@@ -243,6 +246,7 @@ Date de mise à jour: 2026-07-12
 	- Lorsqu'une troisième pièce rejoint l'intérieur d'un mur existant, le point de jonction devient un sommet partagé.
 	- Le mur existant est scindé en deux murs et le mur de la troisième pièce aboutit sur ce sommet: la topologie comporte alors trois murs distincts autour du point de jonction.
 	- Après la scission, chacun des trois murs reste lié à zéro, une ou deux pièces au maximum.
+	- La jonction, la scission, l'intersection et le découpage d'un chevauchement sont refusés atomiquement s'ils affectent une pièce, un mur ou une ouverture verrouillé.
 - Critères d'acceptation:
 	- La jonction d'une troisième pièce à l'intérieur d'un mur crée un sommet au point de rencontre.
 	- Le segment initial n'existe plus comme mur unique et est remplacé par deux murs partageant ce sommet.
@@ -251,7 +255,7 @@ Date de mise à jour: 2026-07-12
 
 ### 3) Icône de pièce configurable (legacy #9)
 - Version cible validée: V1.
-- Statut: terminée.
+- Spécification fonctionnelle: validée.
 - Objectif:
 	- Associer un pictogramme métier à une pièce.
 - Portée fonctionnelle cible:
@@ -273,7 +277,7 @@ Date de mise à jour: 2026-07-12
 
 ### 4) Vue Mur dédiée (vue de face) (legacy #10)
 - Version cible validée: V1.
-- Statut: terminée.
+- Spécification fonctionnelle: validée.
 - Objectif:
 	- Fournir un écran dédié à la lecture et à l'édition d'un mur en vue de face, cohérent avec les autres vues à canvas.
 - Portée fonctionnelle cible:
@@ -300,7 +304,7 @@ Date de mise à jour: 2026-07-12
 
 ### 5) Profils de hauteur multiples sur un mur (legacy #12)
 - Version cible validée: V1.
-- Statut: terminée.
+- Spécification fonctionnelle: validée.
 - Objectif:
 	- Permettre plus de deux hauteurs sur chacune des deux faces d'un mur via deux profils discrets, liés par défaut et dissociables.
 - Portée fonctionnelle cible:
@@ -380,7 +384,7 @@ Date de mise à jour: 2026-07-12
 ### 11) ProjectMetricsView (legacy #6)
 - Fichier IHM cible: `docs/ihm/vues/project_metrics_view.md`.
 - Version cible validée: V1.
-- Statut: terminée.
+- Spécification fonctionnelle: validée.
 - Objectif:
 	- Consolider les indicateurs métier du projet courant.
 - Portée fonctionnelle legacy explicite:
@@ -400,6 +404,7 @@ Date de mise à jour: 2026-07-12
 	- Les trois tableaux sont affichés dans l'ordre pièces, murs, ouvertures.
 	- Chaque colonne peut être filtrée et triée selon son type de donnée.
 	- Les exports PDF, Excel et CSV reproduisent les données filtrées et triées avec les unités affichées.
+	- Le contrat détaillé des trois formats d'export est documenté avant leur implémentation; aucun choix de structure de fichier, de feuille ou de regroupement n'est implicite.
 
 ### 12) Assistant IA orienté intentions avec validation humaine (legacy #11)
 - Objectif:
@@ -414,7 +419,7 @@ Date de mise à jour: 2026-07-12
 
 ### 13) Verrouillage d'édition simple
 - Version cible validée: V1.
-- Statut: terminée.
+- Spécification fonctionnelle: validée; activation planifiée en fin de V1 avant la recette de publication.
 - Objectif:
 	- Empêcher des modifications concurrentes conflictuelles sans implémenter de collaboration temps réel complexe.
 - Portée fonctionnelle cible:
@@ -439,7 +444,7 @@ Date de mise à jour: 2026-07-12
 
 ### Verrouillage manuel des pièces, murs et ouvertures
 - Version cible validée: V1.
-- Statut: terminée.
+- Spécification fonctionnelle: validée.
 - Objectif:
 	- Permettre de protéger volontairement une pièce, un mur ou une ouverture contre les modifications accidentelles, indépendamment du verrou d'édition collaboratif.
 - Portée fonctionnelle cible:
@@ -453,6 +458,7 @@ Date de mise à jour: 2026-07-12
 	- Le collaborateur en lecture peut consulter l'état du verrou, mais ne peut ni verrouiller ni déverrouiller.
 	- Le contrôle du droit d'écriture précède l'action de verrouillage ou de déverrouillage; le verrou manuel est ensuite contrôlé avant toute autre modification de l'élément.
 	- Le verrou manuel ne remplace pas le verrou d'édition collaboratif requis.
+	- Toute transformation topologique qui devrait modifier, scinder ou supprimer un élément verrouillé est refusée dans son ensemble avant persistance.
 - Critères d'acceptation:
 	- Une pièce, un mur ou une ouverture verrouillé reste sélectionnable et consultable.
 	- Toute tentative de modification ou de suppression de l'élément verrouillé est refusée avec un retour explicite.
@@ -484,10 +490,10 @@ Date de mise à jour: 2026-07-12
 
 ## Invariants métier à conserver (rappel)
 - Une pièce est définie par une liste ordonnée de sommets x,y.
-- Un mur est le segment entre deux sommets consécutifs.
+- Chaque segment du contour d'une pièce référence un mur; le mur est une entité topologique autonome pouvant être liée à zéro, une ou deux pièces.
 - Les angles sont calculés, pas stockés.
 - Les coordonnées sont globales au niveau.
-- Les calculs métier utilisent le centimètre.
+- Les calculs et la persistance utilisent le centimètre pour les longueurs et le centimètre carré pour les surfaces; les saisies et affichages suivent les préférences utilisateur.
 - La base est la source de vérité.
 - Les valeurs dérivées sont calculées à la lecture.
 - La longueur métier de référence d'un mur est la longueur intérieure.

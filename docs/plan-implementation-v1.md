@@ -1,192 +1,139 @@
-# Plan d’implémentation de la V1
+# Plan d’implémentation refactoré de la V1
 
-Date de mise à jour : 2026-07-12
+Date de mise à jour: 2026-07-15
 
-## Mode d’emploi
+## Rôle du document
 
-Ce document est une file de tâches ordonnée. Chaque tâche est conçue pour être confiée seule à un agent IA et terminée en une intervention comprenant l’analyse ciblée, le code, les tests et la documentation directement concernée.
+Ce document définit l’ordre d’exécution de la V1. Il ne porte aucun statut de réalisation: l’état réel, les preuves et les blocages sont tenus uniquement dans [matrice-livraison-v1.md](./matrice-livraison-v1.md).
 
-Pour avancer, demander simplement : `Implémente V1-XX`.
-
-Les tâches doivent être réalisées dans l’ordre. Il n’est pas nécessaire de demander l’implémentation d’un lot.
+Chaque tâche doit produire un incrément vérifiable comprenant le code, les tests, les éventuelles migrations incrémentales et la documentation directement concernée. Les anciennes tâches V1-01 à V1-33 restent traçables dans la table de correspondance finale.
 
 ## Règles communes
 
-- Lire `docs/projet.md`, puis les spécifications concernées avant chaque tâche.
+- Lire `docs/projet.md`, la matrice de livraison et les spécifications concernées avant chaque tâche.
 - Considérer `docs/ihm/` comme source fonctionnelle principale.
 - Placer les types et la logique métier frontend dans `web/src/domain/`.
+- Placer les accès techniques Supabase dans `web/src/data/`; `web/src/services/` orchestre les cas d’usage sans dupliquer le domaine.
 - Utiliser Supabase/PostgreSQL comme source des données persistées.
-- Conserver les migrations appliquées immuables et ajouter toute évolution de persistance dans une nouvelle migration `<YYYYMMDDHHMMSS>_<description>.sql` sous `supabase/migrations/`, avec un préfixe numérique unique avant le premier `_`.
-- Calculer les données dérivées au lieu de les persister.
-- Ne pas prendre le code actuel de `web/` comme référence fonctionnelle.
+- Ne jamais modifier une migration appliquée, notamment `20260703_000002_init_v2.sql`; toute évolution utilise une nouvelle migration `<YYYYMMDDHHMMSS>_<description>.sql` au préfixe unique.
+- Normaliser les longueurs et coordonnées en centimètres et les surfaces en centimètres carrés; appliquer les préférences utilisateur à la saisie et à l’affichage.
+- Refuser atomiquement toute transformation topologique affectant une pièce, un mur ou une ouverture verrouillé.
 - Ne pas introduire de fonctionnalité prévue après la V1.
-- Terminer chaque tâche par les tests pertinents, `npm run check` et la mise à jour documentaire concernée.
+- Terminer chaque tâche par les tests pertinents, `npm run check`, les tests Supabase applicables et la mise à jour de la matrice de livraison.
 
-## Tâches ordonnées
+## Séquencement refactoré
 
-### V1-01 — Restructurer le socle frontend et installer les tests
+### V1-R00 — Assainir le socle avant toute nouvelle fonction
 
-Auditer le code existant face aux specs, créer les répertoires domaine, données, fonctionnalités, composants et vues, configurer le client Supabase et ses variables, puis installer les tests unitaires et d’intégration. La tâche est terminée lorsque l’application démarre, qu’une configuration invalide est signalée et que le test témoin ainsi que `npm run check` passent.
+Objectif: rendre le dépôt et la base reproductibles, puis empêcher l’usage d’un chemin d’écriture connu comme incompatible.
 
-### V1-02 — Implémenter les primitives et calculs géométriques
+- Sortir le provisionnement du profil initial de `supabase/migrations/`, supprimer toute donnée personnelle du mécanisme et documenter une procédure sûre de création du premier administrateur.
+- Vérifier la chaîne complète des migrations sur une base vide sans modifier l’historique appliqué.
+- Corriger la configuration de test React-Konva afin que `Canvas2D.test.tsx` et `GlobalEditor2DView.test.tsx` s’exécutent.
+- Ajouter un contrôle de lint au portail qualité.
+- Désactiver les écritures de RoomEditor2DView tant que V1-R20 n’est pas terminée; la consultation peut rester accessible si elle respecte les droits.
+- Critère de sortie: base neuve reproductible, aucun fichier de migration ignoré, `npm run check` vert et aucun chemin de production ne persiste avec l’ancien schéma Room/Wall/Opening.
 
-Définir point, segment et polygone, puis implémenter distance, vecteur, projection, longueur intérieure, surface, périmètre, centroïde, orientation et angles en centimètres. Couvrir rectangles, polygones concaves, orientation inversée, coordonnées négatives et cas dégénérés par des tests unitaires.
+### V1-R10 — Unifier le domaine et la persistance géométriques
 
-### V1-03 — Implémenter le domaine des pièces
+Objectif: disposer d’un seul modèle V1 et d’une seule frontière transactionnelle avant de poursuivre les écrans.
 
-Définir pièce et sommets ordonnés, la construction rectangulaire depuis deux points sans dimensions par défaut, le type, la couleur, la fermeture implicite et les validations de nombre de sommets, coordonnées et auto-intersections. Chaque invalidité doit produire une erreur métier exploitable par l’interface.
+- Conserver un modèle canonique unique pour pièce, mur topologique autonome, liaison mur-pièce, ouverture et profils de hauteur.
+- Supprimer ou isoler les types et services historiques incompatibles.
+- Remplacer les RPC ou adaptateurs périmés et imposer une sauvegarde transactionnelle unique pour création, mise à jour, scission, intersection et chevauchement.
+- Préserver les ouvertures compatibles et tous les points de profils lors des normalisations topologiques.
+- Vérifier tous les verrous avant la première écriture; refuser la transaction complète lorsqu’un objet affecté est verrouillé.
+- Garantir structurellement qu’un mur est lié à zéro, une ou deux pièces, jamais trois.
+- Critère de sortie: tests domaine et base couvrant succès, refus verrouillé, rollback transactionnel, ouvertures et profils multiples.
 
-### V1-04 — Implémenter le domaine des murs et la topologie
+### V1-R11 — Stabiliser préférences, options de vue et unités
 
-Définir mur, faces stables et relations mur-pièce, générer les murs depuis les sommets, calculer leur caractère intérieur ou extérieur, conserver leurs propriétés après modification et scinder un mur lorsqu’une troisième pièce rejoint son intérieur. Tester qu’aucun mur n’est lié à plus de deux pièces.
+Objectif: appliquer le même contrat d’unités et d’affichage dans toutes les projections.
 
-### V1-05 — Implémenter les profils de hauteur
+- Utiliser les préférences pour les unités de saisie et d’affichage, avec `cm` et `m2` comme valeurs initiales.
+- Convertir vers cm et cm² avant calcul ou persistance, sans réinterpréter les données existantes après un changement de préférence.
+- Persister et relire les options de vue par utilisateur et projet.
+- Appliquer unités et options aux canvas, dashboard, éditeurs, PDF et métriques.
+- Critère de sortie: tests croisés cm/m/mm et m2/cm2/mm2 sur saisie, affichage, rechargement et export.
 
-Définir les points ordonnés distance/hauteur, initialiser deux profils uniformes à 250 cm et liés, valider leurs bornes, gérer liaison, dissociation, remise en liaison et permutation des faces lors d’une inversion du segment. Tester les profils liés et indépendants.
+### V1-R12 — Revalider accès, comptes, projets et collaboration asynchrone
 
-### V1-06 — Implémenter le domaine des ouvertures
+Objectif: fermer les écarts des anciennes tâches V1-09 à V1-20 hors verrou collaboratif final.
 
-Définir templates et instances, placement, dimensions, caractère intérieur/extérieur, adjacence et validation contre les deux profils du mur. Une ouverture incompatible doit être refusée avant persistance ou identifiée pour suppression après une modification topologique.
+- Rejouer la matrice RLS pour propriétaire, lecture, écriture, administrateur et utilisateur sans accès.
+- Revalider LoginView, demandes de compte, profil, administration, projets, invitations et collaborations.
+- Brancher les verrous manuels dans toutes les vues et opérations de production.
+- Retirer les succès génériques et blocs informatifs non demandés; conserver erreurs, états indispensables et confirmations destructives.
+- Critère de sortie: recettes UI/RLS concordantes et aucune écriture indirecte possible en lecture seule.
 
-### V1-07 — Aligner la migration initiale Supabase sur le domaine V1
+### V1-R20 — Refaire les éditeurs sur un socle commun
 
-Aligner la migration initiale sur profils, préférences, demandes de compte, projets, collaborations, invitations, niveaux, pièces, sommets, murs, faces, profils, ouvertures, côtes, notes, options de vue et verrous manuels. Retirer du schéma cible les domaines hors V1 non nécessaires. Vérifier l’initialisation complète d’une base vide. Après son application, cette migration devient immuable et les tâches suivantes ajoutent des migrations incrémentales.
+Objectif: partager le canvas, la sélection, l’historique, les droits et la sauvegarde entre les trois éditeurs.
 
-### V1-08 — Implémenter les transactions métier Supabase
+- Finaliser Canvas2D React-Konva et retirer le canvas SVG du parcours RoomEditor2DView.
+- Uniformiser brouillon local, auto-sauvegarde toutes les cinq minutes, bouton `Sauvegarder`, conservation du brouillon en échec et confirmation uniquement lors d’une sortie effective.
+- Finaliser les objets secondaires de l’éditeur global: niveaux, murs, ouvertures, côtes et notes.
+- Refaire RoomEditor2DView sur le modèle et les services canoniques, puis réactiver son écriture.
+- Créer WallEditorView en lecture, puis l’édition complète des profils et ouvertures.
+- Critère de sortie: mêmes données et mêmes droits observés depuis les trois vues, sans chemin legacy.
 
-Créer les opérations transactionnelles pour la création complète d’une pièce, la scission topologique avec recalcul des relations et ouvertures, et l’écriture des profils liés. Tester que chaque opération réussit entièrement ou laisse la base inchangée.
+### V1-R30 — Finaliser les sorties PDF
 
-### V1-09 — Implémenter les politiques RLS des projets
+Objectif: produire les six exports PDF définis dans `docs/ihm/composants/pdf.md`.
 
-Écrire et tester les politiques de toutes les ressources projet pour propriétaire, collaborateur en lecture, collaborateur en écriture et utilisateur sans accès. La matrice de tests doit couvrir lecture, écriture, gestion du projet et gestion des collaborateurs.
+- Produire les variantes simple et détail du Dashboard, de l’éditeur global et de l’éditeur pièce.
+- Pour l’éditeur global, inclure tous les niveaux visibles dans les deux variantes, avec leur détail structuré dans la variante Détail.
+- Respecter les options d’affichage et les unités actives.
+- Critère de sortie: six fichiers testés sur projet vide, multi-niveaux, pièces supprimées et rôle lecture.
 
-### V1-10 — Implémenter la session et LoginView
+### V1-R31 — Spécifier puis implémenter Métriques et ses exports
 
-Implémenter connexion Supabase, restauration et expiration de session, option « se souvenir de moi », déconnexion, gardes de routes, formulaire de connexion et mot de passe oublié selon `login_view.md`. Tester les erreurs et la redirection sans session valide.
+Objectif: terminer ProjectMetricsView sans inventer le contrat des formats.
 
-### V1-11 — Implémenter la demande et l’approbation de compte
+- Compléter d’abord le contrat du PDF, des feuilles Excel, du conditionnement CSV et du nommage des fichiers.
+- Implémenter les trois tableaux pièces, murs et ouvertures avec filtres et tris par colonne.
+- Exporter exactement les lignes, l’ordre et les unités visibles au déclenchement.
+- Critère de sortie: identité vérifiée entre domaine, éditeurs, tableau filtré et chaque fichier exporté.
 
-Créer le formulaire sans mot de passe, les contrôles d’unicité, la notification administrateur et la fonction serveur d’approbation créant le compte `user`, son profil et l’invitation Supabase. Garantir l’absence de création partielle et de secret Auth Admin dans le frontend.
+### V1-R40 — Réactiver le verrou collaboratif
 
-### V1-12 — Implémenter le profil et les paramètres de compte
+Objectif: ajouter la protection concurrente une fois les parcours d’écriture stabilisés.
 
-Implémenter nom d’affichage unique, prénom, nom, avatar privé, changement d’e-mail avec confirmation et changement de mot de passe. Tester les contrôles d’unicité, de fichier et l’accès limité au compte courant.
+- Réactiver la protection SQL et frontend au niveau du projet.
+- Acquérir et renouveler le verrou uniquement après une persistance réussie.
+- Afficher le détenteur et rendre les vues consultatives pour les autres utilisateurs.
+- Tester expiration serveur après deux minutes et prise de relais par une seconde session.
+- Critère de sortie: aucune écriture concurrente conflictuelle et aucune gêne sur les parcours de consultation.
 
-### V1-13 — Implémenter l’administration des comptes
+### V1-R50 — Recetter et publier la V1
 
-Créer AdminModal pour lister demandes et utilisateurs, approuver, changer un rôle et supprimer un compte via des fonctions serveur. Empêcher l’auto-rétrogradation, l’auto-suppression et la suppression du dernier administrateur, puis tester la suppression en cascade d’un propriétaire.
+Objectif: produire la preuve de livraison 1.0.
 
-### V1-14 — Implémenter la coquille applicative
+- Exécuter les recettes sécurité, concurrence, droits, topologie, profils, métriques et exports.
+- Vérifier accessibilité, performances, base Supabase neuve, compilation et cohérence documentaire.
+- Mettre toutes les lignes de la matrice à `Terminé` avec leurs preuves.
+- Critère de sortie: checklist de publication 1.0 entièrement verte.
 
-Créer les routes V1, AppSidebar avec liens et icônes, vue active, destinations futures désactivées, ouverture/fermeture de session, actions Notifications et Paramètres, thème Mantine et contrat iconographique. Vérifier l’accessibilité clavier et le comportement au rechargement.
+## Correspondance avec l’ancien plan
 
-Statut : implémentée le 2026-07-13.
-
-### V1-15 — Implémenter PreferencesModal et AccountModal
-
-Séparer PreferencesModal, accessible par la roue crantée, et AccountModal, accessible par le profil du header. Gérer unités, thème, hauteur et épaisseur de mur par défaut et options d’affichage. Relire les préférences à la connexion, conserver les centimètres comme unité métier et ne pas modifier rétroactivement les murs existants.
-
-Statut : implémentée le 2026-07-13. Les options d’affichage restent portées par `Editor2DHeaderControls` et persistées par projet, conformément aux spécifications IHM.
-
-### V1-16 — Implémenter les projets et le contexte courant
-
-Implémenter création, lecture, modification, suppression logique et sélection du projet courant, avec choix par défaut du dernier projet modifié. Couvrir les états vide, chargement, erreur et droits insuffisants.
-
-Statut : implémentée le 2026-07-13. La liste active exclut les projets supprimés logiquement, le contexte initial choisit le projet accessible modifié le plus récemment et les actions de modification ou suppression sont réservées au propriétaire.
-
-### V1-17 — Implémenter invitations et collaborations
-
-Créer ProjectCollaborationModal, AppNotifications et les capacités frontend centralisées. Gérer invitation d’un compte existant, rôles lecture/écriture, renvoi, annulation, acceptation, changement de rôle et retrait. Vérifier qu’il n’existe aucun accès avant acceptation et que seul le propriétaire gère le partage.
-
-Statut : implémentée le 2026-07-13. Les transitions d’invitation sont sécurisées par des RPC PostgreSQL, l’acceptation crée atomiquement la collaboration et les capacités de gestion restent réservées au propriétaire.
-
-### V1-18 — Implémenter le verrou d’édition collaboratif
-
-Implémenter le verrou au niveau du projet, son acquisition atomique lors d’une modification persistée, son renouvellement à chaque modification persistée du détenteur et son expiration deux minutes après la dernière activité selon l’heure du serveur. Tester avec deux sessions qu’un seul éditeur écrit et que la lecture reste possible.
-
-Statut : implémentée le 2026-07-13. PostgreSQL sérialise l’acquisition sur la ligne du projet, protège les écritures de ses ressources et expose l’état actif calculé selon l’heure serveur ; l’interface signale la lecture seule temporaire avec l’identité du détenteur.
-
-### V1-19 — Implémenter les verrous manuels
-
-Ajouter les actions verrouiller et déverrouiller pour pièce, mur et ouverture, avec états persistants indépendants et contrôle avant modification ou suppression. Tester la consultation maintenue, l’absence de cascade et l’interdiction pour le rôle lecture.
-
-Statut : implémentée le 2026-07-13. Les verrous persistants indépendants sont contrôlés par PostgreSQL sur les ressources et leurs données constitutives ; une RPC protégée et un bouton réutilisable exposent les actions selon la capacité d’écriture.
-
-### V1-20 — Implémenter niveaux et cartes de pièces du Dashboard
-
-Créer DashboardLayout, la gestion du niveau 0 obligatoire nommé `RDC`, des niveaux visibles et du niveau éditable, puis RoomCard avec création atomique d’une pièce, renommage, type, couleur, icône dérivée et suppression logique. Utiliser les préférences courantes lors des créations.
-
-Statut : implémentée le 2026-07-13. Chaque projet possède un niveau 0 nommé `RDC`, le Dashboard distingue filtre visible et niveau éditable, et les cartes permettent la création transactionnelle avec préférences courantes, la modification des attributs métier et la suppression logique.
-
-### V1-21 — Implémenter le canvas 2D partagé
-
-Créer Canvas2D, grille, zoom, panoramique, indicateur d’échelle, repère global et rendu des pièces, murs et ouvertures. Ajouter les options d’affichage des notes, surfaces, icônes, angles et côtes. Vérifier que la navigation visuelle n’altère jamais les coordonnées métier.
-
-Statut : implémentée le 2026-07-13. Le canvas partagé rend les niveaux visibles avec leur profondeur visuelle, les pièces, murs, ouvertures, notes et mesures, expose toutes les options d’affichage ainsi que le zoom, le panoramique, le reset, l’échelle et le repère global sans mutation des coordonnées métier.
-
-### V1-22 — Implémenter sélection, panneaux et historique
-
-Créer les panneaux de création et détail, DetailTree, les sections métier, SelectionSyncBridge et la sélection synchronisée canvas/arbre/panneau. Ajouter l’historique limité à 20 actions avec boutons et raccourcis Annuler/Rétablir, puis tester les états lecture seule et verrouillé.
-
-Statut : implémentée le 2026-07-14. L’éditeur global dispose des panneaux repliables, des sections métier consultatives et du DetailTree synchronisés avec la sélection du canvas ; SelectionSyncBridge purge les objets disparus et conserve les changements de niveau. L’historique transverse limite l’annulation à 20 commandes, partage les piles entre boutons et raccourcis et vide le rétablissement après une nouvelle action. Les mutations restent volontairement indisponibles jusqu’aux étapes V1-24 et V1-25.
-
-### V1-23 — Implémenter l’affichage de l’éditeur 2D global
-
-Créer GlobalEditor2DView, charger projet et niveau, brancher canvas et panneaux, gérer le changement de niveau, l’affichage multi-pièces et les états vide, erreur, lecture seule et verrouillé. Cette tâche ne modifie pas encore la géométrie.
-
-Statut : implémentée le 2026-07-14. GlobalEditor2DView orchestre le chargement du projet, des niveaux et des snapshots multi-pièces, conserve au moins un niveau visible et synchronise le niveau éditable avec le contexte de navigation. La vue distingue les états sans projet, chargement, erreur, consultation selon les droits et élément manuellement verrouillé ; le canvas, les panneaux et la sélection restent consultables sans exposer d’écriture géométrique.
-
-Mise à jour 2026-07-14 : démarrage du passage en sauvegarde différée avec brouillon local sur l’éditeur global, auto-sauvegarde toutes les 5 minutes, bouton de sauvegarde forcée, alerte navigateur et confirmation de navigation interne en cas de sortie avec modifications non sauvegardées. Le verrou collaboratif frontend est suspendu temporairement.
-
-### V1-24 — Implémenter l’édition géométrique globale
-
-Ajouter création et déplacement des pièces et sommets, magnétisme, validation polygonale, mise à jour des murs et relations, jonctions à trois pièces et compatibilité des ouvertures avec sauvegarde transactionnelle. Tester qu’aucune géométrie invalide ou opération partielle n’est persistée.
-
-Statut : implémentée le 2026-07-14. L’éditeur global crée une pièce rectangulaire en deux clics avec les préférences de mur courantes et permet de déplacer les pièces et leurs sommets. Le magnétisme cible les sommets du niveau puis la grille, les contours invalides sont refusés avant écriture et la création comme la mise à jour géométrique utilisent des opérations transactionnelles de persistance. Lorsqu’une création ou un déplacement provoque un chevauchement, les contours sont immédiatement découpés dans le brouillon local en pièces simples, chaque zone commune devient une nouvelle pièce et l’ensemble est persisté atomiquement lors de la sauvegarde. Les segments mitoyens sont dédupliqués : un même mur est persisté une seule fois et lié à ses deux pièces; le déplacement d’une de ses extrémités est propagé aux sommets correspondants des deux pièces dans le brouillon. La création d’une mitoyenneté par simple accolement ou déplacement déclenche la même consolidation topologique. Le canvas, la liste des murs et les agrégats du Dashboard rendent ou comptent chaque identifiant mural une seule fois. Les droits et verrous manuels neutralisent les interactions ; après une erreur de sauvegarde, l’utilisateur peut conserver le brouillon pour réessayer ou l’abandonner explicitement afin de recharger la géométrie persistée.
-
-### V1-25 — Implémenter les objets secondaires de l’éditeur global
-
-Ajouter les commandes et formulaires de création, modification, suppression et sélection des murs, ouvertures, côtes et notes. Appliquer droits, verrous, validations, historique et raccourci Suppr, avec erreurs explicites sans écriture partielle.
-
-### V1-26 — Implémenter RoomEditor2DView
-
-Créer le contexte projet/niveau/pièce, réutiliser le canvas et permettre l’édition des sommets, murs, ouvertures, côtes et notes, dont la longueur intérieure d’un mur. Brancher magnétisme, sauvegarde, droits, verrous et historique. Tester la synchronisation globale et l’interdiction de supprimer un mur mitoyen.
-
-Mise à jour 2026-07-14 : RoomEditor2DView est branchée sur le registre global des changements non sauvegardés, passe en brouillon local avec auto-sauvegarde toutes les 5 minutes, bouton de sauvegarde forcée et confirmation de sortie tant que des modifications restent non sauvegardées. Les chemins de persistance géométrique restants utilisent désormais les opérations TypeScript de `saveRoomSnapshot` côté service plutôt que les RPC transactionnelles dédiées.
-
-### V1-27 — Implémenter WallEditorView en lecture
-
-Créer la route et le contexte, déterminer la face initiale selon la pièce d’origine et la topologie, puis afficher sélecteur, contour, ouvertures, profils et mesures calculées. Vérifier que les deux faces sont consultables et qu’aucune projection n’est persistée.
-
-### V1-28 — Implémenter l’édition des profils dans WallEditorView
-
-Permettre d’ajouter, déplacer, modifier et supprimer les points, de lier ou dissocier les profils et de confirmer leur remise en liaison. Ajouter validation des ouvertures, persistance atomique, droits, verrous et historique. Tester que la remise en liaison est annulable.
-
-### V1-29 — Implémenter les exports PDF des vues existantes
-
-Produire les six documents définis dans `docs/ihm/composants/pdf.md` pour dashboard, éditeur global et éditeur pièce, en version simple et détaillée. Respecter nommage, unités, options d’affichage et droits, puis tester projet vide, multi-niveaux, pièces supprimées et rôle lecture.
-
-### V1-30 — Implémenter ProjectMetricsView
-
-Créer des sélecteurs réutilisant le domaine, puis implémenter les trois tableaux pièces, murs et ouvertures avec leurs propriétés et métriques calculables. Ajouter filtre et tri sur chaque colonne, unités et états vide/erreur. Vérifier l’identité des valeurs entre éditeurs et vue métriques.
-
-### V1-31 — Implémenter les exports des métriques
-
-**Prérequis : V1-30 terminée.** Produire les exports PDF, Excel et CSV en respectant filtres, tris, unités, droits et contenu validé. Vérifier que les trois fichiers s’ouvrent et correspondent exactement à la vue filtrée.
-
-### V1-32 — Réaliser la recette de sécurité et de concurrence
-
-Tester propriétaire, collaborateur lecture, collaborateur écriture, administrateur et intrus sur toutes les données et commandes. Tester deux sessions sur les verrous collaboratifs et manuels. Documenter la matrice et corriger tout écart entre capacités UI et RLS.
-
-### V1-33 — Réaliser la recette fonctionnelle V1
-
-Tester de bout en bout compte, projet, partage, niveaux, pièces, topologie, ouvertures, profils, métriques et exports. Vérifier accessibilité, performances, initialisation Supabase à zéro, compilation de production et cohérence documentaire, puis établir la checklist de publication 1.0.
+| Nouveau jalon | Anciennes tâches principalement reprises |
+|---|---|
+| V1-R00 | V1-01, V1-07, assainissement préalable de V1-26 |
+| V1-R10 | V1-02 à V1-08, V1-24 |
+| V1-R11 | V1-15, V1-21, unités et options de V1-29 à V1-31 |
+| V1-R12 | V1-09 à V1-20 hors V1-18 |
+| V1-R20 | V1-21 à V1-28 |
+| V1-R30 | V1-29 |
+| V1-R31 | V1-30 et V1-31 |
+| V1-R40 | V1-18 et partie concurrence de V1-32 |
+| V1-R50 | V1-32 et V1-33 |
 
 ## Sources de référence
 
-- `docs/projet.md` : gouvernance et Definition of Done.
-- `docs/product.md` : périmètre de la V1.
-- `docs/spec.md` : features prioritaires et critères.
-- `docs/architecture.md` : responsabilités techniques.
-- `docs/data-model.md` : entités, relations et persistance.
-- `docs/ihm/` : comportements des vues et composants.
+- `docs/projet.md`: gouvernance et Definition of Done.
+- `docs/matrice-livraison-v1.md`: source unique du statut réel.
+- `docs/product.md`: périmètre de la V1.
+- `docs/spec.md`: features et critères fonctionnels.
+- `docs/architecture.md`: responsabilités techniques.
+- `docs/data-model.md`: entités, relations et persistance.
+- `docs/ihm/`: comportements des vues et composants.

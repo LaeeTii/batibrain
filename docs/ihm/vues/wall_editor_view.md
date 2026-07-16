@@ -27,7 +27,8 @@
 
 - La vue reçoit `projectId`, `levelId`, `wallId` et, lorsqu'elle est ouverte depuis RoomEditor2DView, `roomId`.
 - `roomId` indique la pièce d'origine et détermine la face initiale orientée vers cette pièce lorsqu'elle est liée au mur.
-- Le mur reste l'unique sélection active pendant toute la présence dans la vue.
+- Le mur reste l'objet de contexte pendant toute la présence dans la vue.
+- La sélection locale active peut cibler le mur, un point de profil ou une ouverture, sans remplacer le mur de contexte.
 - Si le mur n'appartient plus au niveau ou n'est plus accessible, la vue passe en erreur locale bloquante.
 
 ## Structure écran
@@ -40,6 +41,7 @@
   - qualification calculée du mur: extérieur ou mitoyen;
   - sélecteur de face;
   - état de sauvegarde: en cours, synchronisé ou échec;
+  - bouton `Sauvegarder` pour forcer la persistance du brouillon;
   - boutons icônes `Annuler` et `Rétablir` en haut à droite;
   - action `Retour` vers la vue d'origine.
 - Zone de travail:
@@ -120,10 +122,13 @@
   - demande une confirmation explicite s'ils diffèrent;
   - après confirmation, copie le profil de la face affichée vers l'autre face et active le lien;
   - constitue une seule action annulable dans l'historique.
-- Toute modification valide déclenche l'auto-save et alimente le même historique de 20 actions que les boutons et raccourcis transverses.
+- Toute modification valide est d'abord appliquée au brouillon local et alimente le même historique de 20 actions que les boutons et raccourcis transverses.
+- Une auto-sauvegarde est lancée toutes les 5 minutes tant que le brouillon contient des changements non sauvegardés.
+- Le bouton `Sauvegarder` force la persistance immédiate.
 - Une nouvelle action après annulation vide la pile de rétablissement.
-- En cas d'échec d'auto-save, le message reste visible et une nouvelle tentative est proposée.
-- Une tentative de sortie avec un échec d'auto-save actif demande une confirmation explicite.
+- En cas d'échec d'auto-sauvegarde, le brouillon est conservé, un seul message d'erreur non redondant reste visible et une nouvelle tentative intervient au cycle suivant.
+- Une sortie effective de la vue avec des changements non sauvegardés demande une confirmation explicite; changer de face ou de sélection locale ne déclenche aucune confirmation.
+- Aucun message de succès générique n'est affiché après une sauvegarde standard.
 
 ## Règles métier
 
@@ -145,6 +150,7 @@
 - Toute écriture indirecte est contrôlée côté backend selon les droits du projet.
 - Un mur ou une ouverture verrouillé reste sélectionnable et consultable, mais ses modifications sont bloquées jusqu'à son déverrouillage.
 - Le propriétaire et les collaborateurs en écriture peuvent verrouiller ou déverrouiller le mur ou l'ouverture sélectionnée; le collaborateur en lecture consulte uniquement son état.
+- Le verrou collaboratif projet reste suspendu pendant l'implémentation des autres fonctions V1, puis est réactivé et recetté avant la publication 1.0.
 
 ## Navigation
 
@@ -158,7 +164,7 @@
 - Chargement initial: spinner global et actions inactives.
 - État normal: face, profil, ouvertures et mesures affichés.
 - Auto-save en cours: indicateur visible dans le header.
-- Auto-save en échec: message persistant, action de nouvelle tentative et confirmation avant sortie.
+- Auto-sauvegarde en échec: brouillon conservé, unique message persistant et nouvelle tentative au cycle suivant.
 - Lecture seule ou verrou détenu par un tiers: données consultables et édition désactivée.
 - Verrouillage manuel du mur ou d'une ouverture: élément consultable, état explicite et contrôles de modification indisponibles jusqu'au déverrouillage.
 - Mur introuvable ou inaccessible: erreur locale bloquante et action de retour visible.
@@ -194,7 +200,7 @@
 - Given une modification ferait dépasser une ouverture du profil disponible, When l'utilisateur la valide, Then elle est refusée et un message explicite est affiché.
 - Given le rôle projet est lecture, When la vue est affichée, Then les deux faces restent consultables et aucune modification n'est possible.
 - Given le mur ou une ouverture est verrouillé, When l'élément est sélectionné, Then ses données restent consultables et aucune modification n'est possible avant son déverrouillage.
-- Given un échec d'auto-save est actif, When l'utilisateur demande le retour, Then une confirmation explicite est affichée avant la sortie.
+- Given des changements non sauvegardés existent, When l'utilisateur demande le retour, Then une confirmation explicite est affichée avant la sortie.
 
 ## Références
 

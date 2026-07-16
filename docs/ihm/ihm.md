@@ -82,6 +82,14 @@
 - Le rôle écriture autorise l'édition de toutes les ressources du projet, sous réserve du verrou d'édition applicable.
 - Seul le propriétaire peut gérer les invitations et collaborateurs ou modifier le projet lui-même.
 - Ces règles s'appliquent à toutes les vues métier, sauf dérogation explicitement documentée.
+- Le verrou collaboratif projet est suspendu pendant l'implémentation et le débogage des autres fonctions V1; il est réactivé et recetté à la fin de la V1 avant publication.
+
+## Retours utilisateur transverses
+
+- Aucun message de succès générique n'est affiché après une action standard.
+- Aucun bloc d'information, d'aide, d'astuce ou de bienvenue n'est ajouté sans demande explicite.
+- Les erreurs actionnables, états de chargement, états vides, confirmations destructives et informations indispensables à la sécurité ou à la poursuite d'un flux restent affichés.
+- Une action réussie se traduit par la mise à jour de l'état concerné, sans notification redondante.
 
 ## Règles d'implementation frontend
 - Les conventions techniques frontend (stack, composants UI, icones, styles, checklist) sont definies dans [.github/frontend.instructions.md](../.github/frontend.instructions.md).

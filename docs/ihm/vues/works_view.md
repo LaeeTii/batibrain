@@ -2,7 +2,7 @@
 
 ## Récupération du legacy
 - Sources legacy utilisées:
-	- `docs/spec.md` (Phase 5 Travaux, ordre de priorisation globale),
+	- `docs/spec.md` (WorksView, cible V3),
 	- `docs/product.md` (objectif global de pilotage des travaux de maison).
 
 - Intention produit historique à conserver:

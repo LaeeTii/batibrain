@@ -1,6 +1,6 @@
 # Produit — BatiBrain (roadmap active)
 
-Date de mise à jour: 2026-07-10
+Date de mise à jour: 2026-07-15
 
 ## Positionnement
 BatiBrain n'est pas un MVP: c'est une vraie application produit, livrée par versions successives.
@@ -12,11 +12,13 @@ BatiBrain n'est pas un MVP: c'est une vraie application produit, livrée par ver
 
 ## Invariants produit
 - Une pièce est définie par une liste ordonnée de sommets `(x, y)`.
-- Un mur est le segment entre deux sommets consécutifs.
+- Chaque segment entre deux sommets consécutifs du contour d'une pièce référence un mur.
+- Un mur est une entité topologique autonome définie par un segment ordonné; il peut être détaché ou relié à une ou deux pièces.
 - Un mur peut être lié à deux pièces au maximum; lorsqu'une troisième pièce rejoint l'intérieur d'un mur, un sommet de jonction scinde ce mur en deux afin de former trois murs distincts autour de ce sommet.
 - Les angles sont calculés, pas stockés.
 - Les coordonnées sont globales au niveau.
-- Les calculs métier sont exprimés en centimètres.
+- Les coordonnées, longueurs et calculs internes sont normalisés en centimètres; les surfaces internes sont normalisées en centimètres carrés.
+- Les unités de saisie et d'affichage suivent les préférences de l'utilisateur, préconfigurées en `cm` pour les longueurs et `m2` pour les surfaces.
 - Une pièce rectangulaire est créée par deux points définissant librement ses dimensions; aucune largeur ni profondeur n'est imposée par défaut. Les valeurs initiales des murs restent `10 cm` d'épaisseur et `250 cm` de hauteur; l'utilisateur peut les personnaliser dans ses paramètres pour les créations futures.
 
 ## Découpage de livraison
@@ -37,7 +39,7 @@ Périmètre attendu:
 - Vues et composants transverses du socle déjà spécifiés dans `docs/ihm/`.
 - Features spec V1 prioritaires:
 	- collaboration projet asynchrone simple,
-	- verrouillage pour éviter les conflits d'édition (la collaboration temps réel complexe n'est pas prévue),
+	- verrouillage pour éviter les conflits d'édition, réactivé et recetté à la fin de la V1 afin de ne pas gêner l'implémentation et le débogage des autres fonctions (la collaboration temps réel complexe n'est pas prévue),
 	- verrouillage manuel des pièces, murs et ouvertures contre les modifications accidentelles,
 	- validation d'adjacence des ouvertures intérieures,
 	- icône de pièce configurable,

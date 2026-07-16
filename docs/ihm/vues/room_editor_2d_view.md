@@ -96,7 +96,7 @@
 	- un bouton `Enregistrer` permet de forcer la persistance immédiate.
 	- un feedback d'etat est visible en continu dans l'en-tete (en cours, synchronise, échec).
 	- pour toute édition d'un mur mitoyen, la persistence est transactionnelle entre les deux pièces impactees.
-	- en cas d'échec de persistence d'une édition de mur mitoyen, un rollback complet est applique sur les deux pièces.
+	- en cas d'échec de persistance d'une édition de mur mitoyen, aucune écriture partielle n'est appliquée aux deux pièces et le brouillon local est conservé.
 	- en cas d'échec d'auto-save, la vue conserve le contexte, signale l'erreur et relance une tentative automatique au cycle suivant.
 	- le message d'erreur d'auto-save est persistant jusqu'au succes d'une nouvelle tentative ou fermeture explicite.
 	- en cas d'échec d'auto-save, la vue affiche un unique message d'erreur non redondant.
@@ -135,13 +135,14 @@
 	- Le collaborateur en lecture conserve la consultation, la navigation, les options d'affichage et les exports PDF.
 	- En lecture seule, l'auto-save n'est pas déclenché et les actions de création, d'édition, de suppression, d'annulation et de rétablissement sont désactivées ou masquées.
 	- Un indicateur explicite signale l'état lecture seule et toute tentative d'écriture indirecte est refusée.
-	- Le verrou d'édition collaboratif projet est suspendu temporairement en V1; seuls les verrous manuels restent actifs.
+	- Le verrou d'édition collaboratif projet est suspendu pendant l'implémentation des autres fonctions V1; il est réactivé et recetté avant la publication 1.0. Les verrous manuels restent actifs pendant toute la V1.
 - Portee d'édition:
 	- une pièce, un mur ou une ouverture verrouillé reste sélectionnable et consultable, mais ne peut être modifié ni supprimé avant son déverrouillage.
 	- le propriétaire et les collaborateurs en écriture peuvent verrouiller ou déverrouiller l'élément; le collaborateur en lecture consulte uniquement son état.
 	- la vue autorise l'édition strictement de la pièce courante.
 	- les murs, ouvertures, côtes et notes d'autres pièces visibles en contexte grise ne sont pas editables dans RoomEditor2DView.
 	- l'action d'édition `Couper en deux` d'un mur existant reste autorisee dans RoomEditor2DView.
+	- toute coupe ou transformation topologique est refusée atomiquement si elle affecte une pièce, un mur ou une ouverture verrouillé.
 	- la creation d'un mur est limitee a l'intérieur de la pièce courante ou a son contour; aucun mur ne peut etre créé hors de la pièce courante dans cette vue.
 	- la création d'un mur préremplit son épaisseur et ses profils uniformes avec les préférences de mur par défaut de l'utilisateur courant; ces valeurs restent modifiables avant validation.
 	- la suppression d'un mur mitoyen n'est pas autorisee dans RoomEditor2DView.
@@ -293,7 +294,7 @@
 	- When l'utilisateur modifie la géométrie de ce mur
 	- Then la pièce voisine est mise a jour de facon coherente
 	- And la géométrie reste valide des deux côtes du mur
-	- And en cas d'échec de persistence, un rollback complet est applique
+	- And en cas d'échec de persistance, aucune écriture partielle n'est appliquée et le brouillon local est conservé
 - Scenario 4 - Auto-save en échec:
 	- Given l'auto-save echoue
 	- When la vue reste ouverte
@@ -381,7 +382,7 @@
 	- Édition strictement limitee a la pièce courante.
 	- Les autres pièces du niveau restent visibles en contexte grise non editable.
 	- Les clics sur objets hors pièce courante sont ignores sans feedback.
-	- Sauvegarde en auto-save uniquement, sans mode brouillon explicite.
+	- Brouillon local explicite, auto-sauvegarde toutes les 5 minutes et bouton `Enregistrer` pour forcer la persistance.
 	- En cas d'échec auto-save lors d'une sortie, confirmation explicite obligatoire.
 	- Retour principal de la vue vers DashboardView.
 	- Suppression de pièce avec confirmation explicite puis retour automatique dashboard.
