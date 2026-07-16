@@ -141,14 +141,17 @@
 	- Le collaborateur en lecture conserve la consultation, la navigation, les options d'affichage et les exports PDF.
 	- En lecture seule, l'auto-save n'est pas déclenché et les actions de création, d'édition, de suppression, d'annulation et de rétablissement sont désactivées ou masquées.
 	- Un indicateur explicite signale l'état lecture seule et toute tentative d'écriture indirecte est refusée.
-	- Le verrou d'édition collaboratif projet est suspendu pendant l'implémentation des autres fonctions V1; il est réactivé et recetté avant la publication 1.0. Les verrous manuels restent actifs pendant toute la V1.
+	- Le verrou collaboratif global du projet est hors périmètre de la V1.0 et sera respécifié dans une version ultérieure.
 - Portee d'édition:
-	- une pièce, un mur ou une ouverture verrouillé reste sélectionnable et consultable, mais ne peut être modifié ni supprimé avant son déverrouillage.
-	- le propriétaire et les collaborateurs en écriture peuvent verrouiller ou déverrouiller l'élément; le collaborateur en lecture consulte uniquement son état.
+	- les sommets du plan portent les verrous persistés; les états de la pièce, de ses murs et de ses côtes sont calculés depuis ces sommets.
+	- la pièce et ses murs restent sélectionnables et consultables lorsque leur état calculé est verrouillé.
+	- le propriétaire et les collaborateurs en écriture peuvent verrouiller ou déverrouiller un sommet par clic droit ou utiliser les boutons des blocs Pièce et Mur; le collaborateur en lecture consulte uniquement l'état.
+	- une interaction interdite est refusée avant toute modification du brouillon.
+	- les ouvertures ne portent aucun verrou propre et restent modifiables lorsque leur mur est verrouillé.
 	- la vue autorise l'édition strictement de la pièce courante.
 	- les murs, ouvertures, côtes et notes d'autres pièces visibles en contexte grise ne sont pas editables dans RoomEditor2DView.
 	- l'action d'édition `Couper en deux` d'un mur existant reste autorisee dans RoomEditor2DView.
-	- toute coupe ou transformation topologique est refusée atomiquement si elle affecte une pièce, un mur ou une ouverture verrouillé.
+	- toute coupe ou transformation topologique est refusée atomiquement si elle déplacerait, remplacerait ou supprimerait un sommet verrouillé.
 	- la creation d'un mur est limitee a l'intérieur de la pièce courante ou a son contour; aucun mur ne peut etre créé hors de la pièce courante dans cette vue.
 	- la création d'un mur préremplit son épaisseur et ses profils uniformes avec les préférences de mur par défaut de l'utilisateur courant; ces valeurs restent modifiables avant validation.
 	- la suppression d'un mur mitoyen n'est pas autorisee dans RoomEditor2DView.
@@ -191,7 +194,7 @@
 	- chaque bouton est grise et non cliquable si son historique est vide.
 - État élément verrouillé:
 	- l'élément reste sélectionnable et ses données restent consultables.
-	- son état verrouillé est explicite et ses contrôles de modification et de suppression sont indisponibles.
+	- son état verrouillé calculé est explicite et ses contrôles géométriques ou de suppression interdits sont indisponibles.
 - Etat auto-save en cours:
 	- un indicateur explicite de synchronisation est visible dans l'en-tete.
 - Etat auto-save en échec:
@@ -322,10 +325,10 @@
 	- Then la suppression est executee
 	- And la vue retourne automatiquement vers DashboardView
 - Scenario 7b - Élément verrouillé:
-	- Given la pièce courante, l'un de ses murs ou l'une de ses ouvertures est verrouillé
+	- Given la pièce courante ou l'un de ses murs est calculé verrouillé depuis ses sommets
 	- When l'utilisateur sélectionne cet élément
 	- Then ses données restent consultables
-	- And sa modification et sa suppression sont indisponibles jusqu'à son déverrouillage
+	- And ses interactions géométriques et sa suppression sont indisponibles jusqu'au déverrouillage de ses points
 - Scenario 8 - Contexte d'en-tete:
 	- Given la vue est en etat normal
 	- When l'utilisateur consulte l'en-tete

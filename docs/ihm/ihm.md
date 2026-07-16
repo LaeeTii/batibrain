@@ -79,10 +79,11 @@
 ## Droits projet transverses
 - Les projets accessibles sont les projets possédés par l'utilisateur ou ceux dont il a accepté l'invitation.
 - Le rôle lecture autorise la consultation, la navigation et les exports, mais interdit toute création, modification ou suppression.
-- Le rôle écriture autorise l'édition de toutes les ressources du projet, sous réserve du verrou d'édition applicable.
+- Le rôle écriture autorise l'édition des ressources du projet, sous réserve du verrouillage géométrique par points.
 - Seul le propriétaire peut gérer les invitations et collaborateurs ou modifier le projet lui-même.
 - Ces règles s'appliquent à toutes les vues métier, sauf dérogation explicitement documentée.
-- Le verrou collaboratif projet est suspendu pendant l'implémentation et le débogage des autres fonctions V1; il est réactivé et recetté à la fin de la V1 avant publication.
+- Le verrou collaboratif global du projet est hors périmètre de la V1.0 et sera respécifié dans une version ultérieure.
+- Le verrouillage géométrique V1 est défini dans [verrouillage_geometrique.md](./logique/verrouillage_geometrique.md).
 
 ## Retours utilisateur transverses
 
@@ -92,7 +93,7 @@
 - Une action réussie se traduit par la mise à jour de l'état concerné, sans notification redondante.
 
 ## Règles d'implementation frontend
-- Les conventions techniques frontend (stack, composants UI, icones, styles, checklist) sont definies dans [.github/frontend.instructions.md](../.github/frontend.instructions.md).
+- Les conventions techniques frontend (stack, composants UI, icones, styles, checklist) sont definies dans [.github/frontend.instructions.md](../../.github/frontend.instructions.md).
 
 ## Terminologie commune
 - Magnetisme (snapping): terme fonctionnel unique pour la capture des points/segments pendant l'édition (sources + distance de capture).

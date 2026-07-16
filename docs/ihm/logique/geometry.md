@@ -1,11 +1,12 @@
 # Contrat géométrique
 
-Date de mise à jour: 2026-07-15
+Date de mise à jour: 2026-07-16
 
 ## Périmètre du document
 - Ce document decrit les objets geometriques, leurs invariants, leurs calculs, leurs transformations et leurs cas limites.
 - Les parcours utilisateur, les panneaux, les modes d'édition et les règles d'interaction appartiennent a [editeur_2d_global.md](../vues/editeur_2d_global.md).
 - Les règles de synchronisation de sélection et d'ouverture des panneaux appartiennent a [edition_2D_synchronisation_selection.md](./edition_2D_synchronisation_selection.md).
+- Les règles de verrouillage des sommets, murs, pièces, côtes et profils appartiennent à [verrouillage_geometrique.md](./verrouillage_geometrique.md).
 
 ## Objets geometriques
 - Point : coordonnees 2D dans le plan d'un niveau.
@@ -20,6 +21,7 @@ Date de mise à jour: 2026-07-15
 ## Source de verite
 - Les pièces et les murs sont deux entites geometriques de premier rang.
 - Une pièce est modelisee comme un polygone ordonne de sommets.
+- Un sommet possède une identité topologique unique dans le niveau et peut être partagé par plusieurs murs ou contours de pièces.
 - Le rectangle dessine en 2 clics dans l'IHM est une modalite de creation initiale d'une pièce polygonale a 4 sommets.
 - Un mur est une entité topologique autonome modélisée comme un segment épais ordonné défini par deux points.
 - Chaque segment entre deux sommets consécutifs du contour d'une pièce référence le mur qui matérialise cette frontière; le mur peut néanmoins exister sans liaison à une pièce.
@@ -37,7 +39,7 @@ Date de mise à jour: 2026-07-15
 - Un mur lie a une seule pièce est extérieur pour cette pièce.
 - Un mur lie a deux pièces differentes est intérieur pour les deux pièces.
 - Un mur sans liaison est qualifié de détaché; cette qualification complète les états extérieur et intérieur sans être persistée.
-- Une transformation topologique est refusée dans son ensemble si elle doit modifier, scinder, détacher ou supprimer une pièce, un mur ou une ouverture verrouillé.
+- Une transformation topologique est refusée dans son ensemble si elle doit déplacer, remplacer ou supprimer un sommet verrouillé.
 - Chaque mur possède exactement deux faces et deux profils de hauteur propres, liés par défaut et dissociables.
 - Les faces stables sont toujours ordonnées `gauche`, puis `droite`, relativement au segment orienté du sommet de début vers le sommet de fin.
 - Chaque profil est une liste de points ordonnée par leur distance depuis le début du segment; à la création, sa hauteur est uniforme et provient de la hauteur de mur par défaut de l'utilisateur courant.
@@ -50,6 +52,7 @@ Date de mise à jour: 2026-07-15
 - Si le sens du segment est inversé par une transformation topologique, les profils sont permutés afin de rester attachés à la même face physique.
 - Lors de cette inversion, les distances des points sont recalculées depuis la nouvelle origine du segment (`nouvelle distance = longueur du mur - ancienne distance`) et leur ordre est inversé.
 - L'édition géométrique d'un mur mitoyen doit impacter de facon coherente les deux pièces liees a ce mur.
+- L'état verrouillé d'un mur est calculé depuis ses deux sommets; l'état verrouillé d'une pièce est calculé depuis tous les murs de son contour.
 - Un mur n'est supprimable que lorsqu'il n'est plus lie a aucune pièce.
 - Une ouverture doit rester entierement comprise dans son mur support.
 - Les ouvertures d'un meme mur ne doivent pas se chevaucher.
@@ -102,6 +105,7 @@ Date de mise à jour: 2026-07-15
 - Placement d'une ouverture sur un mur support.
 - Lorsque le lien est inactif, ajout, déplacement, modification ou suppression d'un point de profil sur une face sans modifier le profil de l'autre face.
 - Ajout, déplacement, modification ou suppression simultanée du point correspondant sur les deux faces lorsque leur lien est actif.
+- Toute transformation géométrique interroge le verrou des points affectés avant la première mutation du brouillon.
 
 ## Règles de scission et d'intersection
 - Si l'extremite d'un mur est posee sur un mur existant, le mur support est scinde au point d'ancrage et le nouveau mur est lie a ce point.
@@ -111,11 +115,10 @@ Date de mise à jour: 2026-07-15
 - L'operation "Couper en deux" créé deux segments colineaires partageant le point de coupe. Le mur de gauche garde le focus fonctionnel, le mur de droite reprend les memes proprietes.
 - Si des murs se croisent sur un meme niveau, ils doivent etre scindes au point d'intersection pour produire des segments elementaires.
 - Si des pièces se chevauchent sur un meme niveau, les murs concernes sont scindes aux intersections necessaires et la zone de chevauchement devient une nouvelle pièce.
-- Avant toute scission, intersection ou création de pièce issue d'un chevauchement, tous les objets affectés sont contrôlés; la présence d'un verrou manuel annule l'opération avant toute persistance.
+- Avant toute scission, intersection ou création de pièce issue d'un chevauchement, tous les sommets affectés sont contrôlés; la présence d'un sommet verrouillé annule l'opération avant toute mutation du brouillon.
 - Si une pièce est supprimee, chaque mur precedemment mitoyen perd uniquement le lien vers cette pièce et conserve ses liens restants.
 - Apres suppression d'une pièce, un mur conserve est requalifie extérieur/intérieur selon son nouveau nombre de pièces liees.
-- Après toute modification topologique, les ouvertures du mur sont revérifiées; toute ouverture non verrouillée dont la caractéristique intérieur/extérieur ne correspond plus à la qualification du mur est supprimée.
-- Si une ouverture incompatible est verrouillée, la modification topologique entière est refusée et l'état précédent est conservé.
+- Après toute modification topologique, les ouvertures du mur sont revérifiées; toute ouverture dont la caractéristique intérieur/extérieur ne correspond plus à la qualification du mur est supprimée.
 
 ## Cas limites et validations
 - Refuser une ouverture hors du mur support.
@@ -130,8 +133,8 @@ Date de mise à jour: 2026-07-15
 - Recalculer les segments elementaires apres toute coupe, intersection ou creation d'ancrage sur mur.
 - Recalculer les relations mur-pièce apres toute modification topologique.
 - Refuser toute topologie qui lierait un même mur à trois pièces; appliquer la scission au point de jonction avant persistance.
-- Refuser atomiquement toute topologie affectant un objet verrouillé.
-- Supprimer les ouvertures non verrouillées devenues incompatibles après le recalcul des relations mur-pièce; refuser l'opération si l'une d'elles est verrouillée.
+- Refuser atomiquement toute topologie qui déplacerait, remplacerait ou supprimerait un sommet verrouillé.
+- Supprimer les ouvertures devenues incompatibles après le recalcul des relations mur-pièce.
 
 ## Algorithmes attendus
 - Distance entre deux points.
@@ -146,6 +149,7 @@ Date de mise à jour: 2026-07-15
 - Verification de non-chevauchement entre ouvertures d'un meme mur.
 - Verification de compatibilité entre la caractéristique du template d'ouverture et le nombre de pièces liées au mur support.
 - Interpolation de la hauteur disponible entre deux points consécutifs d'un profil de face.
+- Calcul de l'état verrouillé d'un mur, d'une pièce, d'une côte et d'un profil depuis leurs points.
 
 ## Conventions des primitives V1
 - La projection d'un point sur un segment est bornée aux deux extrémités; pour un segment de longueur nulle, elle retourne son point unique.

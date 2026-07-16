@@ -1,6 +1,6 @@
 # SPEC PRODUIT ET TECHNIQUE — BATIBRAIN (registre features consolidé)
 
-Date de mise à jour: 2026-07-15
+Date de mise à jour: 2026-07-16
 
 ## Statut du document
 - Ce document remplace l'ancien format par phases et tâches.
@@ -13,8 +13,9 @@ Date de mise à jour: 2026-07-15
 
 ## Décisions de priorisation validées
 - Priorité immédiate:
-	- Features de V1, incluant le verrouillage d'édition simple.
+	- Features de V1, incluant le verrouillage géométrique par points.
 - Priorité différée:
+	- Verrouillage collaboratif global du projet, dans une version postérieure à la V1.0 restant à préciser.
 	- Features de V2, V2.1 et V3.
 - Priorité lointaine:
 	- Features de V4 et V5.
@@ -22,14 +23,14 @@ Date de mise à jour: 2026-07-15
 ## Décisions de versioning validées
 - V1:
 	- Collaboration projet asynchrone simple.
-	- Verrouillage d'édition simple pour éviter les conflits d'édition (sans temps réel complexe).
-	- Verrouillage manuel des pièces, murs et ouvertures.
+	- Verrouillage géométrique persistant des sommets du plan et des points de profils, avec verrouillage calculé des murs, pièces, côtes et profils.
 	- Validation d'adjacence des ouvertures intérieures.
 	- Icône de pièce configurable.
 	- Vue Mur dédiée (vue de face).
 	- Profils de hauteur multiples sur un mur.
 	- ProjectMetricsView avec tableau, filtres et exports PDF/Excel/CSV.
-	- Verrouillage d'édition simple réactivé et recetté après les autres fonctions V1, avant la publication 1.0.
+- Post-V1, version à préciser:
+	- Verrouillage collaboratif global du projet pour éviter les éditions simultanées.
 - V2:
 	- DocumentsView.
 	- PhotosView.
@@ -197,7 +198,7 @@ Date de mise à jour: 2026-07-15
 	- Seul le propriétaire gère les collaborateurs.
 	- Un collaborateur en lecture peut consulter, naviguer et exporter, mais ne peut ni créer, ni modifier, ni supprimer de donnée du projet.
 	- Un collaborateur en écriture dispose des droits d'édition sur tout le projet, mais ne gère ni les collaborateurs ni le projet lui-même.
-	- Le droit d'écriture est toujours vérifié; le verrou collaboratif requis pour la publication 1.0 est activé après l'implémentation des autres fonctions V1.
+	- Le droit d'écriture est toujours vérifié; le verrou collaboratif global est hors périmètre de la V1.0.
 	- Une invitation ne donne accès au projet qu'après son acceptation.
 	- Les invitations n'ont ni action de refus ni date d'expiration.
 	- La collaboration temps réel complexe et le transfert de propriété restent hors périmètre.
@@ -225,7 +226,7 @@ Date de mise à jour: 2026-07-15
 	- Un template intérieur est refusé sur un mur extérieur et un template extérieur est refusé sur un mur intérieur.
 	- Il n'existe pas de détection d'adjacence entre deux murs distincts, de tolérance géométrique ni de recouvrement partiel pour cette règle.
 	- Au survol d'un mur incompatible, aucune prévisualisation de l'ouverture n'est affichée.
-	- Après une modification topologique, toute ouverture devenue incompatible avec la nouvelle qualification de son mur est supprimée, sauf si elle est verrouillée: dans ce cas, la transformation topologique entière est refusée avant persistance.
+	- Après une modification topologique, toute ouverture devenue incompatible avec la nouvelle qualification de son mur est supprimée.
 - Critères d'acceptation:
 	- Un template intérieur peut être posé sur un mur lié à deux pièces et ne peut pas être posé sur un mur lié à une pièce.
 	- Un template extérieur peut être posé sur un mur lié à une pièce et ne peut pas être posé sur un mur lié à deux pièces.
@@ -246,7 +247,7 @@ Date de mise à jour: 2026-07-15
 	- Lorsqu'une troisième pièce rejoint l'intérieur d'un mur existant, le point de jonction devient un sommet partagé.
 	- Le mur existant est scindé en deux murs et le mur de la troisième pièce aboutit sur ce sommet: la topologie comporte alors trois murs distincts autour du point de jonction.
 	- Après la scission, chacun des trois murs reste lié à zéro, une ou deux pièces au maximum.
-	- La jonction, la scission, l'intersection et le découpage d'un chevauchement sont refusés atomiquement s'ils affectent une pièce, un mur ou une ouverture verrouillé.
+	- La jonction, la scission, l'intersection et le découpage d'un chevauchement sont refusés atomiquement s'ils déplaceraient, remplaceraient ou supprimeraient un sommet verrouillé.
 - Critères d'acceptation:
 	- La jonction d'une troisième pièce à l'intérieur d'un mur crée un sommet au point de rencontre.
 	- Le segment initial n'existe plus comme mur unique et est remplacé par deux murs partageant ce sommet.
@@ -299,7 +300,7 @@ Date de mise à jour: 2026-07-15
 	- L'utilisateur peut afficher et modifier indépendamment le profil de chacune des deux faces.
 	- La face affichée initialement respecte la pièce d'origine, puis le caractère extérieur du mur, puis le choix par défaut de la face gauche.
 	- Un mur nouvellement créé possède deux profils uniformes utilisant la hauteur de mur par défaut courante.
-	- Le propriétaire et le collaborateur en écriture peuvent modifier les profils sous réserve du verrou; le collaborateur en lecture peut les consulter sans les modifier.
+	- Le propriétaire et le collaborateur en écriture peuvent modifier les profils tant que les points affectés sont déverrouillés; le collaborateur en lecture peut les consulter sans les modifier.
 	- Une modification invalide pour une ouverture est refusée avec un message explicite.
 
 ### 5) Profils de hauteur multiples sur un mur (legacy #12)
@@ -418,51 +419,61 @@ Date de mise à jour: 2026-07-15
 	- Les actions proposées sont compréhensibles et auditables avant exécution.
 
 ### 13) Verrouillage d'édition simple
-- Version cible validée: V1.
-- Spécification fonctionnelle: validée; activation planifiée en fin de V1 avant la recette de publication.
+- Version cible validée: postérieure à la V1.0, version exacte à préciser.
+- Spécification fonctionnelle: à reprendre avant implémentation.
 - Objectif:
 	- Empêcher des modifications concurrentes conflictuelles sans implémenter de collaboration temps réel complexe.
-- Portée fonctionnelle cible:
-	- Verrouillage unique au niveau du projet entier.
-	- Acquisition atomique lors de la première modification persistée sur un projet libre.
-	- Renouvellement à chaque modification persistée par le détenteur.
-	- Libération automatique après deux minutes sans modification persistée par le détenteur.
-	- Information visuelle claire lorsqu'un contenu est verrouillé par un autre utilisateur.
-- Règles métier minimales:
-	- Un seul utilisateur détient le verrou d'un projet à un instant donné.
-	- Le propriétaire et un collaborateur en écriture peuvent acquérir le verrou; un collaborateur en lecture ne le peut pas.
-	- Le droit d'écriture est contrôlé avant l'acquisition du verrou.
-	- Tant que la dernière modification du détenteur date de moins de deux minutes, les autres utilisateurs peuvent consulter le projet mais ne peuvent modifier aucun de ses objets.
-	- Une tentative de modification par le détenteur renouvelle le verrou uniquement si la modification est effectivement persistée.
-	- Deux minutes après la dernière modification persistée, le verrou est considéré comme expiré sans opération de libération explicite; le prochain utilisateur autorisé qui persiste une modification l'acquiert atomiquement.
-	- Le délai est évalué avec l'heure du serveur afin de ne pas dépendre de l'horloge du navigateur.
-- Critères d'acceptation:
-	- Un utilisateur ne peut modifier aucun objet d'un projet dont le verrou a été renouvelé par un autre utilisateur depuis moins de deux minutes.
-	- Chaque modification persistée par le détenteur repousse l'expiration de deux minutes.
-	- Après deux minutes sans modification persistée, un autre utilisateur autorisé peut modifier le projet et devient le nouveau détenteur.
-	- Les vues affichent le détenteur du verrou et l'état de lecture seule temporaire.
+- Décisions reportées:
+	- granularité et durée du verrou;
+	- acquisition, renouvellement et libération;
+	- synchronisation entre sessions;
+	- affichage du détenteur et état de lecture seule;
+	- stratégie de reprise après expiration ou fermeture inattendue.
+- Règle de cadrage:
+	- aucun comportement de verrou collaboratif global n'est requis pour publier la V1.0.
 
-### Verrouillage manuel des pièces, murs et ouvertures
+### Verrouillage géométrique par points
 - Version cible validée: V1.
 - Spécification fonctionnelle: validée.
 - Objectif:
-	- Permettre de protéger volontairement une pièce, un mur ou une ouverture contre les modifications accidentelles, indépendamment du verrou d'édition collaboratif.
+	- Protéger les transformations géométriques accidentelles avec un unique type de verrou persistant porté par les points.
 - Portée fonctionnelle cible:
-	- Action `Verrouiller` ou `Déverrouiller` disponible pour la pièce, le mur ou l'ouverture sélectionné.
-	- État de verrouillage persistant propre à chaque pièce, mur et ouverture.
-	- Sélection et consultation maintenues lorsque l'élément est verrouillé.
+	- État persistant `isLocked` sur chaque sommet du plan et chaque point de profil de hauteur.
+	- Verrouillage d'un sommet ou d'un point de profil par clic droit.
+	- Actions `Verrouiller` ou `Déverrouiller` disponibles dans les blocs d'édition des pièces, murs et profils.
+	- État des murs, pièces, côtes et profils calculé depuis leurs points.
+	- Application immédiate du verrouillage ou du déverrouillage dans le brouillon local.
 - Règles métier minimales:
-	- Le verrouillage manuel d'un élément bloque sa modification et sa suppression, sans bloquer sa sélection ni sa consultation.
-	- Les verrous d'une pièce, d'un mur et d'une ouverture sont indépendants; aucun verrouillage ou déverrouillage en cascade n'est appliqué.
-	- Le propriétaire et les collaborateurs en écriture peuvent verrouiller et déverrouiller un élément.
+	- Un mur est verrouillé lorsque ses deux sommets sont verrouillés.
+	- Une pièce est verrouillée lorsque tous les murs de son contour sont verrouillés.
+	- Une côte est verrouillée pour ses interactions géométriques lorsqu'elle référence un mur verrouillé ou un point verrouillé.
+	- Un profil de hauteur est verrouillé lorsque tous ses points sont verrouillés.
+	- Verrouiller ou déverrouiller un mur applique l'état à ses deux sommets.
+	- Verrouiller ou déverrouiller une pièce applique l'état à tous les sommets des murs de son contour.
+	- Verrouiller ou déverrouiller un profil applique l'état à tous ses points.
+	- Les effets sur les murs et pièces partageant un point sont volontaires et immédiatement recalculés.
+	- Lorsque les profils gauche et droit sont liés, les verrous de leurs points correspondants sont synchronisés.
+	- Le propriétaire et les collaborateurs en écriture peuvent modifier les verrous.
 	- Le collaborateur en lecture peut consulter l'état du verrou, mais ne peut ni verrouiller ni déverrouiller.
-	- Le contrôle du droit d'écriture précède l'action de verrouillage ou de déverrouillage; le verrou manuel est ensuite contrôlé avant toute autre modification de l'élément.
-	- Le verrou manuel ne remplace pas le verrou d'édition collaboratif requis.
-	- Toute transformation topologique qui devrait modifier, scinder ou supprimer un élément verrouillé est refusée dans son ensemble avant persistance.
+	- Une interaction interdite est refusée avant toute modification visuelle, métier ou d'historique du brouillon.
+	- Un sommet, un mur ou une pièce verrouillé ne peut pas être déplacé, transformé topologiquement ni supprimé.
+	- L'épaisseur d'un mur verrouillé ne peut pas être modifiée.
+	- Le matériau, l'isolation et les notes restent modifiables.
+	- Une ouverture ne porte aucun verrou propre; sa position, ses dimensions, ses propriétés et sa suppression restent disponibles selon les autres validations.
+	- Le verrouillage du segment en plan ne verrouille pas automatiquement ses profils de hauteur.
+	- Le verrouillage, le déverrouillage et les modifications géométriques autorisées d'un même brouillon sont persistés atomiquement.
+	- Le contrat détaillé est défini dans [verrouillage_geometrique.md](./ihm/logique/verrouillage_geometrique.md).
 - Critères d'acceptation:
-	- Une pièce, un mur ou une ouverture verrouillé reste sélectionnable et consultable.
-	- Toute tentative de modification ou de suppression de l'élément verrouillé est refusée avec un retour explicite.
-	- Le propriétaire ou un collaborateur en écriture peut déverrouiller l'élément puis le modifier, sous réserve du verrou d'édition collaboratif applicable.
+	- Un point verrouillé au chargement ne peut pas être déplacé.
+	- Un point déverrouillé dans le brouillon devient immédiatement déplaçable sans attendre la sauvegarde.
+	- Un mur verrouillé apparaît en rouge sur le plan depuis toutes les pièces auxquelles il est lié.
+	- Une pièce verrouillée affiche un cadenas à côté de son nom.
+	- Une action sur une pièce, un mur ou une côte ne déplace jamais indirectement un point verrouillé.
+	- Si un seul sommet d'un mur est verrouillé, une modification de longueur déplace uniquement l'autre sommet en conservant l'orientation.
+	- Si aucun sommet n'est verrouillé, le sommet de début reste l'ancrage par défaut.
+	- Si les deux sommets sont verrouillés, la modification de longueur ou d'épaisseur est refusée sans altérer le brouillon.
+	- Le matériau, l'isolation, les notes et les ouvertures restent modifiables lorsque le mur est verrouillé.
+	- Les verrous des points de profils liés restent synchronisés entre les deux faces.
 	- Un collaborateur en lecture ne peut pas changer l'état de verrouillage.
 
 ### 14) Moteur 3D complet

@@ -138,7 +138,7 @@
 - Droits projet:
 	- Le rôle lecture conserve la consultation des cartes, la navigation vers les vues et les exports.
 	- Le rôle lecture ne peut pas ajouter de note, supprimer une pièce ni déclencher une autre action créant ou modifiant une donnée.
-	- Le rôle écriture et le propriétaire disposent des actions d'édition; les opérations soumises à verrou nécessitent ensuite la détention du verrou.
+	- Le rôle écriture et le propriétaire disposent des actions d'édition; la suppression d'une pièce est refusée si elle devrait supprimer ou remplacer un sommet verrouillé.
 	- Les actions interdites par le rôle sont désactivées ou masquées sans permettre leur déclenchement indirect.
 - Contexte projet:
 	- Le dashboard affiche les données du projet courant selectionne depuis la sidebar.

@@ -12,7 +12,7 @@ Statuts autorisés:
 - `Partiel`: une partie existe, mais des critères ou parcours importants manquent.
 - `À valider`: l’implémentation paraît présente, mais la recette complète n’a pas été démontrée.
 - `Bloqué`: l’implémentation ne doit pas progresser avant la levée du blocage indiqué.
-- `Différé fin V1`: volontairement planifié après les autres fonctions V1, mais requis avant publication.
+- `Hors V1`: explicitement reporté après la version 1.0 et non requis pour sa publication.
 - `Terminé`: tous les critères sont vérifiés avec tests, migration éventuelle et preuve de recette.
 
 Une ligne ne passe à `Terminé` que si `npm run check` et les validations de base applicables sont verts.
@@ -53,8 +53,8 @@ Une ligne ne passe à `Terminé` que si `npm run check` et les validations de ba
 | V1-15 | Préférences et compte | Partiel | Préférences persistées, mais unités et options ne sont pas appliquées partout. |
 | V1-16 | Projets et contexte | À valider | Parcours présent; recette propriétaire, suppression et base neuve à compléter. |
 | V1-17 | Invitations et collaborations | À valider | Parcours présent; recette multi-utilisateur complète à rejouer. |
-| V1-18 | Verrou collaboratif | Différé fin V1 | Neutralisé volontairement; réactivation et recette prévues en V1-R40. |
-| V1-19 | Verrous manuels | Partiel | Domaine, RPC et bouton présents, mais intégration incomplète dans les vues de production. |
+| V1-18 | Verrou collaboratif | Hors V1 | Reporté après la V1.0; version cible et contrat à respécifier avant réactivation. |
+| V1-19 | Verrouillage géométrique | Partiel | Contrat cible harmonisé sur les sommets et points de profils persistés; modèle, RPC et vues actuels restent à converger. |
 | V1-20 | Dashboard, niveaux et cartes | Partiel | Écran présent; notes, unités, PDF et retours utilisateur restent incohérents. |
 | V1-21 | Canvas partagé | Partiel | Canvas React-Konva et ses tests sont verts; RoomEditor conserve un canvas SVG distinct jusqu’à V1-R20. |
 | V1-22 | Sélection, panneaux, historique | Partiel | Consultation et historique présents; les mutations secondaires sont encore désactivées. |
@@ -67,15 +67,17 @@ Une ligne ne passe à `Terminé` que si `npm run check` et les validations de ba
 | V1-29 | Six exports PDF | Partiel | Exports Dashboard partiels; variantes éditeurs absentes. |
 | V1-30 | ProjectMetricsView | À faire | Route placeholder, aucun tableau, filtre ou tri. |
 | V1-31 | Exports Métriques | Bloqué | Aucun export; contrat PDF/Excel/CSV détaillé à compléter avant code. |
-| V1-32 | Recette sécurité/concurrence | À faire | Verrou collaboratif différé et tests DB complets non exécutés. |
+| V1-32 | Recette sécurité | À faire | Recettes droits, verrouillage géométrique et invariants base à compléter; concurrence multi-utilisateur hors V1. |
 | V1-33 | Recette fonctionnelle V1 | À faire | Portail qualité vert; fonctions V1-25 à V1-31 encore incomplètes. |
 
 ## Décisions de cadrage gelées
 
-- Le verrou collaboratif reste obligatoire pour la publication 1.0, mais est traité après les autres fonctions V1.
+- Le verrou collaboratif global du projet est reporté après la V1.0 et n'est plus un critère de publication de la V1.
 - Un mur est une entité topologique autonome reliée à zéro, une ou deux pièces.
 - Intersections et chevauchements avec création de pièce restent dans la V1.
-- Toute transformation topologique affectant un objet verrouillé est refusée atomiquement.
+- Les seuls verrous géométriques persistés sont portés par les sommets du plan et les points de profils; les états des murs, pièces, côtes et profils sont calculés.
+- Toute interaction géométrique impliquant un point verrouillé est refusée avant la première mutation du brouillon.
+- La frontière transactionnelle revérifie l'état persisté et autorise un déverrouillage accompagné de sa modification dans une même sauvegarde atomique.
 - Les préférences pilotent saisie et affichage; les données internes restent en cm et cm², avec cm/m² comme préférences initiales.
 - Les trois éditeurs utilisent brouillon local, auto-sauvegarde cinq minutes et sauvegarde manuelle.
 - Le PDF détail global couvre tous les niveaux visibles.

@@ -4,6 +4,7 @@
 - Ce document decrit les règles de synchronisation entre le canvas, le panneau de creation, le panneau détail et les bulles de notes projet.
 - Il couvre la propagation de la sélection, les changements de focus et les ouvertures automatiques de panneaux.
 - Le contrat géométrique appartient a [geometry.md](./geometry.md).
+- Le verrouillage géométrique appartient à [verrouillage_geometrique.md](./verrouillage_geometrique.md).
 - Les parcours utilisateur et les modes d'interaction appartiennent a [editeur_2d_global.md](../vues/editeur_2d_global.md).
 
 ## Sources de sélection
@@ -17,7 +18,7 @@
 - La sélection active est unique a un instant donne.
 - L'objet selectionne est mis en surbrillance dans chaque vue qui peut l'afficher.
 - La sélection d'un objet doit afficher son bloc édition quand ce bloc existe.
-- Le verrouillage manuel d'une pièce, d'un mur ou d'une ouverture ne désactive ni sa sélection, ni sa surbrillance, ni l'ouverture consultative de son bloc d'édition.
+- Le verrouillage d'un point et les états verrouillés calculés d'une pièce, d'un mur, d'une côte ou d'un profil ne désactivent ni leur sélection, ni leur surbrillance, ni l'ouverture consultative de leur bloc d'édition.
 
 ## Propagation de la sélection
 - Si un objet est selectionne dans le canvas et que la liste des objets du meme type est ouverte dans le panneau menu creation, l'objet est mis en surbrillance dans cette liste et dans le panneau détail s'il est ouvert.
@@ -42,11 +43,13 @@
 - Note : mise en surbrillance dans le canvas, synchronisation avec la liste des notes et la bulle des notes projet, affichage de l'infobulle contextuelle et ouverture du bloc édition.
 - Point : mise en surbrillance dans le canvas et exposition du contexte d'édition associe si le mode actif le permet.
 
-## Effet du verrouillage manuel
-- Une pièce, un mur ou une ouverture verrouillé suit les mêmes règles de propagation de sélection qu'un élément déverrouillé.
-- Son bloc d'édition affiche son état verrouillé et rend indisponibles les modifications et la suppression.
-- Le propriétaire et les collaborateurs en écriture disposent de l'action `Déverrouiller`; le collaborateur en lecture consulte uniquement l'état.
-- Les verrous sont indépendants entre pièce, mur et ouverture et ne produisent aucun changement en cascade.
+## Effet du verrouillage géométrique
+- Un sommet ou un point de profil verrouillé suit les mêmes règles de propagation de sélection qu'un point déverrouillé.
+- Une pièce, un mur, une côte ou un profil calculé verrouillé reste sélectionnable dans toutes les zones qui le représentent.
+- Le bloc d'édition affiche l'état calculé et rend indisponibles uniquement les actions interdites par le contrat de verrouillage géométrique.
+- Le propriétaire et les collaborateurs en écriture disposent des actions de verrouillage adaptées; le collaborateur en lecture consulte uniquement l'état.
+- Les effets sur les autres objets partageant les mêmes points sont recalculés immédiatement et propagés à toutes les zones.
+- Une ouverture ne possède aucun état verrouillé propre et conserve ses interactions ordinaires lorsque son mur support est verrouillé.
 
 ## Changement de niveau actif
 - Si un objet est selectionne depuis le panneau détail et qu'il appartient a un autre niveau, ce niveau devient le niveau editable actif.

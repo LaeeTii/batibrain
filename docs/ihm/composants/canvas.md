@@ -59,6 +59,8 @@
 - Lorsqu'elle est active, la grille couvre toute la surface visible du canvas, quel que soit son ratio largeur/hauteur.
 - Le pas de la grille est fixe et représente `5 cm` dans le repère métier.
 - Le viewport est un état visuel de session: aucune interaction d'édition (création, déplacement, sélection) ne doit forcer un recadrage automatique.
+- Un clic droit sur un sommet du plan ou un point de profil ouvre son action `Verrouiller` ou `Déverrouiller`.
+- Une tentative de déplacement d'un point verrouillé est refusée avant toute mutation visuelle ou du brouillon.
 
 ## Iconographie
 - Zoom avant: `LuZoomIn`, icône seule.
@@ -90,6 +92,8 @@
 - Les règles de synchronisation de sélection ne sont pas redefinies ici et sont referencees depuis la logique dediee.
 - Les icônes de pièces sont affichées par défaut sur tous les canvas.
 - Un mur mitoyen est rendu une seule fois à partir de son identifiant unique, même lorsqu’il apparaît dans les relations de ses deux pièces.
+- Un mur calculé verrouillé est affiché en rouge sur le plan.
+- Une pièce calculée verrouillée affiche un cadenas à côté de son nom.
 - L'icône est dérivée du type par le frontend avec `react-icons` et n'est pas persistée.
 - Elle est affichée sous le nom et la surface; le type `autre` ne produit aucune icône.
 - L'option Icônes de pièces masque ou réaffiche toutes les icônes du canvas courant.
@@ -117,12 +121,15 @@
 	- les ouvertures sont projetées à leur position sur le mur et leurs largeur, hauteur, allège et distances aux extrémités peuvent être cotées,
 	- lorsque le lien des profils est inactif, le profil de la face opposée n'est jamais modifié indirectement,
 	- lorsque le lien est actif, toute modification graphique du profil courant est répercutée sur le profil opposé dans la même action métier.
+	- lorsque le lien est actif, le verrouillage ou le déverrouillage d'un point est également répercuté sur le point correspondant du profil opposé.
+	- un point de profil verrouillé reste sélectionnable mais ne peut pas être déplacé.
 
 ## Cas limites
 - Tentative de creation/édition hors mode actif: aucune modification persistante ne doit etre appliquee.
 - Objet devenu invalide pendant interaction: retour a un etat stable avec message d'erreur.
 - Échec de persistance après action: le brouillon local et le contexte visuel sont conservés; un seul message d'erreur non redondant est affiché et la persistance est retentée selon le contrat transverse.
 - Si l'objet selectionne appartient a un niveau non editable, le canvas conserve l'affichage contextuel sans autoriser l'édition directe.
+- Si une interaction géométrique affecterait un sommet ou un point de profil verrouillé, elle est refusée sans déplacement temporaire ni historique partiel.
 - Si aucune option de mesure n'est activee, l'echelle graphique reste visible en continu.
 
 ## Criteres d'acceptation testables
@@ -138,6 +145,10 @@
 - Given WallEditorView affiche une face, When l'utilisateur choisit l'autre face, Then le canvas rend le profil propre à cette face sans changer le mur sélectionné.
 - Given une ouverture dépasse la hauteur disponible sur une face, When une modification de profil est validée, Then la modification est refusée avec un message explicite.
 - Given les profils sont liés, When un point est ajouté ou déplacé sur le canvas, Then le point correspondant est ajouté ou déplacé à la même position et hauteur sur l'autre face.
+- Given un sommet du plan est verrouillé, When l'utilisateur commence un glisser-déposer, Then le sommet ne se déplace pas et le brouillon reste inchangé.
+- Given un mur a ses deux sommets verrouillés, When le plan est rendu, Then le mur apparaît en rouge.
+- Given tous les murs d'une pièce sont verrouillés, When son nom est rendu, Then un cadenas est affiché à côté de celui-ci.
+- Given les profils sont liés, When un point est verrouillé sur une face, Then le point correspondant de l'autre face reçoit le même état.
 
 ## References
 - Referentiel global : [ihm.md](../ihm.md)
@@ -145,6 +156,7 @@
 - Vue mur associée : [wall_editor_view.md](../vues/wall_editor_view.md)
 - Logique sélection : [edition_2D_synchronisation_selection.md](../logique/edition_2D_synchronisation_selection.md)
 - Logique géométrique : [geometry.md](../logique/geometry.md)
+- Verrouillage géométrique : [verrouillage_geometrique.md](../logique/verrouillage_geometrique.md)
 
 ## État d’implémentation V1-21
 - `Canvas2D`, `CanvasOverlayMeasurements`, `CanvasZoomControls`, `CanvasScaleIndicator` et le contrôle des options d’affichage sont disponibles comme composants partagés.

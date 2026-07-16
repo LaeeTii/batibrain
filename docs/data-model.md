@@ -1,6 +1,6 @@
 # Modèle de données BatiBrain
 
-Date de mise à jour: 2026-07-15
+Date de mise à jour: 2026-07-16
 
 ## Objectif
 Ce document décrit le modèle de données métier actuel, reconstruit à partir des spécifications dans `docs/ihm/`.
@@ -76,8 +76,6 @@ Champs minimaux:
 - `name`
 - `description` (optionnel)
 - `ownerUserId`
-- `editingLockUserId` (optionnel)
-- `editingLockLastActivityAt` (optionnel)
 - `updatedAt`
 - `isSoftDeleted`
 
@@ -87,12 +85,8 @@ Règles:
 - Un projet supprimé logiquement est exclu des listes actives par défaut.
 - Un projet possède un propriétaire unique.
 - Un utilisateur accède à un projet s'il en est propriétaire ou si une collaboration acceptée le lui autorise.
-- Le verrou d'édition collaboratif porte sur le projet entier et n'est actif que si `editingLockUserId` est renseigné et si `editingLockLastActivityAt` date de moins de deux minutes selon l'heure du serveur.
-- Pendant l'implémentation et le débogage des autres fonctions V1, ce verrou reste suspendu; il est réactivé et recetté avec deux sessions avant la publication 1.0.
-- La première modification persistée sur un projet libre ou dont le verrou a expiré attribue atomiquement le verrou à son auteur autorisé.
-- Chaque modification effectivement persistée par le détenteur met à jour `editingLockLastActivityAt`; une tentative refusée ou invalide ne le renouvelle pas.
-- Pendant les deux minutes suivant la dernière modification, les autres utilisateurs conservent la lecture mais aucune écriture sur les objets du projet.
-- Après deux minutes sans modification, le verrou est considéré comme libre sans remise à zéro préalable des deux champs; l'acquisition suivante les remplace atomiquement.
+- Le verrou collaboratif global du projet est reporté après la V1.0 et sera respécifié avant implémentation.
+- Les éventuels champs techniques legacy de verrou collaboratif ne font pas partie du contrat métier cible de la V1.
 
 ### UserProfile
 Représente les informations applicatives du compte, distinctes des identifiants gérés par Supabase Auth.
@@ -211,7 +205,6 @@ Champs minimaux:
 - `wallThicknessCm`
 - `wallHeightCm`
 - `isSoftDeleted`
-- `isLocked` (booléen; initialisé à `false` par le domaine)
 
 Règles:
 - Si `name` est vide à la création, la valeur par défaut est `Nouvelle pièce`.
@@ -220,22 +213,28 @@ Règles:
 - Les correspondances sont: toque, lit, sofa, baignoire, WC, bureau, voiture, porte ouverte, pion et livre; `autre` ne produit aucune icône.
 - La suppression dans le dashboard est logique (`isSoftDeleted = true`).
 - Les pièces supprimées logiquement sont masquées par défaut et exclues des exports globaux par défaut.
-- Le passage à l'état supprimé est une transformation topologique: les relations actives mur-pièce sont recalculées et l'opération entière est refusée si elle affecte un élément verrouillé.
-- Une pièce verrouillée reste sélectionnable et consultable, mais ne peut être ni modifiée ni supprimée avant son déverrouillage.
+- Le passage à l'état supprimé est une transformation topologique: les relations actives mur-pièce sont recalculées et l'opération entière est refusée si elle devrait supprimer ou remplacer un sommet verrouillé.
+- L'état verrouillé de la pièce est calculé: tous les murs de son contour, et donc tous leurs sommets, doivent être verrouillés.
+- Verrouiller ou déverrouiller une pièce modifie les verrous de tous les sommets des murs de son contour.
+- Une pièce calculée verrouillée ne peut pas être déplacée, transformée topologiquement ni supprimée; son nom, son type, sa couleur de sol et ses notes restent modifiables.
 
 ### Vertex
-Sommet 2D d'une pièce dans le repère du niveau.
+Sommet topologique 2D partagé dans le repère du niveau.
 
 Champs minimaux:
 - `id` (recommandé)
-- `roomId`
-- `orderIndex`
+- `levelId`
 - `xCm`
 - `yCm`
+- `isLocked` (booléen; initialisé à `false` par le domaine)
 
 Règles:
-- Une pièce est un polygone fermé ordonné de sommets.
-- L'ordre des sommets doit rester stable pour garantir le calcul des murs, angles, surfaces et périmètres.
+- Un sommet possède une identité unique même lorsqu'il est référencé par plusieurs murs ou contours de pièces.
+- Une pièce est un polygone fermé ordonné de sommets; l'ordre est porté par l'association entre la pièce et ses sommets.
+- L'ordre des sommets d'une pièce doit rester stable pour garantir le calcul des murs, angles, surfaces et périmètres.
+- Le sommet est l'unique source persistée du verrouillage géométrique du plan.
+- Un sommet verrouillé ne peut être ni déplacé ni supprimé.
+- Un point partagé transmet son état verrouillé à tous les murs, pièces et côtes qui le référencent.
 
 ### Wall
 Segment support et propriétés métier associées.
@@ -249,7 +248,6 @@ Champs minimaux:
 - `heightProfilesLinked` (booléen; initialisé à `true` par le domaine)
 - `material` (optionnel)
 - `insulation` (optionnel)
-- `isLocked` (booléen; initialisé à `false` par le domaine)
 
 Règles:
 - La longueur métier de référence est la longueur intérieure.
@@ -267,7 +265,11 @@ Règles:
 - Réactiver le lien après divergence remplace, après confirmation, le profil de la face opposée par celui de la face affichée.
 - Lors d'une inversion du segment, les profils sont permutés afin de rester rattachés à la même face physique.
 - Dans RoomEditor2DView, la suppression d'un mur mitoyen est interdite.
-- Un mur verrouillé reste sélectionnable et consultable, mais ne peut être ni modifié ni supprimé avant son déverrouillage.
+- L'état verrouillé du mur est calculé: ses deux sommets doivent être verrouillés.
+- Verrouiller ou déverrouiller un mur modifie le verrou de ses deux sommets.
+- Un mur calculé verrouillé ne peut pas être déplacé, détaché, scindé, supprimé ni recevoir une modification d'épaisseur.
+- Son matériau, son isolation et ses notes restent modifiables.
+- Une modification de longueur conserve le sommet verrouillé comme ancrage; si aucun sommet n'est verrouillé, le sommet de début est l'ancrage par défaut; si les deux le sont, la modification est refusée.
 
 ### WallFaceHeightProfilePoint
 Point du profil de hauteur d'une face d'un mur.
@@ -278,6 +280,7 @@ Champs minimaux:
 - `faceSide` (`gauche`, `droite`)
 - `positionCm` (distance horizontale depuis `startVertexId`)
 - `heightCm` (hauteur locale au point)
+- `isLocked` (booléen; initialisé à `false` par le domaine)
 
 Règles:
 - Les points sont triés par `positionCm` croissante au sein de chaque couple `wallId`/`faceSide`.
@@ -289,6 +292,11 @@ Règles:
 - Deux points couvrent un profil uniforme ou une pente simple; plus de deux points couvrent un profil multi-hauteurs.
 - Pour un mur mitoyen, l'association affichée entre face et pièce est calculée depuis la topologie.
 - Pour un mur extérieur, l'association affichée distingue la face intérieure de la face extérieure; les deux profils restent éditables.
+- Le point de profil est l'unique source persistée du verrouillage géométrique de sa face.
+- Un point de profil verrouillé ne peut pas être déplacé, modifié ni supprimé.
+- Un profil est calculé verrouillé lorsque tous ses points sont verrouillés.
+- Verrouiller ou déverrouiller un profil modifie le verrou de tous ses points.
+- Lorsque les profils sont liés, les états `isLocked` des points correspondants sont synchronisés avec leurs positions et hauteurs.
 
 ### Opening
 Ouverture positionnée sur un mur (porte, fenêtre, baie, autre).
@@ -304,7 +312,6 @@ Champs minimaux:
 - `heightCm`
 - `bottomCm` (allège)
 - `orientation` (si applicable)
-- `isLocked` (booléen; initialisé à `false` par le domaine)
 
 Règles:
 - Une ouverture doit rester entièrement comprise dans son mur support.
@@ -314,8 +321,8 @@ Règles:
 - Une ouverture intérieure est compatible uniquement avec un mur lié à deux pièces.
 - Une ouverture extérieure est compatible uniquement avec un mur lié à une pièce.
 - Après une modification topologique, une ouverture devenue incompatible avec la qualification calculée du mur est supprimée.
-- Une ouverture verrouillée reste sélectionnable et consultable, mais ne peut être ni modifiée ni supprimée avant son déverrouillage.
-- Si un recalcul topologique devrait supprimer ou déplacer une ouverture verrouillée, le recalcul entier est refusé avant persistance.
+- Une ouverture ne possède aucun verrou géométrique propre.
+- Sa position, ses dimensions, ses propriétés et sa suppression restent modifiables lorsque son mur support est verrouillé, sous réserve des droits projet et des autres validations.
 
 ### OpeningTemplate
 Modèle sélectionnable utilisé pour créer une ouverture.
@@ -347,6 +354,8 @@ Champs minimaux:
 Règles:
 - Une cote de distance nulle est invalide.
 - Une cote devient persistante après validation du décalage.
+- Une cote est calculée verrouillée pour ses interactions géométriques lorsqu'elle référence un mur verrouillé ou un sommet verrouillé.
+- Une cote calculée verrouillée ne peut pas être repositionnée ni supprimée.
 
 ### Note
 Note métier rattachée au projet ou à un objet (pièce, mur, point, ouverture, niveau).
@@ -512,7 +521,8 @@ Chaque colonne est filtrable et triable selon son type. Une valeur sans objet es
 - `Project` 1..n `ProjectCollaboration`
 - `Project` 1..n `ProjectInvitation`
 - `Level` 1..n `Room`
-- `Room` 1..n `Vertex`
+- `Level` 1..n `Vertex`
+- `Room` n..n `Vertex` via une association de contour ordonnée
 - `Room` n..n `Wall` via une association topologique limitée à deux pièces par mur
 - `Wall` 4..n `WallFaceHeightProfilePoint` (au moins deux points ordonnés sur chacune des deux faces)
 - `Wall` 1..n `Opening`
@@ -543,24 +553,29 @@ Chaque colonne est filtrable et triable selon son type. Une valeur sans objet es
 - Les coordonnées partagent le même repère au sein d'un niveau.
 - Les valeurs dérivées (surface, angle, périmètre, orientation) sont calculées, pas stockées comme source primaire.
 - Après modification topologique (coupe/intersection), recalculer segments élémentaires et relations mur-pièce.
-- Refuser avant persistance toute modification topologique qui affecterait une pièce, un mur ou une ouverture verrouillé; ce refus est atomique et conserve l'état précédent complet.
+- Refuser avant toute mutation du brouillon une modification géométrique qui déplacerait, remplacerait ou supprimerait un sommet ou un point de profil verrouillé.
 - Une jonction entre trois pièces est représentée par trois murs distincts autour d'un sommet partagé; elle ne crée jamais une troisième liaison sur un même mur.
 - En cas d'édition d'un mur mitoyen, la cohérence des deux pièces doit être conservée.
 - La qualification intérieure ou extérieure d'un mur est dérivée de son nombre de pièces liées et n'est pas persistée comme source primaire.
 - L'orientation d'une face vers une pièce ou vers l'extérieur est dérivée de la topologie; seule sa position stable gauche/droite et son profil sont persistés.
 - Une ouverture doit respecter la hauteur disponible sur les deux faces du mur à toute position qu'elle occupe.
 - Lorsque `heightProfilesLinked` est actif, les deux profils sont enregistrés atomiquement et restent strictement identiques.
-- Après recalcul topologique, supprimer toute ouverture non verrouillée dont `placementType` est incompatible avec la qualification de son mur support; si l'ouverture est verrouillée, refuser le recalcul entier.
-- Les verrous manuels d'une pièce, d'un mur et d'une ouverture sont persistés indépendamment et ne se propagent pas en cascade.
-- Le propriétaire et les collaborateurs en écriture peuvent verrouiller ou déverrouiller ces ressources; un collaborateur en lecture consulte leur état sans pouvoir le modifier.
-- Le contrôle du droit d'écriture précède le changement de verrou manuel; le verrou manuel est contrôlé avant toute autre modification ou suppression de la ressource et ne remplace pas le verrou d'édition collaboratif.
+- Après recalcul topologique, supprimer toute ouverture dont `placementType` est incompatible avec la qualification de son mur support.
+- Les seuls verrous géométriques persistés sont ceux des sommets du plan et des points de profils.
+- Les états verrouillés des murs, pièces, côtes et profils sont calculés depuis leurs points.
+- Le propriétaire et les collaborateurs en écriture peuvent modifier ces verrous; un collaborateur en lecture consulte leur état sans pouvoir le modifier.
+- Le contrôle du droit d'écriture précède le changement de verrou.
+- Les effets sur les objets partageant un point sont volontaires et recalculés immédiatement dans le brouillon.
+- Le contrat complet est défini dans [verrouillage_geometrique.md](./ihm/logique/verrouillage_geometrique.md).
 
 ## Persistance et suppression
 - Source de vérité persistée: Supabase/PostgreSQL.
 - La source de vérité des règles métier et des valeurs initiales est `web/src/domain/`; PostgreSQL stocke le résultat explicitement fourni par l'application.
 - PostgreSQL ne porte pas de valeur par défaut fonctionnelle ni de validation métier évolutive.
 - Les écritures liées qui ne peuvent pas être partiellement appliquées utilisent une transaction, notamment la mise à jour de deux profils de hauteur liés.
-- Une transformation topologique vérifie les verrous de tous les objets affectés avant la première écriture et s'exécute dans une transaction unique.
+- Le domaine refuse toute interaction géométrique impliquant un point verrouillé avant la première mutation du brouillon.
+- Une sauvegarde peut déverrouiller des points et appliquer leurs modifications géométriques dans une transaction unique; en cas d'échec, la base conserve son état précédent complet.
+- La transaction refuse une modification géométrique d'un point verrouillé dans l'état courant persisté, sauf si le même instantané autorisé contient son déverrouillage.
 - Suppression logique explicitement définie pour les pièces dans le dashboard.
 - Les suppressions physiques et politiques d'archivage des autres domaines restent à arbitrer.
 

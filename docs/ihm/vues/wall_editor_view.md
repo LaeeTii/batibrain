@@ -15,7 +15,7 @@
   - consultation et édition du profil ordonné de hauteurs de la face active;
   - affichage et édition des propriétés du mur et de ses ouvertures;
   - affichage des mesures pertinentes en vue de face;
-  - gestion des droits projet, du verrou d'édition, de l'auto-save et de l'historique.
+  - gestion des droits projet, du verrouillage géométrique des profils, de l'auto-save et de l'historique.
 - Out-of-scope:
   - modification de la géométrie en plan du segment support;
   - création ou suppression du mur;
@@ -57,7 +57,9 @@
 - Lier ou dissocier les profils: `LuLink` ou `LuUnlink`, icône + texte.
 - Ajouter un point intermédiaire: `LuPlus`, icône + texte.
 - Supprimer un point intermédiaire: `LuTrash2`, icône seule dans la liste répétitive.
-- Verrouiller ou déverrouiller le mur ou une ouverture: `LuLock` ou `LuLockOpen`, icône + texte.
+- Verrouiller ou déverrouiller le mur en plan: `LuLock` ou `LuLockOpen`, icône + texte.
+- Verrouiller ou déverrouiller le profil affiché: `LuLock` ou `LuLockOpen`, icône + texte.
+- Verrouiller ou déverrouiller un point de profil: `LuLock` ou `LuLockOpen`, action de menu contextuel au clic droit.
 - États d'auto-sauvegarde, toujours accompagnés d'un texte visible: `LuLoaderCircle`, `LuCircleCheck` et `LuCloudAlert`.
 - Les contrôles de zoom et les actions d'historique reprennent les contrats transverses du canvas et du référentiel IHM.
 
@@ -91,7 +93,7 @@
 ## Panneau d'édition
 
 - Bloc `Mur`:
-  - action contextuelle `Verrouiller` ou `Déverrouiller`;
+  - action contextuelle `Verrouiller` ou `Déverrouiller`, appliquée aux deux sommets du segment en plan;
   - épaisseur;
   - matériau optionnel;
   - isolation optionnelle;
@@ -108,7 +110,9 @@
   - sélection d'une ouverture;
   - propriétés existantes applicables: position, largeur, hauteur, allège et orientation;
   - aucune création d'ouverture depuis WallEditorView.
-  - action contextuelle `Verrouiller` ou `Déverrouiller` pour l'ouverture sélectionnée.
+- Bloc `Profil de hauteur`:
+  - action `Verrouiller` ou `Déverrouiller` appliquée à tous les points de la face affichée;
+  - état verrouillé calculé depuis tous les points du profil.
 
 ## Interactions et sauvegarde
 
@@ -144,13 +148,19 @@
 
 ## Droits et verrouillage
 
-- Le propriétaire et le collaborateur en écriture peuvent modifier les propriétés, profils et ouvertures sous réserve de détenir le verrou requis.
+- Le propriétaire et le collaborateur en écriture peuvent modifier les propriétés et ouvertures; l'épaisseur exige que le mur en plan soit déverrouillé et les modifications de profils exigent que les points de hauteur affectés soient déverrouillés.
 - Le collaborateur en lecture peut changer de face, consulter le canvas et utiliser le zoom, sans modifier de donnée.
-- En lecture seule ou sans verrou, les contrôles d'écriture, d'annulation et de rétablissement sont désactivés ou masqués et un indicateur explicite est affiché.
+- En lecture seule, les contrôles d'écriture, d'annulation et de rétablissement sont désactivés ou masqués et un indicateur explicite est affiché.
 - Toute écriture indirecte est contrôlée côté backend selon les droits du projet.
-- Un mur ou une ouverture verrouillé reste sélectionnable et consultable, mais ses modifications sont bloquées jusqu'à son déverrouillage.
-- Le propriétaire et les collaborateurs en écriture peuvent verrouiller ou déverrouiller le mur ou l'ouverture sélectionnée; le collaborateur en lecture consulte uniquement son état.
-- Le verrou collaboratif projet reste suspendu pendant l'implémentation des autres fonctions V1, puis est réactivé et recetté avant la publication 1.0.
+- Les points de profils portent les seuls verrous persistés de la vue; un profil est calculé verrouillé lorsque tous ses points sont verrouillés.
+- Le mur en plan est calculé verrouillé lorsque ses deux sommets sont verrouillés; son bouton de verrouillage modifie ces deux sommets.
+- Lorsque le mur en plan est verrouillé, son épaisseur est indisponible, mais son matériau, son isolation et ses notes restent modifiables.
+- Un point ou un profil verrouillé reste sélectionnable et consultable, mais ses modifications géométriques sont bloquées.
+- Le propriétaire et les collaborateurs en écriture peuvent verrouiller ou déverrouiller un point par clic droit ou le profil depuis son bloc d'édition; le collaborateur en lecture consulte uniquement l'état.
+- Lorsque les profils sont liés, les états de verrouillage de leurs points correspondants sont synchronisés.
+- Le verrouillage géométrique du segment en plan ne verrouille pas automatiquement les profils de hauteur.
+- Les ouvertures ne portent aucun verrou propre et restent modifiables selon les validations de hauteur ordinaires.
+- Le verrou collaboratif global du projet est hors périmètre de la V1.0 et sera respécifié dans une version ultérieure.
 
 ## Navigation
 
@@ -165,8 +175,8 @@
 - État normal: face, profil, ouvertures et mesures affichés.
 - Auto-save en cours: indicateur visible dans le header.
 - Auto-sauvegarde en échec: brouillon conservé, unique message persistant et nouvelle tentative au cycle suivant.
-- Lecture seule ou verrou détenu par un tiers: données consultables et édition désactivée.
-- Verrouillage manuel du mur ou d'une ouverture: élément consultable, état explicite et contrôles de modification indisponibles jusqu'au déverrouillage.
+- Lecture seule: données consultables et édition désactivée.
+- Verrouillage d'un point ou du profil: élément consultable, état explicite et contrôles géométriques indisponibles jusqu'au déverrouillage.
 - Mur introuvable ou inaccessible: erreur locale bloquante et action de retour visible.
 - Validation refusée: ancienne valeur conservée et message explicite à proximité du contrôle concerné.
 - Remise en liaison de profils différents: confirmation indiquant que le profil de la face affichée remplacera celui de l'autre face.
@@ -179,6 +189,7 @@
 - Si une ouverture disparaît pendant son édition, sa sélection est nettoyée et le mur reste affiché.
 - Un point intermédiaire ne peut pas être déplacé au-delà de ses voisins ni sur la même position qu'eux.
 - Si l'enregistrement de l'un des deux profils liés échoue, aucun des deux profils ni l'état du lien n'est modifié.
+- Si les profils sont liés, toute action de verrouillage ou de déverrouillage conserve des états identiques entre points correspondants.
 - Une remise en liaison annulée dans la confirmation conserve les deux profils indépendants et laisse le lien inactif.
 
 ## Critères d'acceptation testables
@@ -199,7 +210,10 @@
 - Given la remise en liaison est confirmée, When l'auto-save réussit, Then le profil opposé est remplacé par celui de la face affichée et le lien devient actif dans une seule action annulable.
 - Given une modification ferait dépasser une ouverture du profil disponible, When l'utilisateur la valide, Then elle est refusée et un message explicite est affiché.
 - Given le rôle projet est lecture, When la vue est affichée, Then les deux faces restent consultables et aucune modification n'est possible.
-- Given le mur ou une ouverture est verrouillé, When l'élément est sélectionné, Then ses données restent consultables et aucune modification n'est possible avant son déverrouillage.
+- Given un point de profil est verrouillé, When l'utilisateur tente de le déplacer, Then le geste est refusé avant toute mutation du brouillon.
+- Given les deux sommets du mur en plan sont verrouillés, When l'utilisateur tente de modifier son épaisseur, Then l'action est refusée, mais le matériau, l'isolation et les notes restent modifiables.
+- Given tous les points du profil sont verrouillés, When le profil est affiché, Then son état verrouillé est explicite et aucune modification géométrique n'est possible.
+- Given les profils sont liés, When un point est verrouillé sur une face, Then le point correspondant de l'autre face reçoit le même état.
 - Given des changements non sauvegardés existent, When l'utilisateur demande le retour, Then une confirmation explicite est affichée avant la sortie.
 
 ## Références

@@ -1,6 +1,6 @@
 # Produit — BatiBrain (roadmap active)
 
-Date de mise à jour: 2026-07-15
+Date de mise à jour: 2026-07-16
 
 ## Positionnement
 BatiBrain n'est pas un MVP: c'est une vraie application produit, livrée par versions successives.
@@ -12,6 +12,7 @@ BatiBrain n'est pas un MVP: c'est une vraie application produit, livrée par ver
 
 ## Invariants produit
 - Une pièce est définie par une liste ordonnée de sommets `(x, y)`.
+- Un sommet possède une identité topologique unique dans le niveau et peut être partagé par plusieurs murs ou contours de pièces.
 - Chaque segment entre deux sommets consécutifs du contour d'une pièce référence un mur.
 - Un mur est une entité topologique autonome définie par un segment ordonné; il peut être détaché ou relié à une ou deux pièces.
 - Un mur peut être lié à deux pièces au maximum; lorsqu'une troisième pièce rejoint l'intérieur d'un mur, un sommet de jonction scinde ce mur en deux afin de former trois murs distincts autour de ce sommet.
@@ -39,12 +40,18 @@ Périmètre attendu:
 - Vues et composants transverses du socle déjà spécifiés dans `docs/ihm/`.
 - Features spec V1 prioritaires:
 	- collaboration projet asynchrone simple,
-	- verrouillage pour éviter les conflits d'édition, réactivé et recetté à la fin de la V1 afin de ne pas gêner l'implémentation et le débogage des autres fonctions (la collaboration temps réel complexe n'est pas prévue),
-	- verrouillage manuel des pièces, murs et ouvertures contre les modifications accidentelles,
+	- verrouillage géométrique des sommets du plan et des points de profils, avec états calculés des murs, pièces, côtes et profils,
 	- validation d'adjacence des ouvertures intérieures,
 	- icône de pièce configurable,
 	- vue mur dédiée (vue de face),
 	- profils de hauteur multiples sur un mur.
+
+### Évolution postérieure à la V1.0 — version à préciser
+
+Périmètre attendu:
+- Verrouillage collaboratif global du projet pour empêcher deux utilisateurs d'éditer simultanément.
+- Affichage du détenteur et mise en lecture seule temporaire des autres sessions.
+- Acquisition, renouvellement et expiration du verrou selon un contrat à respécifier avant implémentation.
 
 ### V2 — Gestion des documents et photos
 Périmètre attendu:

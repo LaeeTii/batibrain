@@ -1,6 +1,6 @@
 # Plan d’implémentation refactoré de la V1
 
-Date de mise à jour: 2026-07-15
+Date de mise à jour: 2026-07-16
 
 ## Rôle du document
 
@@ -17,7 +17,7 @@ Chaque tâche doit produire un incrément vérifiable comprenant le code, les te
 - Utiliser Supabase/PostgreSQL comme source des données persistées.
 - Ne jamais modifier une migration appliquée, notamment `20260703_000002_init_v2.sql`; toute évolution utilise une nouvelle migration `<YYYYMMDDHHMMSS>_<description>.sql` au préfixe unique.
 - Normaliser les longueurs et coordonnées en centimètres et les surfaces en centimètres carrés; appliquer les préférences utilisateur à la saisie et à l’affichage.
-- Refuser atomiquement toute transformation topologique affectant une pièce, un mur ou une ouverture verrouillé.
+- Refuser avant toute mutation du brouillon une transformation géométrique qui déplacerait, remplacerait ou supprimerait un sommet ou un point de profil verrouillé.
 - Ne pas introduire de fonctionnalité prévue après la V1.
 - Terminer chaque tâche par les tests pertinents, `npm run check`, les tests Supabase applicables et la mise à jour de la matrice de livraison.
 
@@ -42,7 +42,9 @@ Objectif: disposer d’un seul modèle V1 et d’une seule frontière transactio
 - Supprimer ou isoler les types et services historiques incompatibles.
 - Remplacer les RPC ou adaptateurs périmés et imposer une sauvegarde transactionnelle unique pour création, mise à jour, scission, intersection et chevauchement.
 - Préserver les ouvertures compatibles et tous les points de profils lors des normalisations topologiques.
-- Vérifier tous les verrous avant la première écriture; refuser la transaction complète lorsqu’un objet affecté est verrouillé.
+- Appliquer le verrouillage géométrique porté par les sommets et points de profils; calculer les états des murs, pièces, côtes et profils.
+- Refuser toute interaction interdite avant la première mutation du brouillon et persister atomiquement les changements de verrous avec la géométrie autorisée.
+- Vérifier à nouveau l'état persisté dans la frontière transactionnelle; n'autoriser une modification d'un point verrouillé que si le même instantané contient son déverrouillage autorisé.
 - Garantir structurellement qu’un mur est lié à zéro, une ou deux pièces, jamais trois.
 - Critère de sortie: tests domaine et base couvrant succès, refus verrouillé, rollback transactionnel, ouvertures et profils multiples.
 
@@ -58,11 +60,11 @@ Objectif: appliquer le même contrat d’unités et d’affichage dans toutes le
 
 ### V1-R12 — Revalider accès, comptes, projets et collaboration asynchrone
 
-Objectif: fermer les écarts des anciennes tâches V1-09 à V1-20 hors verrou collaboratif final.
+Objectif: fermer les écarts des anciennes tâches V1-09 à V1-20 hors verrou collaboratif global reporté après la V1.0.
 
 - Rejouer la matrice RLS pour propriétaire, lecture, écriture, administrateur et utilisateur sans accès.
 - Revalider LoginView, demandes de compte, profil, administration, projets, invitations et collaborations.
-- Brancher les verrous manuels dans toutes les vues et opérations de production.
+- Brancher le verrouillage géométrique par points dans toutes les vues et opérations de production.
 - Retirer les succès génériques et blocs informatifs non demandés; conserver erreurs, états indispensables et confirmations destructives.
 - Critère de sortie: recettes UI/RLS concordantes et aucune écriture indirecte possible en lecture seule.
 
@@ -95,21 +97,11 @@ Objectif: terminer ProjectMetricsView sans inventer le contrat des formats.
 - Exporter exactement les lignes, l’ordre et les unités visibles au déclenchement.
 - Critère de sortie: identité vérifiée entre domaine, éditeurs, tableau filtré et chaque fichier exporté.
 
-### V1-R40 — Réactiver le verrou collaboratif
-
-Objectif: ajouter la protection concurrente une fois les parcours d’écriture stabilisés.
-
-- Réactiver la protection SQL et frontend au niveau du projet.
-- Acquérir et renouveler le verrou uniquement après une persistance réussie.
-- Afficher le détenteur et rendre les vues consultatives pour les autres utilisateurs.
-- Tester expiration serveur après deux minutes et prise de relais par une seconde session.
-- Critère de sortie: aucune écriture concurrente conflictuelle et aucune gêne sur les parcours de consultation.
-
 ### V1-R50 — Recetter et publier la V1
 
 Objectif: produire la preuve de livraison 1.0.
 
-- Exécuter les recettes sécurité, concurrence, droits, topologie, profils, métriques et exports.
+- Exécuter les recettes sécurité, droits, topologie, verrouillage géométrique, profils, métriques et exports.
 - Vérifier accessibilité, performances, base Supabase neuve, compilation et cohérence documentaire.
 - Mettre toutes les lignes de la matrice à `Terminé` avec leurs preuves.
 - Critère de sortie: checklist de publication 1.0 entièrement verte.
@@ -125,8 +117,11 @@ Objectif: produire la preuve de livraison 1.0.
 | V1-R20 | V1-21 à V1-28 |
 | V1-R30 | V1-29 |
 | V1-R31 | V1-30 et V1-31 |
-| V1-R40 | V1-18 et partie concurrence de V1-32 |
-| V1-R50 | V1-32 et V1-33 |
+| V1-R50 | V1-32 hors concurrence multi-utilisateur, et V1-33 |
+
+## Évolution hors V1
+
+Le verrou collaboratif global du projet, anciennement suivi par V1-18 et V1-R40, est reporté après la V1.0. Sa version cible, son contrat d'acquisition et sa stratégie de synchronisation seront respécifiés avant implémentation.
 
 ## Sources de référence
 

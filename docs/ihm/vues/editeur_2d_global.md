@@ -103,7 +103,7 @@
   - Le collaborateur en lecture conserve la navigation, la sélection consultative, les options d'affichage, le zoom et les exports.
   - En lecture seule, les contrôles de création, d'édition, de suppression, d'annulation et de rétablissement d'actions métier sont désactivés ou masqués.
   - Une tentative d'écriture indirecte est refusée même si un contrôle obsolète reste affiché.
-  - Pendant l'implémentation des autres fonctions V1, le verrou collaboratif projet reste suspendu; il est réactivé et recetté avant la publication 1.0.
+  - Le verrou collaboratif global du projet est hors périmètre de la V1.0 et sera respécifié dans une version ultérieure.
  - Sauvegarde:
   - Les modifications de géométrie et de structure sont d'abord appliquées en brouillon local.
   - Une auto-sauvegarde est déclenchée toutes les 5 minutes quand des changements non sauvegardés existent.
@@ -113,11 +113,14 @@
   - Aucun message de succès générique n'est affiché après une action standard sans demande explicite.
   - Toute sortie de la vue avec des changements non sauvegardés demande une confirmation explicite.
   - Un changement de contexte interne à la vue (niveau éditable, sélection, panneau, mode) ne déclenche pas de confirmation de sortie.
-- Verrouillage manuel:
-  - Une pièce, un mur ou une ouverture verrouillé reste sélectionnable et consultable dans le canvas et les panneaux.
-  - Ses modifications, manipulations et sa suppression sont bloquées jusqu'à son déverrouillage.
-  - Le propriétaire et les collaborateurs en écriture peuvent verrouiller ou déverrouiller l'élément sélectionné; le collaborateur en lecture consulte uniquement son état.
-  - Les verrous sont propres à chaque élément et ne se propagent pas entre pièce, mur et ouverture.
+- Verrouillage géométrique:
+  - Les sommets du plan portent les seuls verrous géométriques persistés de cette vue.
+  - Un clic droit sur un sommet permet au propriétaire ou au collaborateur en écriture de le verrouiller ou le déverrouiller.
+  - Les boutons des blocs d'édition Pièce et Mur appliquent l'état à tous leurs sommets concernés.
+  - L'état verrouillé des murs, pièces et côtes est calculé et propagé immédiatement dans le canvas et les panneaux.
+  - Une interaction interdite est refusée avant toute modification du brouillon ou de l'historique.
+  - Les ouvertures ne possèdent aucun verrou propre et restent modifiables lorsque leur mur est verrouillé.
+  - Le contrat complet suit [verrouillage_geometrique.md](../logique/verrouillage_geometrique.md).
 - Contexte de travail:
   - La vue travaille toujours dans le contexte du projet courant.
   - Un seul niveau est editable a un instant donne.
@@ -145,7 +148,7 @@
 - Topologie des murs:
   - Un mur peut être lié à deux pièces au maximum.
   - Lorsqu'une troisième pièce rejoint l'intérieur d'un mur existant, la vue crée un sommet au point de jonction, scinde le mur existant en deux et conserve le mur aboutissant: trois murs distincts se rencontrent alors au sommet.
-  - Toute transformation topologique est refusée avant persistance si elle affecte une pièce, un mur ou une ouverture verrouillé.
+  - Toute transformation topologique est refusée avant la première mutation du brouillon si elle déplacerait, remplacerait ou supprimerait un sommet verrouillé.
 - Export PDF:
   - L'export Plan prend en compte les niveaux visibles et les options d'affichage actives.
   - L'export Détail ajoute le détail structuré de tous les niveaux visibles au plan exporté.
@@ -171,7 +174,7 @@
   - Les mesures directement liees a l'objet edite restent visibles en priorite.
 - État élément verrouillé:
   - L'élément sélectionné reste en surbrillance et son bloc d'édition reste consultable.
-  - Un indicateur explicite signale son verrouillage et les contrôles de modification ou de suppression sont indisponibles.
+  - Un indicateur explicite signale son verrouillage calculé et seuls les contrôles géométriques ou de suppression interdits sont indisponibles.
 - Etat repli panneaux:
   - Le repli du panneau creation ou détail ne supprime ni la sélection ni le contexte de travail.
 - Etat erreur:
@@ -298,10 +301,10 @@
   - Then la sélection est nettoyee
   - And la vue revient a un etat stable
 - Scenario 11 - Élément verrouillé:
-  - Given une pièce, un mur ou une ouverture verrouillé est visible
+  - Given un sommet, un mur, une pièce ou une côte verrouillé est visible
   - When l'utilisateur le sélectionne
   - Then l'élément est mis en surbrillance et ses données restent consultables
-  - And sa modification et sa suppression sont indisponibles jusqu'à son déverrouillage
+  - And ses interactions géométriques interdites sont indisponibles jusqu'au déverrouillage de ses points
 - Scenario 12 - Jonction d'une troisième pièce sur un mur:
   - Given un mur existant est déjà une frontière entre des pièces
   - When le mur d'une troisième pièce rejoint l'intérieur de ce mur

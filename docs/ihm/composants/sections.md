@@ -110,6 +110,7 @@
 - La hauteur et l'épaisseur de mur proposées à la création proviennent des préférences de l'utilisateur courant; en l'absence de préférences enregistrées, elles valent respectivement `250 cm` et `10 cm`.
 - Les préférences sont lues à l'entrée dans un nouveau formulaire de création; leur modification ne change ni un formulaire déjà commencé ni un mur existant.
 - Les règles geometriques et de synchronisation detaillees restent referencees dans le dossier logique.
+- Le verrouillage géométrique des points et ses états calculés suivent [verrouillage_geometrique.md](../logique/verrouillage_geometrique.md).
 - Modes d'édition declenches par section:
 	- LevelsSection:
 		- aucun mode de dessin actif sur le canvas,
@@ -179,6 +180,8 @@
 	- la longueur et la largeur sont visibles en temps reel entre les deux clics,
 	- la sélection d'une pièce existante ouvre automatiquement le bloc édition correspondant,
 	- la suppression retire la pièce du plan selon les validations metier en vigueur.
+	- l'action `Verrouiller` ou `Déverrouiller` applique l'état à tous les sommets des murs du contour,
+	- la pièce affiche un état verrouillé calculé lorsque tous ses murs sont verrouillés.
 
 ### Focus detaille - WallsSection
 - Etats de la section:
@@ -197,12 +200,15 @@
 	- l'action Ouvrir la vue Mur ouvre WallEditorView avec les contextes projet, niveau et mur courants; le contexte de pièce est transmis uniquement depuis RoomEditor2DView,
 	- l'action Couper en deux lance un mode de coupe centre sur un point de coupe valide,
 	- lorsqu'un mur créé rejoint l'intérieur d'un mur existant à la jonction d'une troisième pièce, le mur existant est automatiquement scindé au nouveau sommet afin d'obtenir trois murs distincts, chacun lié à deux pièces au maximum,
-	- toute coupe, scission, intersection ou création issue d'un chevauchement est refusée atomiquement si elle affecte une pièce, un mur ou une ouverture verrouillé,
+	- toute coupe, scission, intersection ou création issue d'un chevauchement est refusée atomiquement si elle déplacerait, remplacerait ou supprimerait un sommet verrouillé,
 	- l'action Detacher place l'utilisateur dans un mode de choix du point d'ancrage a deplacer,
 	- en scope RoomEditor2DView, la suppression d'un mur mitoyen est refusee,
 	- en scope RoomEditor2DView, la creation d'un mur est refusee si sa géométrie sort de la pièce courante,
 	- en scope RoomEditor2DView, la creation d'un nouveau mur intérieur creant une nouvelle pièce est refusee,
 	- l'action Supprimer retire le mur du plan apres validation metier.
+	- l'action `Verrouiller` ou `Déverrouiller` applique l'état aux deux sommets du mur,
+	- le mur est calculé verrouillé lorsque ses deux sommets sont verrouillés,
+	- lorsque le mur est verrouillé, son épaisseur et ses transformations géométriques sont indisponibles; matériau, isolation et notes restent modifiables.
 
 ### Focus detaille - NotesSection
 - Etats de la section:
@@ -238,8 +244,8 @@
 	- la sélection d'une ouverture existante ouvre automatiquement le bloc édition correspondant,
 	- au survol d'un mur incompatible avec le template sélectionné, aucune prévisualisation ni mesure de positionnement n'est affichée,
 	- le switch Ouvrant gauche/droite n'est visible que si applicable au type d'ouverture,
-	- action contextuelle `Verrouiller` ou `Déverrouiller` dans le bloc d'édition de l'ouverture sélectionnée,
 	- l'action Inverser le sens agit sur l'orientation de l'ouverture par rapport au mur support.
+	- une ouverture ne possède aucun verrou propre et reste modifiable lorsque son mur est verrouillé.
 
 ### Focus detaille - DimensionsSection
 - Etats de la section:
@@ -256,12 +262,14 @@
 - Règles d'interaction:
 	- la touche Echap annule toute creation de cote en cours,
 	- l'action Repositionner decalage remet la cote dans une phase de reglage de decalage,
-	- la sélection d'une cote existante ouvre automatiquement son bloc édition.
+	- la sélection d'une cote existante ouvre automatiquement son bloc édition,
+	- une cote référant un mur verrouillé ou un sommet verrouillé ne peut pas être repositionnée ni supprimée.
 
 ## Cas limites
 - Creation lancee sans prerequis de contexte (ex: pas de niveau actif): action refusee avec feedback explicite.
 - Objet selectionne disparu avant validation édition: bloc édition ferme et sélection nettoyee.
-- Pièce, mur ou ouverture verrouillé: le bloc reste consultable, ses actions de modification et de suppression sont indisponibles, et l'action `Déverrouiller` reste disponible au propriétaire et aux collaborateurs en écriture.
+- Pièce ou mur calculé verrouillé: le bloc reste consultable; les actions géométriques et la suppression sont indisponibles, tandis que les propriétés non géométriques autorisées restent éditables.
+- Ouverture sélectionnée sur un mur verrouillé: ses propriétés, sa position et sa suppression restent disponibles selon les validations ordinaires.
 - Données de liste volumineuses: la section reste navigable sans perdre la cohérence de sélection.
 
 ## Criteres d'acceptation testables
@@ -286,7 +294,9 @@
 - Given l'utilisateur clique sur Detacher pour un mur, When le mode s'active, Then les points d'ancrage eligibles sont mis en evidence pour permettre le choix du point a deplacer.
 - Given une note est en cours de creation sans objet selectionne, When l'utilisateur valide la note, Then la note est rattachee au projet.
 - Given une note existante est selectionnee, When l'utilisateur clique sur Changer origine, Then la note passe en mode de reassociation sans perdre son texte.
-- Given une pièce, un mur ou une ouverture verrouillé est sélectionné, When son bloc d'édition s'affiche, Then ses données restent consultables et aucune modification ni suppression n'est disponible avant son déverrouillage.
+- Given une pièce calculée verrouillée est sélectionnée, When son bloc d'édition s'affiche, Then ses propriétés descriptives restent consultables et aucune transformation géométrique ni suppression n'est disponible avant le déverrouillage de ses points.
+- Given un mur calculé verrouillé est sélectionné, When son bloc d'édition s'affiche, Then son épaisseur et ses actions géométriques sont indisponibles, mais son matériau, son isolation et ses notes restent modifiables.
+- Given une ouverture d'un mur verrouillé est sélectionnée, When son bloc d'édition s'affiche, Then sa position, ses dimensions, ses propriétés et sa suppression restent disponibles.
 
 ## References
 - Referentiel global : [ihm.md](../ihm.md)

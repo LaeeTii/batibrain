@@ -17,10 +17,10 @@
 - AppNotifications
 
 ### Statut du verrou d'édition collaboratif
-- Le verrou d'édition collaboratif projet est suspendu pendant l'implémentation et le débogage des autres fonctions V1.
-- Il est réactivé et recetté avec deux sessions à la fin de la V1, avant la publication 1.0.
-- Les contrôles d'écriture reposent uniquement sur les droits projet et les verrous manuels durant cette phase.
-- La suspension est appliquée côté frontend et dans la couche SQL de persistance pour éviter toute acquisition implicite du verrou collaboratif.
+- Le verrou d'édition collaboratif global du projet est reporté après la V1.0.
+- Sa version cible et son contrat seront précisés avant sa réactivation.
+- En V1, les contrôles d'écriture reposent sur les droits projet et le [verrouillage géométrique par points](../logique/verrouillage_geometrique.md).
+- Aucun verrou collaboratif ne doit être acquis implicitement par les parcours V1.
 
 ### Contrat transverse de sauvegarde des vues canvas
 - Portée:

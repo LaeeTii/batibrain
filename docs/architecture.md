@@ -52,14 +52,18 @@ Le socle de tests frontend repose sur Vitest, Testing Library et jsdom. `npm run
 - le propriétaire peut lire et gérer le projet, ses ressources et ses accès; le collaborateur en lecture consulte uniquement, le collaborateur en écriture modifie les ressources métier sans gérer le projet ni ses accès, et un utilisateur sans collaboration ne voit aucune ressource
 - les options de vue liées à un projet restent propres à leur utilisateur et peuvent être persistées dès que celui-ci dispose d'un accès en lecture au projet
 - le contrôle du droit d'écriture est évalué avant toute tentative de persistance
-- le verrou d'édition collaboratif est temporairement désactivé pendant l'implémentation et le débogage de la V1; il reste une exigence de publication 1.0 et doit être réactivé, intégré aux vues puis recetté avec deux sessions après les autres fonctions V1
-- le verrou manuel persistant d'une pièce, d'un mur ou d'une ouverture reste actif; il est contrôlé avant toute modification ou suppression de la ressource, sans empêcher sa sélection ni sa consultation
-- les verrous manuels sont indépendants entre pièce, mur et ouverture et ne se propagent pas en cascade
+- le verrou d'édition collaboratif global du projet est hors périmètre de la V1.0; sa version cible et son contrat sont précisés avant une implémentation postérieure
+- le verrou géométrique persistant est porté uniquement par les sommets du plan et les points de profils de hauteur
+- l'état verrouillé d'un mur, d'une pièce, d'une côte ou d'un profil est calculé depuis ses points selon [le contrat de verrouillage géométrique](./ihm/logique/verrouillage_geometrique.md)
+- le domaine frontend refuse une interaction géométrique interdite avant toute mutation du brouillon local
+- les boutons de verrouillage d'une pièce, d'un mur ou d'un profil modifient atomiquement les verrous de leurs points; les effets sur les objets partageant ces points sont volontaires
+- lorsque les profils sont liés, les verrous de leurs points correspondants sont synchronisés
+- les ouvertures ne portent aucun verrou propre et restent modifiables selon leurs validations ordinaires
 - la compatibilité intérieur/extérieur entre un template d'ouverture et son mur support est une validation métier géométrique portée par le domaine frontend avant persistance
 - la qualification intérieure ou extérieure d'un mur est calculée depuis le nombre de pièces liées et n'est pas persistée comme donnée source
 - un mur ne peut jamais être lié à trois pièces; lorsqu'une troisième pièce rejoint l'intérieur d'un segment existant, la logique géométrique crée un sommet de jonction, scinde le segment initial en deux et persiste trois murs distincts autour de ce sommet
 - après toute modification topologique, les relations mur-pièce et la compatibilité des ouvertures sont recalculées avant persistance; les ouvertures devenues incompatibles sont supprimées
-- toute transformation topologique est refusée atomiquement si elle modifierait, scinderait ou supprimerait une pièce, un mur ou une ouverture verrouillé; aucun objet ni brouillon persistant partiel n'est produit
+- toute transformation topologique est refusée atomiquement si elle déplacerait, remplacerait ou supprimerait un sommet verrouillé; aucun objet ni brouillon persistant partiel n'est produit
 - la création et les mises à jour géométriques sont en migration vers des opérations pilotées par le domaine TypeScript et une sauvegarde différée côté frontend
 - le type de pièce est persisté dans Supabase/PostgreSQL; son icône est une projection frontend produite avec `react-icons` et n'est pas stockée
 - les options d'affichage des surfaces et des icônes de pièces sont persistées avec les autres préférences de vue et appliquées aux canvas comme aux exports PDF
@@ -73,10 +77,12 @@ Le socle de tests frontend repose sur Vitest, Testing Library et jsdom. `npm run
 - les valeurs par défaut fonctionnelles sont définies dans `web/src/domain/`, testées avec la logique métier et envoyées explicitement lors de chaque création; elles ne reposent pas sur des clauses `DEFAULT` PostgreSQL
 - les valeurs personnalisables de hauteur et d'épaisseur de mur sont lues depuis les préférences de l'utilisateur courant; en l'absence de préférences enregistrées, le domaine initialise respectivement `250 cm` et `10 cm`
 - les règles métier évolutives sont validées dans `web/src/domain/` avant persistance, notamment les règles géométriques, les compatibilités, les bornes fonctionnelles et les transitions d'état
-- l'interface peut répéter ces validations pour fournir un retour immédiat, mais elle s'appuie sur le domaine pour prendre la décision métier
+- l'interface interroge le domaine avant chaque interaction géométrique afin de refuser toute mutation du brouillon impliquant un point verrouillé
 - PostgreSQL garantit uniquement l'intégrité technique indispensable: identité, présence des données structurelles, clés étrangères, unicité technique, sécurité RLS et cohérence transactionnelle
 - une contrainte `CHECK` PostgreSQL n'est ajoutée que si elle protège une propriété structurelle durable et indépendante d'une règle produit susceptible d'évoluer
 - les opérations qui doivent rester indivisibles sont persistées dans une même transaction, sans déplacer pour autant leur décision métier dans la base de données
+- une sauvegarde peut déverrouiller des points et appliquer leurs modifications géométriques dans la même transaction atomique
+- la frontière transactionnelle refuse toute modification d'un point verrouillé dans l'état courant de la base, sauf si le même instantané autorisé demande son déverrouillage
 - les RPC PostgreSQL `create_piece_complete`, `replace_wall_topology` et `write_wall_height_profiles` constituent les frontières transactionnelles respectives de création d'une pièce, de remplacement d'un ensemble ciblé de murs et d'écriture des profils d'un mur
 - ces RPC reçoivent des instantanés JSON validés par le domaine frontend avec des identifiants explicites; `replace_wall_topology` retire uniquement les murs explicitement remplacés, persiste leurs murs résultants et leurs relations mur-pièce, puis ne réinsère parmi leurs ouvertures que celles dont le placement intérieur ou extérieur reste compatible
 - toute modification d'une règle ou d'une valeur par défaut fonctionnelle doit pouvoir être réalisée dans le code et ses tests sans nécessiter de migration SQL
