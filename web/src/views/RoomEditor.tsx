@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActionIcon, Button, NativeSelect, NumberInput, TextInput, UnstyledButton } from '@mantine/core';
+import { LuEye } from 'react-icons/lu';
 import { RoomCanvas } from '../components/RoomCanvas';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { usePreferences } from '../components/PreferencesContext';
@@ -42,6 +43,7 @@ const DEFAULT_LEVEL_NAME = '';
 const DEFAULT_PROJECT_NAME = '';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const OPENING_REMAP_EPSILON = 1e-6;
+const ROOM_EDITOR_WRITES_ENABLED = false;
 const AREA_FORMATTER = new Intl.NumberFormat('fr-FR', {
   minimumFractionDigits: 0,
   maximumFractionDigits: 2,
@@ -340,6 +342,7 @@ export function RoomEditor({
   }
 
   const markDirty = useCallback(() => {
+    if (!ROOM_EDITOR_WRITES_ENABLED) return;
     setHasUnsavedChanges(true);
     setSaveStatus('dirty');
   }, []);
@@ -383,6 +386,7 @@ export function RoomEditor({
   }
 
   function handleVerticesChange(nextVertices: Vertex[]) {
+    if (!ROOM_EDITOR_WRITES_ENABLED) return;
     const previousWalls = wallDefinitions;
     const nextWalls = syncWallsWithVertices(nextVertices, previousWalls);
     setVertices(nextVertices);
@@ -395,7 +399,7 @@ export function RoomEditor({
   }
 
   function updateSelectedWall(nextWall: Wall) {
-    if (selectedWallIndex === null) return;
+    if (!ROOM_EDITOR_WRITES_ENABLED || selectedWallIndex === null) return;
 
     setWallDefinitions((currentWalls) => currentWalls.map((wall, index) => (
       index === selectedWallIndex ? nextWall : wall
@@ -444,7 +448,7 @@ export function RoomEditor({
   }
 
   function handleAddOpening() {
-    if (!selectedWall || !selectedWallDefinition) return;
+    if (!ROOM_EDITOR_WRITES_ENABLED || !selectedWall || !selectedWallDefinition) return;
 
     const offsetCm = parseMetricInput(openingDraft.offsetCm);
     const widthCm = parseMetricInput(openingDraft.widthCm);
@@ -502,6 +506,7 @@ export function RoomEditor({
   }
 
   function handleRemoveOpening(openingId: string) {
+    if (!ROOM_EDITOR_WRITES_ENABLED) return;
     setOpenings((currentOpenings) => currentOpenings.filter((opening) => opening.id !== openingId));
     setOpeningFormMessage(null);
     setErrorMessage(null);
@@ -741,6 +746,7 @@ export function RoomEditor({
   };
 
   const handleCreateProject = () => {
+    if (!ROOM_EDITOR_WRITES_ENABLED) return;
     void runRoomAction('create-project', async () => {
       const projectName = newProjectNameInput.trim();
 
@@ -791,6 +797,7 @@ export function RoomEditor({
   };
 
   const handleCreateLevel = () => {
+    if (!ROOM_EDITOR_WRITES_ENABLED) return;
     void runRoomAction('create-level', async () => {
       const projectId = newLevelProjectId.trim();
       const levelName = newLevelNameInput.trim();
@@ -822,6 +829,7 @@ export function RoomEditor({
   };
 
   const handleCreateRoom = () => {
+    if (!ROOM_EDITOR_WRITES_ENABLED) return;
     const roomName = newRoomNameInput.trim();
 
     if (!selectedLevelId) {
@@ -882,6 +890,7 @@ export function RoomEditor({
   };
 
   const handleSaveRoom = (mode: 'manual' | 'auto' = 'manual') => {
+    if (!ROOM_EDITOR_WRITES_ENABLED) return;
     void runRoomAction('save', async () => {
       setSaveStatus('saving');
       const draftRoomName = roomNameInput.trim();
@@ -980,7 +989,7 @@ export function RoomEditor({
   };
 
   useEffect(() => {
-    if (!supabaseConfigured || !hasUnsavedChanges || isBusy || !selectedLevelId) {
+    if (!ROOM_EDITOR_WRITES_ENABLED || !supabaseConfigured || !hasUnsavedChanges || isBusy || !selectedLevelId) {
       return undefined;
     }
     const interval = window.setInterval(() => {
@@ -990,6 +999,7 @@ export function RoomEditor({
   }, [handleSaveRoom, hasUnsavedChanges, isBusy, selectedLevelId, supabaseConfigured]);
 
   const handleDeleteRoom = () => {
+    if (!ROOM_EDITOR_WRITES_ENABLED) return;
     void runRoomAction('delete', async () => {
       if (!activeRoom) {
         throw new Error('Sélectionne une pièce avant de la supprimer.');
@@ -1033,6 +1043,10 @@ export function RoomEditor({
           </p>
         </div>
         <div className="room-editor__headerActions">
+          <span className="room-editor__readOnlyStatus" role="status">
+            <LuEye aria-hidden="true" />
+            Lecture seule
+          </span>
           {onBack ? (
             <Button variant="default" className="dashboard-outlineButton" onClick={onBack}>
               Retour
@@ -1068,7 +1082,7 @@ export function RoomEditor({
                 variant="light"
                 className="room-editor__iconAction"
                 onClick={handleCreateRoom}
-                disabled={isBusy || !selectedLevelId || (!activeRoom && vertices.length !== 4)}
+                disabled
                 aria-label="Préparer une nouvelle pièce"
               >
                 +
@@ -1095,7 +1109,7 @@ export function RoomEditor({
                 value={newRoomNameInput}
                 onChange={(event) => setNewRoomNameInput(event.target.value)}
                 placeholder="Cuisine, salon, chambre..."
-                disabled={isBusy}
+                disabled
             />
 
             <div className="room-editor__list">
@@ -1125,16 +1139,16 @@ export function RoomEditor({
           <div className="room-editor__canvasPanel">
             <div className="room-editor__toolbar">
               <div className="room-editor__toolGroup">
-                <Button variant="light" className="room-editor__toolButton is-active">Dessiner</Button>
-                <Button variant="subtle" className="room-editor__toolButton">Sélection</Button>
-                <Button variant="subtle" className="room-editor__toolButton">Déplacer</Button>
-                <Button variant="subtle" className="room-editor__toolButton">Mesurer</Button>
-                <Button variant="subtle" className="room-editor__toolButton">Annoter</Button>
+                <Button variant="light" className="room-editor__toolButton" disabled>Dessiner</Button>
+                <Button variant="subtle" className="room-editor__toolButton" disabled>Sélection</Button>
+                <Button variant="subtle" className="room-editor__toolButton" disabled>Déplacer</Button>
+                <Button variant="subtle" className="room-editor__toolButton" disabled>Mesurer</Button>
+                <Button variant="subtle" className="room-editor__toolButton" disabled>Annoter</Button>
               </div>
               <Button
                 className="dashboard-primaryButton room-editor__toolbarSave"
                 onClick={() => handleSaveRoom('manual')}
-                disabled={isBusy || !selectedLevelId}
+                disabled
               >
                 {busyAction === 'save' ? 'Enregistrement...' : activeRoom ? 'Enregistrer' : 'Créer la pièce'}
               </Button>
@@ -1148,6 +1162,7 @@ export function RoomEditor({
               viewportStateKey={`room:${selectedProjectId}:${selectedLevelId}:${selectedRoomId || 'draft'}`}
               selectedWallIndex={selectedWallIndex}
               showInspector={false}
+              readOnly
               height={760}
               onVerticesChange={handleVerticesChange}
               onWallSelect={setSelectedWallIndex}
@@ -1252,6 +1267,7 @@ export function RoomEditor({
                       <NativeSelect className="dashboard-field dashboard-field--compact room-editor__openingTypeField" label="Type"
                           value={openingDraft.type}
                           onChange={(event) => handleOpeningDraftChange('type', event.target.value)}
+                          disabled
                         data={[{ value: 'door', label: 'Porte' }, { value: 'window', label: 'Fenêtre' }, { value: 'other', label: 'Autre' }]}
                       />
                       <NumberInput className="dashboard-field dashboard-field--compact" label="Position (cm)"
@@ -1259,28 +1275,32 @@ export function RoomEditor({
                           step={1}
                           value={openingDraft.offsetCm}
                           onChange={(value) => handleOpeningDraftChange('offsetCm', String(value))}
+                          disabled
                         />
                       <NumberInput className="dashboard-field dashboard-field--compact" label="Largeur (cm)"
                           min={1}
                           step={1}
                           value={openingDraft.widthCm}
                           onChange={(value) => handleOpeningDraftChange('widthCm', String(value))}
+                          disabled
                         />
                       <NumberInput className="dashboard-field dashboard-field--compact" label="Allège (cm)"
                           min={0}
                           step={1}
                           value={openingDraft.bottomCm}
                           onChange={(value) => handleOpeningDraftChange('bottomCm', String(value))}
+                          disabled
                         />
                       <NumberInput className="dashboard-field dashboard-field--compact" label="Hauteur (cm)"
                           min={1}
                           step={1}
                           value={openingDraft.heightCm}
                           onChange={(value) => handleOpeningDraftChange('heightCm', String(value))}
+                          disabled
                         />
                     </div>
 
-                    <Button className="dashboard-viewButton" onClick={handleAddOpening}>
+                    <Button className="dashboard-viewButton" onClick={handleAddOpening} disabled>
                       Ajouter ouverture
                     </Button>
 
@@ -1302,6 +1322,7 @@ export function RoomEditor({
                               variant="subtle"
                               className="room-editor__openingDeleteButton"
                               onClick={() => handleRemoveOpening(opening.id)}
+                              disabled
                               aria-label={`Supprimer l'ouverture ${openingTypeLabel(opening.type)}`}
                               title="Supprimer"
                             >

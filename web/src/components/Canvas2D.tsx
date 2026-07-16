@@ -517,7 +517,7 @@ export function Canvas2D({
       >
         <Layer scaleX={scale} scaleY={scale} x={offsetX - viewport.x * scale} y={offsetY - viewport.y * scale}>
           <Rect
-            name="canvas-background"
+            name="canvas2d-background"
             x={visibleViewport.x}
             y={visibleViewport.y}
             width={visibleViewport.width}
@@ -556,6 +556,7 @@ export function Canvas2D({
 
           {options.rulers ? (
             <Group>
+              <Text x={8} y={-8} text="0,0" fontSize={11} fill="#64748b" />
               <Text
                 x={viewport.x + 15}
                 y={viewport.y + 25}
@@ -598,7 +599,7 @@ export function Canvas2D({
                           stroke={isRoomSelected ? '#6757ff' : snapshot.walls.length === 0 ? appearance.stroke : 'rgba(0,0,0,0)'}
                           strokeWidth={isRoomSelected ? 8 : snapshot.walls.length === 0 ? 4 : 0}
                           onClick={() => {
-                            if (isActiveLevel) {
+                            if (!creationActive && isActiveLevel) {
                               onSelect?.({ source: 'canvas', type: 'room', id: snapshot.room.id, levelId: level.id });
                             }
                           }}
@@ -649,7 +650,7 @@ export function Canvas2D({
                         stroke={isWallSelected ? '#6757ff' : appearance.stroke}
                         strokeWidth={isWallSelected ? 10 : 4}
                         onClick={() => {
-                          if (isActiveLevel) onSelect?.({ source: 'canvas', type: 'wall', id: wall.id, levelId: level.id });
+                          if (!creationActive && isActiveLevel) onSelect?.({ source: 'canvas', type: 'wall', id: wall.id, levelId: level.id });
                         }}
                       />
                     );
@@ -668,7 +669,7 @@ export function Canvas2D({
                         stroke={isOpeningSelected ? '#6757ff' : '#ffffff'}
                         strokeWidth={isOpeningSelected ? 12 : 8}
                         onClick={() => {
-                          if (isActiveLevel) onSelect?.({ source: 'canvas', type: 'opening', id: opening.id, levelId: level.id });
+                          if (!creationActive && isActiveLevel) onSelect?.({ source: 'canvas', type: 'opening', id: opening.id, levelId: level.id });
                         }}
                       />
                     );
@@ -744,6 +745,7 @@ export function Canvas2D({
 
           {creationFirstPoint && creationPreviewPoint ? (
             <Line
+              name="canvas2d-creationPreview"
               points={[
                 creationFirstPoint.x,
                 creationFirstPoint.y,

@@ -9,13 +9,15 @@ insert into opening_templates(id, name, opening_type, placement_type) values
 ('a5000000-0000-0000-0000-000000000001', 'Porte extérieure', 'porte', 'extérieur');
 insert into projects(id, owner_user_id, name, is_soft_deleted) values
 ('a2000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000001', 'Projet verrou', false);
+update levels
+set id = 'a3000000-0000-0000-0000-000000000001'
+where project_id = 'a2000000-0000-0000-0000-000000000001'
+  and level_number = 0;
 insert into project_collaborations(project_id, user_id, role) values
 ('a2000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000002', 'lecture');
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', 'a1000000-0000-0000-0000-000000000001', true);
-insert into levels(id, project_id, name, level_number, is_visible, is_soft_deleted) values
-('a3000000-0000-0000-0000-000000000001', 'a2000000-0000-0000-0000-000000000001', 'Niveau 0', 0, true, false);
 insert into pieces(id, level_id, name, room_type, floor_color, wall_thickness_cm, wall_height_cm, is_soft_deleted, is_locked) values
 ('a4000000-0000-0000-0000-000000000001', 'a3000000-0000-0000-0000-000000000001', 'Salon', 'salon', '#ffffff', 10, 250, false, false);
 insert into piece_vertices(id, piece_id, vertex_order, x_cm, y_cm) values

@@ -19,6 +19,11 @@ insert into projects (
   'Projet RLS', false, now(), now()
 );
 
+update levels
+set id = '50000000-0000-0000-0000-000000000001'
+where project_id = '20000000-0000-0000-0000-000000000001'
+  and level_number = 0;
+
 insert into project_collaborations (id, project_id, user_id, role)
 values
   ('30000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000002', 'lecture'),
@@ -31,13 +36,6 @@ insert into project_invitations (
   '10000000-0000-0000-0000-000000000005', 'invitee@example.test', 'lecture', 'en_attente'
 );
 
-insert into levels (
-  id, project_id, name, level_number, is_visible, is_soft_deleted
-) values (
-  '50000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001',
-  'Niveau 0', 0, true, false
-);
-
 set local role authenticated;
 
 select set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000001', true);
@@ -46,7 +44,13 @@ select results_eq(
   array[1::bigint], 'le propriétaire lit son projet'
 );
 select results_eq(
-  $$update projects set name = 'Projet propriétaire' where id = '20000000-0000-0000-0000-000000000001' returning id$$,
+  $$select id from update_project_with_lock(
+    '20000000-0000-0000-0000-000000000001',
+    'Projet propriétaire',
+    null,
+    null,
+    false
+  )$$,
   array['20000000-0000-0000-0000-000000000001'::uuid], 'le propriétaire modifie son projet'
 );
 select results_eq(

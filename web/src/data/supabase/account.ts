@@ -49,7 +49,7 @@ export const supabaseAccountGateway: AccountGateway = {
   async updateProfile(input, avatar) {
     const client = getSupabaseClient();
     let uploadedPath: string | null = null;
-    let previousPath: string | null = null;
+    let previousPath: string | null;
 
     try {
       const { data: userData, error: userError } = await client.auth.getUser();

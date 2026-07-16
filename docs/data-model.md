@@ -115,7 +115,7 @@ Règles:
 - L'utilisateur authentifié peut créer, lire et modifier uniquement son propre profil.
 - Tout nouveau compte approuvé reçoit le rôle `user`.
 - Le rôle est modifiable uniquement par un administrateur et n'est jamais accepté depuis une mise à jour de profil personnelle.
-- Le premier administrateur est promu manuellement dans Supabase après la création de son compte.
+- Le premier administrateur est promu manuellement dans Supabase après la création de son compte, selon la [procédure dédiée](./exploitation-premier-administrateur.md), sans donnée personnelle ni provisionnement dans les migrations.
 - Un administrateur ne peut ni rétrograder ni supprimer son propre compte.
 - Toute modification de rôle ou suppression de compte doit conserver au moins un administrateur.
 - La suppression est confirmée avec le nombre courant de projets possédés; le serveur refuse l'opération si ce nombre a changé depuis l'affichage.

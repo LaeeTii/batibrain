@@ -43,7 +43,7 @@ Le socle de tests frontend repose sur Vitest, Testing Library et jsdom. `npm run
 - avant une suppression, le frontend confirme le nombre de projets possédés et le serveur le recompte; la suppression Auth cascade ensuite sur le profil, les projets possédés et leurs dépendances
 - les opérations d'administration Auth, notamment la création et la suppression d'un utilisateur, s'exécutent uniquement dans un environnement serveur sécurisé; aucune clé secrète Supabase n'est exposée au frontend
 - la base protège également le dernier administrateur contre une suppression directe de l'utilisateur Auth
-- le premier rôle `admin` est attribué manuellement au compte initial depuis l'interface d'administration de la base Supabase
+- le premier rôle `admin` est attribué manuellement au compte initial avec la [procédure de création du premier administrateur](./exploitation-premier-administrateur.md), hors de la chaîne de migrations
 - la propriété des projets, les collaborations et les invitations sont persistées dans Supabase/PostgreSQL
 - l'accès aux données est limité côté backend aux projets possédés par l'utilisateur authentifié ou partagés avec lui après acceptation de l'invitation
 - les autorisations de lecture et d'écriture sont contrôlées côté backend selon le rôle projet; l'interface ne constitue pas la barrière de sécurité

@@ -69,8 +69,6 @@ insert into user_profiles (user_id, display_name, first_name, last_name, role)
 values ('12000000-0000-0000-0000-000000000004', 'Propriétaire', 'Pro', 'Priétaire', 'user');
 insert into projects (id, owner_user_id, name, is_soft_deleted)
 values ('22000000-0000-0000-0000-000000000001', '12000000-0000-0000-0000-000000000004', 'Projet supprimé', false);
-insert into levels (project_id, name, level_number, is_visible, is_soft_deleted)
-values ('22000000-0000-0000-0000-000000000001', 'Niveau', 0, true, false);
 delete from auth.users where id = '12000000-0000-0000-0000-000000000004';
 
 select is(

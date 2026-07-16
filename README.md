@@ -41,8 +41,11 @@ npm run dev
 Vérifications utiles :
 
 ```bash
+npm run lint
+npm run test
 npm run typecheck
 npm run build
+npm run check
 ```
 
 ## Configurer Supabase
@@ -109,6 +112,7 @@ Notes utiles :
 - Si la CLI demande le mot de passe de base de données, il est disponible dans le dashboard Supabase, section **Database**.
 - Si des migrations ont déjà été exécutées manuellement sur un projet existant, leur historique doit être aligné avant d'utiliser `supabase db push`.
 - Une base neuve est créée en rejouant toute la chaîne. Un éventuel schéma consolidé doit être généré depuis cette chaîne et ne doit pas être maintenu manuellement.
+- La création du premier administrateur est effectuée après les migrations avec la procédure décrite dans `docs/exploitation-premier-administrateur.md`; aucun profil utilisateur n'est provisionné par une migration.
 
 Exemple de démarrage :
 

@@ -21,6 +21,7 @@ export interface RoomCanvasProps {
   height?: number;
   selectedWallIndex?: number | null;
   showInspector?: boolean;
+  readOnly?: boolean;
   onVerticesChange: (next: Vertex[]) => void;
   onWallSelect?: (wallIndex: number) => void;
   rectangleCreationEnabled?: boolean;
@@ -149,6 +150,7 @@ export function RoomCanvas({
   height = 700,
   selectedWallIndex = null,
   showInspector = true,
+  readOnly = false,
   onVerticesChange,
   onWallSelect,
   rectangleCreationEnabled = false,
@@ -213,7 +215,7 @@ export function RoomCanvas({
   }, [selectedVertexIds, walls]);
 
   const handleSvgDoubleClick = (event: React.MouseEvent<SVGSVGElement>) => {
-    if (rectangleCreationEnabled) return;
+    if (readOnly || rectangleCreationEnabled) return;
     const svg = svgRef.current;
     if (!svg) return;
     const { x, y } = getSvgPoint(event, svg);
@@ -237,6 +239,7 @@ export function RoomCanvas({
     wallIndex: number,
   ) => {
     event.stopPropagation();
+    if (readOnly) return;
 
     const svg = svgRef.current;
     const wall = walls[wallIndex];
@@ -269,6 +272,7 @@ export function RoomCanvas({
     vertexId: string,
   ) => {
     event.stopPropagation();
+    if (readOnly) return;
     didDragRef.current = false;
     setDragVertexId(vertexId);
   };
@@ -297,6 +301,7 @@ export function RoomCanvas({
   };
 
   const handleMouseMove = (event: React.MouseEvent<SVGSVGElement>) => {
+    if (readOnly) return;
     if (rectangleCreationEnabled && rectangleFirstPoint && svgRef.current) {
       setRectanglePointer(getSvgPoint(event, svgRef.current));
     }
@@ -330,7 +335,7 @@ export function RoomCanvas({
   };
 
   const handleCanvasClick = (event: React.MouseEvent<SVGSVGElement>) => {
-    if (!rectangleCreationEnabled || !onRectangleCreate || !svgRef.current || event.target !== event.currentTarget && (event.target as Element).tagName !== 'rect') return;
+    if (readOnly || !rectangleCreationEnabled || !onRectangleCreate || !svgRef.current || event.target !== event.currentTarget && (event.target as Element).tagName !== 'rect') return;
     const point = getSvgPoint(event, svgRef.current);
     if (!rectangleFirstPoint) {
       setRectangleFirstPoint(point);
@@ -353,7 +358,7 @@ export function RoomCanvas({
   };
 
   const handleInsertVertexBetweenSelection = () => {
-    if (!selectedVertexWall) return;
+    if (readOnly || !selectedVertexWall) return;
 
     const nextVertexId = crypto.randomUUID();
     const next = insertVertexBetween(
@@ -375,7 +380,7 @@ export function RoomCanvas({
   };
 
   const handleDeleteSelectedVertex = () => {
-    if (!selectedVertex) return;
+    if (readOnly || !selectedVertex) return;
 
     const next = removeVertex(sortedVertices, selectedVertex.id);
     if (!next) return;
@@ -418,6 +423,7 @@ export function RoomCanvas({
   };
 
   const handleWallLabelEditStart = (wallIndex: number) => {
+    if (readOnly) return;
     const wall = walls[wallIndex];
     if (!wall) return;
 
@@ -428,7 +434,7 @@ export function RoomCanvas({
   };
 
   const handleWallLengthCommit = () => {
-    if (editingWallIndex === null) return false;
+    if (readOnly || editingWallIndex === null) return false;
 
     const parsedMeters = Number(wallLengthDraft.replace(',', '.'));
     if (!Number.isFinite(parsedMeters) || parsedMeters <= 0) {
@@ -469,7 +475,7 @@ export function RoomCanvas({
         </defs>
         <rect x={viewBox.minX} y={viewBox.minY} width={viewBox.width} height={viewBox.height} fill="url(#grid)" />
 
-        {rectangleCreationEnabled && rectangleFirstPoint && rectanglePointer ? <rect
+        {!readOnly && rectangleCreationEnabled && rectangleFirstPoint && rectanglePointer ? <rect
           x={Math.min(rectangleFirstPoint.x, rectanglePointer.x)}
           y={Math.min(rectangleFirstPoint.y, rectanglePointer.y)}
           width={Math.abs(rectanglePointer.x - rectangleFirstPoint.x)}
@@ -648,7 +654,7 @@ export function RoomCanvas({
                     handleWallLabelEditStart(wall.index);
                   }}
                   onDoubleClick={(event) => event.stopPropagation()}
-                  style={{ cursor: 'text' }}
+                  style={{ cursor: readOnly ? 'default' : 'text' }}
                 >
                   <rect
                     x={middle.x - 36}
@@ -686,7 +692,7 @@ export function RoomCanvas({
               strokeWidth={3}
               onMouseDown={(event) => handleVertexMouseDown(event, vertex.id)}
               onClick={(event) => handleVertexClick(event, vertex.id)}
-              style={{ cursor: 'grab' }}
+              style={{ cursor: readOnly ? 'pointer' : 'grab' }}
             />
             <text
               x={vertex.x + 12}
@@ -735,32 +741,32 @@ export function RoomCanvas({
         <Button
           color="red"
           onClick={handleDeleteSelectedVertex}
-          disabled={!canDeleteSelectedVertex}
+          disabled={readOnly || !canDeleteSelectedVertex}
           style={{
             width: '100%',
             marginBottom: 12,
             padding: '10px 12px',
             borderRadius: 6,
             border: '1px solid #d0d7de',
-            background: canDeleteSelectedVertex ? '#d83b01' : '#f6f8fa',
-            color: canDeleteSelectedVertex ? 'white' : '#8c959f',
-            cursor: canDeleteSelectedVertex ? 'pointer' : 'not-allowed',
+            background: !readOnly && canDeleteSelectedVertex ? '#d83b01' : '#f6f8fa',
+            color: !readOnly && canDeleteSelectedVertex ? 'white' : '#8c959f',
+            cursor: !readOnly && canDeleteSelectedVertex ? 'pointer' : 'not-allowed',
           }}
         >
           Supprimer le sommet sélectionné
         </Button>
         <Button
           onClick={handleInsertVertexBetweenSelection}
-          disabled={!selectedVertexWall}
+          disabled={readOnly || !selectedVertexWall}
           style={{
             width: '100%',
             marginBottom: 12,
             padding: '10px 12px',
             borderRadius: 6,
             border: '1px solid #d0d7de',
-            background: selectedVertexWall ? '#0e54e9' : '#f6f8fa',
-            color: selectedVertexWall ? 'white' : '#8c959f',
-            cursor: selectedVertexWall ? 'pointer' : 'not-allowed',
+            background: !readOnly && selectedVertexWall ? '#0e54e9' : '#f6f8fa',
+            color: !readOnly && selectedVertexWall ? 'white' : '#8c959f',
+            cursor: !readOnly && selectedVertexWall ? 'pointer' : 'not-allowed',
           }}
         >
           Insérer un sommet entre les sommets sélectionnés

@@ -1372,6 +1372,14 @@ body {
   gap: 10px;
 }
 
+.room-editor__readOnlyStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
 .room-editor__workspace {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr) 320px;
