@@ -14,6 +14,7 @@ type KonvaMockProps = {
   fontSize?: number;
   fontStyle?: string;
   strokeWidth?: number;
+  dash?: number[];
   onClick?: (event: KonvaMockEvent) => void;
   onMouseDown?: (event: KonvaMockEvent) => void;
   onMouseMove?: (event: KonvaMockEvent) => void;
@@ -21,6 +22,7 @@ type KonvaMockProps = {
   onMouseLeave?: (event: KonvaMockEvent) => void;
   onDragMove?: (event: KonvaMockEvent) => void;
   onDragEnd?: (event: KonvaMockEvent) => void;
+  onContextMenu?: (event: KonvaMockEvent) => void;
   [key: string]: unknown;
 };
 
@@ -30,6 +32,7 @@ type KonvaMockEvent = {
     getStage(): KonvaStageMock;
     x(): number;
     y(): number;
+    position(value: { x: number; y: number }): void;
   };
 };
 
@@ -51,6 +54,7 @@ function createEvent(event: MouseEvent<SVGElement>, props: KonvaMockProps): Konv
       getStage: () => stage,
       x: () => Number(props.x ?? 0),
       y: () => Number(props.y ?? 0),
+      position: () => undefined,
     },
   };
 }
@@ -72,6 +76,9 @@ function eventProps(props: KonvaMockProps) {
     onMouseLeave: props.onMouseLeave
       ? (event: MouseEvent<SVGElement>) => props.onMouseLeave?.(createEvent(event, props))
       : undefined,
+    onContextMenu: props.onContextMenu
+      ? (event: MouseEvent<SVGElement>) => props.onContextMenu?.(createEvent(event, props))
+      : undefined,
   };
 }
 
@@ -81,6 +88,7 @@ function presentationProps(props: KonvaMockProps) {
     fill: props.fill as string | undefined,
     stroke: props.stroke as string | undefined,
     strokeWidth: props.strokeWidth,
+    strokeDasharray: props.dash?.join(' '),
     opacity: props.opacity as number | undefined,
   };
 }

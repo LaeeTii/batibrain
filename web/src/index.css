@@ -1201,6 +1201,17 @@ body {
 .editor-panel { width: 290px; min-height: 700px; padding: 14px; border: 1px solid var(--border-soft); border-radius: 18px; background: var(--bg-surface-strong); }
 .editor-panel--collapsed { width: auto; min-height: 0; padding: 6px; }
 .editor-panel__header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.editor-panel__object-list .mantine-Button-root { line-height: 1.15; }
+.wall-editor__body { display: grid; grid-template-columns: minmax(0, 1fr) 340px; align-items: start; gap: 12px; min-width: 0; }
+.wall-editor__panel { width: 340px; max-height: 700px; overflow: auto; }
+.wall-editor__profile-point-row { width: 100%; }
+.wall-editor__profile-point-label { flex: 0 0 52px; padding-bottom: 8px; }
+.wall-editor__profile-point-field { flex: 1 1 0; min-width: 0; }
+.wall-editor__profile-point-action { flex: 0 0 28px; }
+.wall-elevation-canvas { position: relative; overflow: hidden; border: 1px solid var(--border-soft); border-radius: 18px; background: var(--bg-surface-strong); }
+.wall-elevation-canvas > svg { display: block; width: 100%; touch-action: none; }
+.room-editor2d__panel { max-height: 700px; overflow: auto; }
+.detail-tree__row.is-disabled { opacity: .48; }
 .detail-tree, .detail-tree ul { margin: 0; padding: 0; list-style: none; }
 .detail-tree ul { padding-left: 18px; }
 .detail-tree__row { display: grid; grid-template-columns: 28px minmax(0, 1fr); align-items: center; border-radius: 10px; }
@@ -1753,6 +1764,8 @@ body {
   .global-editor__editableLevel { width: 100%; }
   .global-editor__editableLevel select { flex: 1; }
   .global-editor__body { grid-template-columns: 1fr; }
+  .wall-editor__body { grid-template-columns: 1fr; }
+  .wall-editor__panel { width: 100%; max-height: none; }
   .editor-panel { width: 100%; min-height: 0; }
 
   .dashboard-header__actions {

@@ -211,3 +211,31 @@ export interface DerivedWall {
   end: Vertex;
   lengthCm: number;
 }
+
+export type DimensionType = 'point-point' | 'wall-wall' | 'point-on-wall';
+
+export interface DimensionReference {
+  type: 'point' | 'vertex' | 'wall';
+  id?: Id;
+  x?: number;
+  y?: number;
+}
+
+export interface EditorDimension {
+  id: Id;
+  levelId: Id;
+  name: string;
+  type: DimensionType;
+  distanceCm: number;
+  offsetCm: number;
+  referenceA: DimensionReference;
+  referenceB: DimensionReference;
+}
+
+export interface EditorNote {
+  id: Id;
+  projectId: Id;
+  originType: 'projet' | 'niveau' | 'pièce' | 'mur' | 'sommet' | 'ouverture';
+  originId: Id | null;
+  text: string;
+}

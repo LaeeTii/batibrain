@@ -115,9 +115,10 @@
 	- un template extérieur affiche sa prévisualisation et ses mesures uniquement sur un mur lié à une pièce,
 	- au survol d'un mur incompatible, aucune prévisualisation ni mesure liée à l'ouverture n'est rendue.
 - Règles de la vue de face:
-	- une seule face du mur est affichée à la fois et le changement de face conserve le zoom et le mur sélectionné,
+	- une seule face du mur est active et éditable à la fois; le profil de la face opposée reste visible en filigrane non interactif et le changement de face conserve le zoom et le mur sélectionné,
 	- le contour supérieur relie dans l'ordre les points du profil de la face active,
 	- les deux extrémités du profil et leurs hauteurs sont toujours visibles en mode édition,
+	- les verticales gauche et droite du mur sont rendues en trait plein, tandis que les verticales des points intermédiaires sont rendues en pointillé,
 	- les ouvertures sont projetées à leur position sur le mur et leurs largeur, hauteur, allège et distances aux extrémités peuvent être cotées,
 	- lorsque le lien des profils est inactif, le profil de la face opposée n'est jamais modifié indirectement,
 	- lorsque le lien est actif, toute modification graphique du profil courant est répercutée sur le profil opposé dans la même action métier.
@@ -143,6 +144,8 @@
 - Given un mur est lié à deux pièces visibles, When le niveau est rendu, Then un seul segment mural interactif est affiché pour cet identifiant.
 - Given l'utilisateur clique sur reset zoom, When l'action est terminee, Then le niveau de zoom revient a sa valeur initiale.
 - Given WallEditorView affiche une face, When l'utilisateur choisit l'autre face, Then le canvas rend le profil propre à cette face sans changer le mur sélectionné.
+- Given WallEditorView affiche une face, When le canvas est rendu, Then le profil opposé apparaît en filigrane atténué et pointillé derrière le profil actif sans intercepter les interactions.
+- Given le profil affiché comporte des points intermédiaires, When le canvas est rendu, Then les verticales gauche et droite sont en trait plein et les guides verticaux intermédiaires sont en pointillé.
 - Given une ouverture dépasse la hauteur disponible sur une face, When une modification de profil est validée, Then la modification est refusée avec un message explicite.
 - Given les profils sont liés, When un point est ajouté ou déplacé sur le canvas, Then le point correspondant est ajouté ou déplacé à la même position et hauteur sur l'autre face.
 - Given un sommet du plan est verrouillé, When l'utilisateur commence un glisser-déposer, Then le sommet ne se déplace pas et le brouillon reste inchangé.
@@ -168,3 +171,10 @@
 - Les sept options d’affichage du canvas global sont relues et enregistrées dans `editor_view_settings` pour le couple utilisateur-projet courant.
 - Les changements d’options sont sérialisés afin qu’une réponse réseau tardive ne puisse pas rétablir une ancienne sélection.
 - Les canvas, éditeurs et exports à finaliser dans V1-R20, V1-R30 et V1-R31 consomment le même contrat d’unités et d’options au lieu de définir leurs propres conversions.
+
+## État d’implémentation V1-R20
+
+- GlobalEditor2DView et RoomEditor2DView utilisent `Canvas2D`; le canvas SVG historique n’est plus présent dans le parcours d’édition par pièce.
+- WallEditorView utilise `WallElevationCanvas` React-Konva avec les mêmes contrôles de zoom et d’échelle.
+- Les trois éditeurs partagent le contrat de brouillon, l’historique limité à vingt actions, la sauvegarde manuelle, l’auto-sauvegarde toutes les cinq minutes et la conservation du brouillon en échec.
+- Les clics droits sur les sommets du plan et les points de profil pilotent leurs verrous persistés selon les droits du projet.

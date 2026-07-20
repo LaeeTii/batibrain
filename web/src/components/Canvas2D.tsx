@@ -25,6 +25,7 @@ import {
 } from '../domain/canvasViewport';
 import type { Level, Point } from '../domain/types';
 import type { EditorSelection } from '../domain/editorSelection';
+import { roomLockState, wallLockState } from '../domain/manualLock';
 import {
   formatLength,
   formatSurface,
@@ -48,6 +49,8 @@ export interface CanvasNote {
   levelId: string;
   position: Point;
   text: string;
+  originType?: 'projet' | 'niveau' | 'pièce' | 'mur' | 'sommet' | 'ouverture';
+  originId?: string | null;
 }
 
 export interface CanvasDimension {
@@ -56,6 +59,8 @@ export interface CanvasDimension {
   start: Point;
   end: Point;
   label?: string;
+  type?: 'point-point' | 'wall-wall' | 'point-on-wall';
+  offsetCm?: number;
 }
 
 export interface CanvasLevelData {
@@ -86,6 +91,7 @@ interface Canvas2DProps {
   snapPoint?(point: Point, roomId: string, vertexId: string): Point;
   onVertexMove?(roomId: string, vertexId: string, point: Point): void;
   onVertexMoveEnd?(roomId: string, vertexId: string, point: Point): void;
+  onVertexContextMenu?(roomId: string, vertexId: string): void;
   onRoomMove?(roomId: string, delta: Point): void;
 }
 
@@ -352,6 +358,7 @@ export function Canvas2D({
   snapPoint,
   onVertexMove,
   onVertexMoveEnd,
+  onVertexContextMenu,
   onRoomMove,
 }: Canvas2DProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -613,7 +620,7 @@ export function Canvas2D({
                           }}
                         />
 
-                        <Text x={center.x - 26} y={center.y - 12} text={snapshot.room.name} fontSize={14} fill="#0f172a" />
+                        <Text x={center.x - 26} y={center.y - 12} text={`${roomLockState(vertices) ? '🔒 ' : ''}${snapshot.room.name}`} fontSize={14} fill="#0f172a" />
                         {options.surfaces ? (
                           <Text
                             x={center.x - 24}
@@ -645,7 +652,7 @@ export function Canvas2D({
                         key={wall.id}
                         name="canvas-level-wall"
                         points={[start.x, start.y, end.x, end.y]}
-                        stroke={isWallSelected ? '#6757ff' : appearance.stroke}
+                        stroke={isWallSelected ? '#6757ff' : wallLockState(wall, owner?.vertices ?? []) ? '#dc2626' : appearance.stroke}
                         strokeWidth={isWallSelected ? 10 : 4}
                         onClick={() => {
                           if (!creationActive && isActiveLevel) onSelect?.({ source: 'canvas', type: 'wall', id: wall.id, levelId: level.id });
@@ -675,7 +682,9 @@ export function Canvas2D({
 
                   {options.dimensions
                     ? dimensions.map((dimension) => (
-                        <Group key={dimension.id}>
+                        <Group key={dimension.id} onClick={() => {
+                          if (!creationActive && isActiveLevel) onSelect?.({ source: 'canvas', type: 'dimension', id: dimension.id, levelId: level.id });
+                        }}>
                           <Line points={[dimension.start.x, dimension.start.y, dimension.end.x, dimension.end.y]} stroke="#334155" strokeWidth={1.5} />
                           <Text
                             x={(dimension.start.x + dimension.end.x) / 2}
@@ -690,7 +699,9 @@ export function Canvas2D({
 
                   {options.notes
                     ? notes.map((note) => (
-                        <Group key={note.id}>
+                        <Group key={note.id} onClick={() => {
+                          if (!creationActive && isActiveLevel) onSelect?.({ source: 'canvas', type: 'note', id: note.id, levelId: level.id });
+                        }}>
                           <Circle x={note.position.x} y={note.position.y} radius={10} fill="#fde68a" stroke="#f59e0b" strokeWidth={1} />
                           <Text x={note.position.x + 14} y={note.position.y - 5} text={note.text} fontSize={11} fill="#7c2d12" />
                         </Group>
@@ -713,6 +724,10 @@ export function Canvas2D({
                   stroke={vertex.isLocked ? '#dc2626' : '#0f172a'}
                   strokeWidth={2}
                   draggable={!vertex.isLocked}
+                  onContextMenu={(event) => {
+                    event.evt.preventDefault();
+                    onVertexContextMenu?.(selectedEditableRoom.room.id, vertex.id);
+                  }}
                   onDragMove={(event) => {
                     if (vertex.isLocked) return;
                     const position = snapPoint?.({

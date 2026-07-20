@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createRectangleRoomGeometry } from './geometry';
-import { linkCoincidentWalls, linkedVertexIds, moveLinkedVertex, moveRoomWithLinkedVertices, normalizeCreatedRoomOverlaps, reconcilePersistedRoomIds, uniqueLevelWalls } from './roomOverlap';
+import { validateRoomPolygon } from './globalGeometry';
+import { assertLockedGeometryPreserved, linkCoincidentWalls, linkedVertexIds, moveLinkedVertex, moveRoomWithLinkedVertices, normalizeCreatedRoomOverlaps, reconcilePersistedRoomIds, uniqueLevelWalls } from './roomOverlap';
 import type { RoomSnapshot } from '../services/rooms';
 import { createUniformWallHeightProfiles, validateWallHeightProfiles } from './wallHeightProfile';
 
@@ -64,6 +65,71 @@ describe('normalisation des chevauchements de pièces', () => {
     expect(moved.flatMap(({ vertices }) => vertices).filter(({ x, y }) => x === 120 && y === 10)).toHaveLength(2);
   });
 
+  it('fusionne deux sommets consécutifs sans conserver de doublon dans le contour', () => {
+    const current = room('A', 0, 0, 100, 100);
+    current.walls = current.walls.map((wall) => ({
+      ...wall,
+      heightProfilesLinked: true,
+      heightProfiles: createUniformWallHeightProfiles(wall.id, 100, 250),
+    }));
+    const sorted = [...current.vertices].sort((left, right) => left.order - right.order);
+    const source = sorted[0];
+    const target = sorted[1];
+
+    const [merged] = moveLinkedVertex([current], current.room.id, source.id, target);
+
+    expect(merged.vertices).toHaveLength(3);
+    expect(merged.vertices.map(({ id }) => id)).not.toContain(source.id);
+    expect(merged.vertices.map(({ id }) => id)).toContain(target.id);
+    expect(new Set(merged.vertices.map(({ id }) => id)).size).toBe(3);
+    expect(merged.walls).toHaveLength(3);
+    expect(merged.walls.some((wall) => wall.startVertexId === wall.endVertexId)).toBe(false);
+    expect(validateRoomPolygon(merged.vertices)).toBeNull();
+    const verticesById = new Map(merged.vertices.map((vertex) => [vertex.id, vertex]));
+    merged.walls.forEach((wall) => {
+      const start = verticesById.get(wall.startVertexId)!;
+      const end = verticesById.get(wall.endVertexId)!;
+      expect(validateWallHeightProfiles(
+        { id: wall.id, heightProfilesLinked: wall.heightProfilesLinked ?? true },
+        wall.heightProfiles!,
+        Math.hypot(end.x - start.x, end.y - start.y),
+      )).toEqual([]);
+    });
+  });
+
+  it('autorise le déplacement d’un sommet libre voisin d’une pièce verrouillée', () => {
+    const linked = linkCoincidentWalls([
+      room('A', 0, 0, 100, 100),
+      room('B', 100, 0, 100, 100),
+    ]);
+    const lockedIds = new Set(linked[0].vertices.map(({ id }) => id));
+    const before = linked.map((snapshot) => ({
+      ...snapshot,
+      vertices: snapshot.vertices.map((vertex) => ({
+        ...vertex,
+        isLocked: lockedIds.has(vertex.id),
+      })),
+    }));
+    const freeVertex = before[1].vertices.find(({ x, y }) => x === 200 && y === 0)!;
+    const moved = linkCoincidentWalls(moveLinkedVertex(
+      before,
+      before[1].room.id,
+      freeVertex.id,
+      { x: 220, y: 0 },
+    ));
+
+    expect(() => assertLockedGeometryPreserved(before, moved)).not.toThrow();
+
+    const lockedVertex = before[0].vertices[0];
+    const invalid = moved.map((snapshot) => ({
+      ...snapshot,
+      vertices: snapshot.vertices.map((vertex) => vertex.id === lockedVertex.id
+        ? { ...vertex, x: vertex.x + 10 }
+        : vertex),
+    }));
+    expect(() => assertLockedGeometryPreserved(before, invalid)).toThrow(/sommet verrouillé/);
+  });
+
   it('recale les profils des murs dont la longueur change avec un sommet', () => {
     const current = room('A', 0, 0, 100, 100);
     current.walls = current.walls.map((wall) => ({
@@ -98,6 +164,43 @@ describe('normalisation des chevauchements de pièces', () => {
     const snapshots = linkCoincidentWalls([room('A', 0, 0, 100, 100), room('B', 100, 0, 100, 100)]);
     expect(snapshots.flatMap(({ walls }) => walls)).toHaveLength(8);
     expect(uniqueLevelWalls(snapshots)).toHaveLength(7);
+  });
+
+  it('synchronise les profils physiques des deux projections d’un mur mitoyen', () => {
+    const [left, right] = linkCoincidentWalls([
+      room('A', 0, 0, 100, 100),
+      room('B', 100, 0, 100, 100),
+    ]);
+    const leftWall = left.walls.find((wall) => right.walls.some(({ id }) => id === wall.id))!;
+    const rightWall = right.walls.find(({ id }) => id === leftWall.id)!;
+    leftWall.heightProfilesLinked = false;
+    leftWall.heightProfiles = {
+      wallId: leftWall.id,
+      gauche: [
+        { id: 'gauche-0', wallId: leftWall.id, faceSide: 'gauche', order: 0, positionCm: 0, heightCm: 210 },
+        { id: 'gauche-1', wallId: leftWall.id, faceSide: 'gauche', order: 1, positionCm: 100, heightCm: 230 },
+      ],
+      droite: [
+        { id: 'droite-0', wallId: leftWall.id, faceSide: 'droite', order: 0, positionCm: 0, heightCm: 310 },
+        { id: 'droite-1', wallId: leftWall.id, faceSide: 'droite', order: 1, positionCm: 100, heightCm: 340 },
+      ],
+    };
+    rightWall.heightProfiles = createUniformWallHeightProfiles(rightWall.id, 100, 999);
+
+    const [synchronizedLeft, synchronizedRight] = linkCoincidentWalls([left, right]);
+    const leftProjection = synchronizedLeft.walls.find(({ id }) => id === leftWall.id)!;
+    const rightProjection = synchronizedRight.walls.find(({ id }) => id === leftWall.id)!;
+
+    expect(leftProjection.heightProfiles?.gauche.map(({ positionCm, heightCm }) => [positionCm, heightCm])).toEqual([
+      [0, 210], [100, 230],
+    ]);
+    expect(rightProjection.heightProfiles?.gauche.map(({ positionCm, heightCm }) => [positionCm, heightCm])).toEqual([
+      [0, 340], [100, 310],
+    ]);
+    expect(rightProjection.heightProfiles?.droite.map(({ positionCm, heightCm }) => [positionCm, heightCm])).toEqual([
+      [0, 230], [100, 210],
+    ]);
+    expect(rightProjection.heightProfilesLinked).toBe(false);
   });
 
   it('désolidarise un ancien identifiant partagé lorsque les segments divergent', () => {

@@ -33,6 +33,10 @@ Date de mise à jour: 2026-07-16
 - Une pièce possède au moins trois sommets aux coordonnées finies, ordonnés de manière unique et continue à partir de zéro.
 - La fermeture d'une pièce est implicite entre son dernier et son premier sommet; le premier sommet n'est pas dupliqué en fin de liste.
 - Le contour d'une pièce ne peut pas s'auto-intersecter.
+- Le déplacement d'un sommet sur un sommet consécutif du même contour fusionne les deux sommets, retire le mur devenu nul et réordonne le contour sans doublon.
+- Le déplacement d'un sommet sur un sommet d'une autre pièce crée un sommet partagé unique dans les deux projections.
+- Deux sommets non consécutifs d'une même pièce ne sont pas fusionnés automatiquement, car cette opération scinderait le contour; l'interaction est refusée avant mutation.
+- Une fusion est refusée si elle supprimerait un mur portant une ouverture ou si elle réduirait la pièce à moins de trois sommets.
 - Une nouvelle pièce rectangulaire utilise les deux points saisis pour déterminer sa largeur et sa profondeur; aucune dimension n'est appliquée par défaut. Elle utilise le nom `Nouvelle pièce` si aucun nom n'est fourni, le type `autre` et la couleur de sol `#E5FFFC`.
 - Un mur peut exister seul ou etre lie a une ou deux pièces.
 - Un mur ne peut jamais être lié à trois pièces.
@@ -43,11 +47,15 @@ Date de mise à jour: 2026-07-16
 - Chaque mur possède exactement deux faces et deux profils de hauteur propres, liés par défaut et dissociables.
 - Les faces stables sont toujours ordonnées `gauche`, puis `droite`, relativement au segment orienté du sommet de début vers le sommet de fin.
 - Chaque profil est une liste de points ordonnée par leur distance depuis le début du segment; à la création, sa hauteur est uniforme et provient de la hauteur de mur par défaut de l'utilisateur courant.
+- Deux murs consécutifs d'une même pièce partagent la hauteur de leur point d'extrémité commun, face intérieure avec face intérieure et face extérieure avec face extérieure.
+- La modification d'une seule face à une extrémité commune ne modifie que la même face sémantique du mur voisin; lorsque les deux faces sont modifiées, les deux extrémités correspondantes du mur voisin sont synchronisées.
 - Le lien entre profils est actif par défaut; lorsqu'il est actif, les deux profils possèdent exactement les mêmes positions et hauteurs.
 - Toute modification effectuée avec le lien actif est répercutée atomiquement sur les deux faces.
 - La désactivation du lien conserve les profils courants; leur édition devient indépendante.
 - La remise en liaison copie le profil de la face affichée vers l'autre face après confirmation explicite.
 - Pour un mur mitoyen, l'orientation de chaque face vers l'une des deux pièces est calculée depuis la topologie.
+- Les projections locales d'un même mur mitoyen partagent toujours les deux mêmes profils physiques, face par face; une modification de profil est répercutée atomiquement dans toutes ses projections.
+- Lorsque les deux pièces parcourent le mur mitoyen en sens opposés, la face gauche d'une projection correspond à la face droite de l'autre et les positions des points sont inversées depuis la nouvelle origine.
 - Pour un mur extérieur, les faces intérieure et extérieure sont toutes deux éditables.
 - Si le sens du segment est inversé par une transformation topologique, les profils sont permutés afin de rester attachés à la même face physique.
 - Lors de cette inversion, les distances des points sont recalculées depuis la nouvelle origine du segment (`nouvelle distance = longueur du mur - ancienne distance`) et leur ordre est inversé.

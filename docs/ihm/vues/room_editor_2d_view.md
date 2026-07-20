@@ -13,11 +13,12 @@
 - Donner une experience de precision locale sur la pièce, ses murs, ses ouvertures, ses côtes et ses notes rattachees.
 - Conserver la cohérence de sélection et de rendu avec les contrats transverses et canvas, sans redefinir les invariants geometriques dans cette vue.
 
-## État transitoire V1-R00
+## État d’implémentation V1-R20
 
-- RoomEditor2DView reste accessible en consultation.
-- Toutes les créations, modifications, suppressions, sauvegardes manuelles et auto-sauvegardes sont désactivées tant que V1-R20 n'a pas remplacé son modèle et sa persistance historiques.
-- Un état `Lecture seule` est affiché dans l'en-tête pendant cette suspension.
+- RoomEditor2DView utilise le canvas React-Konva partagé avec l’éditeur global.
+- La vue charge et sauvegarde l’instantané géométrique canonique complet du niveau; aucun chemin d’écriture legacy pièce, mur ou ouverture n’est utilisé.
+- Le propriétaire et le collaborateur en écriture disposent du brouillon local, de l’historique, de la sauvegarde manuelle et de l’auto-sauvegarde toutes les cinq minutes.
+- Le collaborateur en lecture conserve le canvas, la sélection, les options d’affichage et la navigation sans contrôle d’écriture actif.
 
 ## Périmètre
 - In-scope:

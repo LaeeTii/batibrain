@@ -305,6 +305,16 @@
   - When l'utilisateur le sélectionne
   - Then l'élément est mis en surbrillance et ses données restent consultables
   - And ses interactions géométriques interdites sont indisponibles jusqu'au déverrouillage de ses points
+- Scenario 11b - Pièce voisine verrouillée:
+  - Given une pièce A verrouillée est mitoyenne d'une pièce B
+  - When l'utilisateur déplace un sommet libre de B qui n'est pas partagé avec A
+  - Then le déplacement est accepté
+  - And tous les sommets et profils verrouillés de A restent inchangés
+- Scenario 11c - Suppression d'une pièce voisine:
+  - Given une pièce A verrouillée est mitoyenne d'une pièce B non verrouillée
+  - When l'utilisateur supprime B
+  - Then la suppression est acceptée si tous les points verrouillés partagés restent inchangés dans A
+  - And les murs conservés dans A ne référencent plus B
 - Scenario 12 - Jonction d'une troisième pièce sur un mur:
   - Given un mur existant est déjà une frontière entre des pièces
   - When le mur d'une troisième pièce rejoint l'intérieur de ce mur
@@ -312,6 +322,12 @@
   - And le mur existant est remplacé par deux murs partageant ce sommet
   - And le mur aboutissant forme avec eux une jonction de trois murs distincts
   - And aucun des murs résultants n'est lié à plus de deux pièces
+- Scenario 13 - Fusion de sommets:
+  - Given deux sommets consécutifs et déverrouillés appartiennent au même contour
+  - When l'un est déplacé sur l'autre par magnétisme
+  - Then les deux sommets sont fusionnés sous un identifiant unique
+  - And le mur devenu nul est supprimé
+  - And le contour et ses murs restants sont réordonnés puis sauvegardés sans doublon
 
 ## Recap decisions et hypotheses explicites
 - Decisions validees:
@@ -354,3 +370,10 @@
 - Referentiel global : [ihm.md](../ihm.md)
 - Components : [panels.md](../composants/panels.md), [sections.md](../composants/sections.md), [canvas.md](../composants/canvas.md), [transverses.md](../composants/transverses.md)
 - Logique : [edition_2D_synchronisation_selection.md](../logique/edition_2D_synchronisation_selection.md), [geometry.md](../logique/geometry.md)
+
+## État d’implémentation V1-R20
+
+- Le canvas, la sélection, les panneaux, l’historique, les droits et la sauvegarde utilisent le socle commun des éditeurs.
+- Les modifications géométriques passent par l’instantané canonique complet du niveau et la frontière `save_level_geometry`.
+- Les niveaux, pièces, murs, ouvertures, côtes et notes sont chargés dans le contexte du niveau et exposés dans les panneaux de création et d’édition.
+- L’action `Ouvrir la vue Mur` conserve le projet, le niveau et le mur sélectionnés sans transmettre de pièce d’origine.

@@ -108,3 +108,13 @@ export async function updateLevel(level: Level): Promise<Level> {
   if (error) throw error;
   return mapLevelRow(data as LevelRow);
 }
+
+export async function softDeleteLevel(level: Level): Promise<void> {
+  if (level.number === 0) throw new Error('Le niveau RDC obligatoire ne peut pas être supprimé.');
+  const { error } = await getSupabaseClient().from('levels').update({
+    is_soft_deleted: true,
+    is_visible: false,
+    deleted_at: new Date().toISOString(),
+  }).eq('id', level.id);
+  if (error) throw error;
+}

@@ -38,6 +38,8 @@
 ## Etats et interactions
 - Un seul accordeon de premier niveau est ouvert a la fois dans EditorCreationPanel.
 - Les sous-sections internes (ex: Liste) peuvent rester ouvertes avec les blocs creation/édition de leur domaine.
+- Dans chaque section, le bloc de création ou d'édition précède la liste des objets existants.
+- La liste des objets utilise un espacement vertical compact entre ses éléments.
 - Le bouton retour ferme tous les accordeons et quitte le mode d'édition actif.
 - La sélection d'un objet dans un panneau se propage au canvas et a l'autre panneau selon les règles de synchronisation.
 - Le panneau détail est ferme par defaut et peut etre ouvert/ferme sans perdre la sélection globale active.
@@ -90,6 +92,7 @@
 ## Criteres d'acceptation testables
 - Given un utilisateur ouvre l'accordeon Pièces, When il ouvre ensuite l'accordeon Murs, Then l'accordeon Pièces se ferme automatiquement.
 - Given un mur est selectionne dans le canvas, When le panneau creation est visible, Then l'accordeon Murs s'ouvre avec bloc édition pre-rempli.
+- Given une section du panneau de création contient des objets, When elle est ouverte, Then le bloc de création ou d'édition est affiché avant la liste compacte des objets.
 - Given une pièce est selectionnee dans EditorDetailPanel, When la sélection est appliquee, Then la pièce correspondante est surlignee dans le canvas.
 - Given le bouton retour est clique, When l'action est terminee, Then tous les accordeons sont fermes et aucun mode creation actif ne subsiste.
 - Given l'arbre détail est ouvert, When les données sont chargees, Then les noeuds sont ordonnes selon la hierarchie niveau > pièces > murs > ouvertures > notes associees > notes projet.

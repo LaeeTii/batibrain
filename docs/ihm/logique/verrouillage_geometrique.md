@@ -42,6 +42,7 @@ Date de mise à jour: 2026-07-16
 - L'état chargé depuis la base initialise les verrous du brouillon.
 - Verrouiller un point dans le brouillon le rend immédiatement non déplaçable.
 - Déverrouiller un point dans le brouillon le rend immédiatement déplaçable.
+- Le verrouillage ou le déverrouillage recalcule immédiatement dans le brouillon les états visuels des pièces et des murs concernés, sans attendre l'auto-sauvegarde.
 - Une interaction interdite est refusée avant toute mutation visuelle, métier ou d'historique.
 - Le verrouillage, le déverrouillage et les modifications géométriques autorisées peuvent être sauvegardés dans une transaction atomique unique.
 - La frontière transactionnelle refuse une modification géométrique d'un point verrouillé dans l'état courant de la base, sauf si la même transaction contient son déverrouillage autorisé.
@@ -56,6 +57,8 @@ Date de mise à jour: 2026-07-16
 - Un point de profil verrouillé ne peut pas être déplacé, modifié ni supprimé.
 - Un profil verrouillé ne peut recevoir aucune modification géométrique.
 - Une transformation est refusée dans son ensemble si elle devrait déplacer, supprimer ou remplacer un point verrouillé.
+- La présence d'une autre pièce verrouillée et inchangée sur le niveau ne bloque pas une transformation limitée à des sommets libres d'une pièce voisine.
+- Une pièce non verrouillée peut être supprimée lorsque ses seuls sommets verrouillés sont partagés avec une pièce voisine qui les conserve strictement inchangés.
 
 ## Modifications non bloquées
 
@@ -94,6 +97,8 @@ Date de mise à jour: 2026-07-16
 - Given les profils sont liés, When un point est verrouillé ou déverrouillé sur une face, Then le point correspondant de l'autre face reçoit immédiatement le même état.
 - Given un déverrouillage et une modification géométrique sont présents dans le même brouillon, When la sauvegarde réussit, Then les deux changements sont persistés atomiquement.
 - Given un point reste verrouillé dans la base et aucun déverrouillage n'est soumis, When une écriture tente de modifier sa géométrie, Then la transaction entière est refusée.
+- Given une pièce A verrouillée est mitoyenne d'une pièce B, When un sommet libre et non partagé de B est déplacé sans modifier la géométrie verrouillée de A, Then le déplacement est autorisé et A reste strictement inchangée.
+- Given une pièce A verrouillée est mitoyenne d'une pièce B non verrouillée, When B est supprimée et que ses points verrouillés partagés restent portés sans modification par A, Then la suppression est autorisée et A est conservée.
 
 ## Références
 

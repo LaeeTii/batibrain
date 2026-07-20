@@ -82,6 +82,9 @@
 - L'axe horizontal représente la longueur du mur depuis son sommet de départ vers son sommet d'arrivée.
 - Le sol constitue la référence verticale zéro.
 - Le contour supérieur relie les points ordonnés du profil de hauteur de la face active.
+- Le profil de la face opposée est rendu en filigrane derrière la face active, avec un contour atténué et pointillé; il n'est ni sélectionnable ni modifiable depuis le canvas.
+- Les verticales des extrémités gauche et droite du mur sont affichées en trait plein entre le sol et le contour supérieur.
+- La verticale de chaque point intermédiaire est affichée en pointillé entre le sol et le contour supérieur.
 - Les ouvertures sont projetées selon leur position, largeur, hauteur et allège.
 - Les mesures affichables pertinentes sont:
   - longueur du mur;
@@ -101,6 +104,8 @@
 - Bloc `Profil de hauteur`:
   - contrôle `Lier les hauteurs des deux faces` et état courant du lien;
   - liste ordonnée des points de la face active;
+  - une ligne par point regroupant les champs `Position` et `Hauteur`;
+  - identification des extrémités par `Gauche` et `Droite`, et des points intermédiaires par lettres successives `A`, `B`, puis `C`, etc.;
   - position horizontale et hauteur de chaque point;
   - ajout d'un point intermédiaire;
   - modification de la position ou de la hauteur;
@@ -137,11 +142,13 @@
 ## Règles métier
 
 - Chaque face porte son propre profil; les profils deviennent indépendants lorsque leur lien est désactivé.
+- Pour un mur mitoyen, chaque profil physique reste synchronisé dans les projections des deux pièces; si leurs segments sont orientés en sens opposés, les libellés locaux gauche et droite sont permutés et les positions sont inversées.
 - Le mur porte un état persistant de liaison des profils, actif par défaut.
 - Lorsque le lien est actif, les deux profils contiennent strictement les mêmes positions et hauteurs.
 - À la création d'une pièce ou d'un mur, chaque face possède un profil uniforme utilisant la hauteur de mur par défaut de l'utilisateur courant, matérialisé par un point à chaque extrémité.
 - Les positions des points sont strictement ordonnées, uniques et comprises entre zéro et la longueur du mur.
 - Les hauteurs sont strictement positives.
+- La hauteur d'un point d'extrémité commun à deux murs adjacents est propagée au point correspondant du mur voisin, face intérieure avec face intérieure et face extérieure avec face extérieure.
 - Une modification de profil ne peut rendre aucune ouverture incompatible avec la hauteur disponible sur l'une des deux faces.
 - Lorsque le lien est inactif, le profil de la face opposée reste inchangé lors de l'édition de la face active; lorsqu'il est actif, les deux profils sont modifiés atomiquement.
 - Les associations entre faces, pièces et extérieur sont calculées depuis la topologie et ne sont pas éditables dans cette vue.
@@ -199,11 +206,15 @@
 - Given WallEditorView est ouverte sans pièce d'origine sur un mur extérieur, When le mur est chargé, Then la face intérieure est affichée.
 - Given WallEditorView est ouverte sans pièce d'origine sur un mur mitoyen, When le mur est chargé, Then la face gauche est affichée.
 - Given un mur mitoyen relie deux pièces, When le sélecteur de face est affiché, Then chaque choix identifie la pièce vers laquelle la face est orientée.
+- Given le profil d'une face physique d'un mur mitoyen est modifié depuis une pièce, When le mur est consulté depuis l'autre pièce, Then le profil correspondant présente les mêmes hauteurs aux mêmes emplacements physiques, avec permutation des faces et inversion des positions si le segment local est opposé.
 - Given un mur extérieur est affiché, When le sélecteur de face est ouvert, Then les faces intérieure et extérieure sont toutes deux disponibles et éditables selon les droits.
 - Given le lien des profils est désactivé et l'utilisateur modifie une face, When il affiche l'autre face, Then le profil de cette dernière est inchangé.
 - Given un mur vient d'être créé, When ses faces sont chargées, Then chacune possède deux points d'extrémité à la hauteur de mur par défaut active au moment de sa création.
 - Given un mur vient d'être créé, When le panneau de profil est affiché, Then le lien des hauteurs est actif.
 - Given un point intermédiaire valide est ajouté, When l'auto-save réussit, Then le contour est mis à jour et l'état devient synchronisé.
+- Given deux murs adjacents partagent un sommet, When la hauteur de cette extrémité est modifiée sur la face intérieure de l'un, Then seule l'extrémité de la face intérieure de l'autre reçoit la même hauteur; si les deux faces sont modifiées, leurs deux extrémités sont synchronisées.
+- Given un profil comporte des points intermédiaires, When la vue de face et son panneau sont affichés, Then les limites gauche et droite sont en trait plein, les guides intermédiaires sont en pointillé et chaque ligne de saisie porte son repère `Gauche`, `A`, `B`, puis `Droite`.
+- Given une face est active dans WallEditorView, When le canvas est rendu, Then son profil est affiché au premier plan et le profil de l'autre face apparaît en filigrane non interactif à l'arrière-plan.
 - Given les profils sont liés, When un point est ajouté, déplacé, modifié ou supprimé sur une face, Then les deux profils restent strictement identiques après l'auto-save.
 - Given le lien est désactivé, When une face est modifiée, Then le profil de l'autre face reste inchangé.
 - Given deux profils différents et le lien inactif, When l'utilisateur demande sa réactivation, Then une confirmation annonce que la face affichée sera utilisée comme source.
@@ -226,3 +237,10 @@
 - Synchronisation de sélection: [edition_2D_synchronisation_selection.md](../logique/edition_2D_synchronisation_selection.md)
 - Éditeur global: [editeur_2d_global.md](./editeur_2d_global.md)
 - Éditeur par pièce: [room_editor_2d_view.md](./room_editor_2d_view.md)
+
+## État d’implémentation V1-R20
+
+- WallEditorView est routée depuis les éditeurs global et pièce et charge l’instantané canonique du niveau.
+- WallElevationCanvas React-Konva affiche une face, son profil ordonné, ses ouvertures, ses mesures et les contrôles de zoom partagés.
+- Les propriétés du mur, profils multi-points, liaisons, ouvertures et verrous sont appliqués au brouillon local puis sauvegardés atomiquement.
+- Les droits de lecture seule, l’historique, la sauvegarde manuelle, l’auto-sauvegarde et la confirmation de sortie utilisent les contrats transverses des éditeurs.

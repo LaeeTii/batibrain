@@ -17,6 +17,7 @@ import { LuMenu, LuSettings } from 'react-icons/lu';
 import { LoginView } from './views/LoginView';
 import { RoomEditor } from './views/RoomEditor';
 import { GlobalEditor2DView } from './views/GlobalEditor2DView';
+import { WallEditorView } from './views/WallEditorView';
 import {
   RoomsDashboard,
   type DashboardRoomTarget,
@@ -26,7 +27,10 @@ type AppScreen =
   | { name: 'dashboard' }
   | { name: 'global-editor' }
   | { name: 'metrics' }
-  | { name: 'room-editor'; target: DashboardRoomTarget };
+  | { name: 'room-editor'; target: DashboardRoomTarget }
+  | { name: 'wall-editor'; target: WallEditorTarget };
+
+type WallEditorTarget = DashboardRoomTarget & { wallId: string; origin: 'global-editor' | 'room-editor' };
 
 type AppHistoryState = {
   app: 'batibrain';
@@ -65,6 +69,17 @@ function createScreenFromRoute(
     return {
       name: 'room-editor',
       target: dashboardContext,
+    };
+  }
+  if (routeName === 'wall-editor') {
+    const url = new URL(window.location.href);
+    return {
+      name: 'wall-editor',
+      target: {
+        ...dashboardContext,
+        wallId: url.searchParams.get('wallId') ?? '',
+        origin: url.searchParams.get('origin') === 'room-editor' ? 'room-editor' : 'global-editor',
+      },
     };
   }
 
@@ -108,6 +123,14 @@ function isAppScreen(value: unknown): value is AppScreen {
 
   if (screenName === 'room-editor') {
     return 'target' in value && isDashboardRoomTarget(value.target);
+  }
+  if (screenName === 'wall-editor') {
+    return 'target' in value
+      && isDashboardRoomTarget(value.target)
+      && 'wallId' in value.target
+      && typeof value.target.wallId === 'string'
+      && 'origin' in value.target
+      && (value.target.origin === 'global-editor' || value.target.origin === 'room-editor');
   }
 
   return false;
@@ -194,6 +217,12 @@ function syncScreenWithContext(
       target: dashboardContext,
     };
   }
+  if (screen.name === 'wall-editor') {
+    return {
+      ...screen,
+      target: { ...screen.target, ...dashboardContext },
+    };
+  }
 
   return screen;
 }
@@ -220,6 +249,14 @@ function buildAppUrl(screen: AppScreen, dashboardContext: DashboardRoomTarget): 
     url.searchParams.set('roomId', normalizedDashboardContext.roomId);
   } else {
     url.searchParams.delete('roomId');
+  }
+
+  if (screen.name === 'wall-editor') {
+    url.searchParams.set('wallId', screen.target.wallId);
+    url.searchParams.set('origin', screen.target.origin);
+  } else {
+    url.searchParams.delete('wallId');
+    url.searchParams.delete('origin');
   }
 
   return url.toString();
@@ -447,13 +484,35 @@ function AuthenticatedApp() {
         initialRoomId={screen.target.roomId}
         onBack={goBack}
         onContextChange={updateDashboardContext}
+        onOpenWall={(target) => pushScreen({
+          name: 'wall-editor',
+          target: { ...target, origin: 'room-editor' },
+        }, target)}
       />
     );
+  } else if (screen.name === 'wall-editor') {
+    content = <WallEditorView
+      projectId={screen.target.projectId}
+      levelId={screen.target.levelId}
+      wallId={screen.target.wallId}
+      roomId={screen.target.origin === 'room-editor' ? screen.target.roomId : undefined}
+      onBack={goBack}
+    />;
   } else if (screen.name === 'global-editor') {
     content = <GlobalEditor2DView
       projectId={dashboardContext.projectId}
       initialLevelId={dashboardContext.levelId}
       onLevelChange={(levelId) => updateDashboardContext({ projectId: dashboardContext.projectId, levelId, roomId: '' }, 'replace')}
+      onOpenWall={(wallId, levelId) => pushScreen({
+        name: 'wall-editor',
+        target: {
+          projectId: dashboardContext.projectId,
+          levelId,
+          roomId: '',
+          wallId,
+          origin: 'global-editor',
+        },
+      }, { projectId: dashboardContext.projectId, levelId, roomId: '' })}
     />;
   } else if (screen.name === 'metrics') {
     content = (

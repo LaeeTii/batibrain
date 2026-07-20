@@ -20,8 +20,8 @@ Une ligne ne passe à `Terminé` que si `npm run check` et les validations de ba
 ## État de référence de l’audit
 
 - Branche auditée: `main`.
-- `npm run check`: réussi; lint, 37 fichiers et 167 tests, typecheck et build sont verts.
-- Le build conserve un avertissement non bloquant sur le bundle principal de 1,60 Mo.
+- `npm run check`: réussi; lint, 42 fichiers et 180 tests, typecheck et build sont verts.
+- Le build conserve un avertissement non bloquant sur le bundle principal de 1,62 Mo minifié et environ 483 Ko compressé.
 - Les 21 migrations versionnées sont rejouées sans erreur sur une base Supabase locale recréée avec Podman; les frontières d’écriture des comptes, projets et collaborations sont incluses.
 - Les 7 fichiers de scénarios SQL totalisent 95 tests verts; les comptes, invitations, préférences, options de vue, droits propriétaire/lecture/écriture/administrateur/sans accès et invariants géométriques sont couverts.
 - Aucun fichier de migration n’est ignoré et le provisionnement initial est isolé dans `supabase/scripts/`, sans donnée personnelle.
@@ -34,7 +34,8 @@ Une ligne ne passe à `Terminé` que si `npm run check` et les validations de ba
 | V1-R10 | Terminé | Modèle canonique `vertices` + associations ordonnées, murs autonomes et profils complets; `load_level_geometry`/`save_level_geometry` remplacent les RPC partielles. Migration 19/19 rejouée, 6 scénarios SQL validés (succès, verrou, rollback, profils multi-points, ouverture, cardinalité) et `npm run check` vert avec 32 fichiers et 149 tests. |
 | V1-R11 | Terminé | Conversions centralisées cm/m/mm et m2/cm2/mm2 sans réinterprétation des données; unités appliquées aux canvas, dashboard, éditeurs et PDF existants; options du canvas global relues et enregistrées par utilisateur et projet. Migration 20/20, 79 tests SQL et `npm run check` vert avec 34 fichiers et 159 tests. |
 | V1-R12 | Terminé | Frontières RPC imposées pour profil, projet et collaboration; création de projet et invitation réservées aux comptes approuvés; matrice RLS rejouée sur base neuve pour propriétaire, lecture, écriture, administrateur sans accès, invitation en attente et utilisateur sans accès. Migration 21/21, 95 tests SQL et `npm run check` vert avec 37 fichiers et 167 tests; les actions de lecture seule et retours UI transverses sont couverts. |
-| V1-R21 | À faire | À exécuter après V1-R20 et avant V1-R30; référence actuelle du chunk principal: 1,60 Mo minifié et environ 480 Ko compressé. |
+| V1-R20 | À valider | Les trois éditeurs utilisent React-Konva, la transaction géométrique canonique, les droits projet, l’historique et le même contrat d’auto-sauvegarde. RoomEditor2DView n’appelle plus les écritures legacy; WallEditorView couvre les deux faces, profils liés ou indépendants, ouvertures et verrous. Les niveaux, pièces, murs, ouvertures, côtes et notes sont accessibles depuis l’éditeur global. `npm run check` est vert avec 42 fichiers et 180 tests; la recette UI complète avec Supabase reste à exécuter. |
+| V1-R21 | À faire | À exécuter après V1-R20 et avant V1-R30; référence mesurée après V1-R20: 1,62 Mo minifié et environ 483 Ko compressé. |
 
 ## Matrice des tâches historiques
 
@@ -42,10 +43,10 @@ Une ligne ne passe à `Terminé` que si `npm run check` et les validations de ba
 |---|---|---|---|
 | V1-01 | Socle frontend et tests | Terminé | `npm run check` réussit avec lint, 31 fichiers et 139 tests, typecheck et build. |
 | V1-02 | Primitives géométriques | Terminé | Primitives et validations du domaine couvertes par les tests; instantané canonique validé avant persistance. |
-| V1-03 | Domaine des pièces | À valider | Modèle canonique unique et adaptateur de lecture livrés; la refonte visuelle de RoomEditor reste suivie par V1-R20. |
+| V1-03 | Domaine des pièces | À valider | Modèle canonique unique et adaptateur de lecture livrés; RoomEditor2DView consomme désormais ce modèle et attend sa recette UI complète. |
 | V1-04 | Murs et topologie | Terminé | Murs autonomes, sommets partagés et cardinalité maximale de deux pièces garanties dans le domaine et la base. |
-| V1-05 | Profils de hauteur | À valider | Profils complets et multi-points conservés par les normalisations et la transaction; intégration WallEditor suivie par V1-R20. |
-| V1-06 | Ouvertures | À valider | Ouvertures compatibles préservées et incompatibles écartées lors de la reconstruction canonique; recette UI complète reportée à V1-R20. |
+| V1-05 | Profils de hauteur | À valider | Profils complets et multi-points conservés par les normalisations et la transaction, puis édités dans WallEditorView; recette UI à exécuter. |
+| V1-06 | Ouvertures | À valider | Ouvertures compatibles préservées, validées avant mutation et éditables dans les trois éditeurs; recette UI complète à exécuter. |
 | V1-07 | Schéma et base neuve | Terminé | Migration initiale inchangée; 18 migrations rejouées et concordantes sur base neuve, aucun fichier de migration ignoré, 67 tests SQL verts. |
 | V1-08 | Transactions métier | Terminé | Une seule sauvegarde atomique versionnée par niveau; anciennes RPC supprimées et écritures directes géométriques révoquées. |
 | V1-09 | Politiques RLS | Terminé | Matrice propriétaire, lecture, écriture, administrateur sans accès et utilisateur sans accès rejouée sur base neuve; lecture seule refusée par RLS et par `save_level_geometry`. |
@@ -58,21 +59,21 @@ Une ligne ne passe à `Terminé` que si `npm run check` et les validations de ba
 | V1-16 | Projets et contexte | Terminé | Création limitée aux profils approuvés; modification et suppression logique passent par `update_owned_project`; contexte courant et actions propriétaire sont couverts. |
 | V1-17 | Invitations et collaborations | Terminé | Invitation d’un compte approuvé, absence d’accès avant acceptation, acceptation, changement de rôle et retrait sont validés par RPC et tests UI/SQL. |
 | V1-18 | Verrou collaboratif | Hors V1 | Reporté après la V1.0; version cible et contrat à respécifier avant réactivation. |
-| V1-19 | Verrouillage géométrique | Partiel | Modèle et RPC convergés sur les sommets et points de profils avec revérification transactionnelle; actions complètes des trois éditeurs suivies par V1-R20. |
+| V1-19 | Verrouillage géométrique | À valider | Sommets et points de profils sont verrouillables depuis les trois éditeurs, avec synchronisation des projections partagées et des profils liés; recette UI multi-pièces à exécuter. |
 | V1-20 | Dashboard, niveaux et cartes | Partiel | Écran présent, unités actives appliquées et actions d’écriture masquées en lecture seule; succès génériques et bloc de bienvenue retirés. La recette complète des notes et niveaux reste à mener. |
-| V1-21 | Canvas partagé | Partiel | Canvas React-Konva et ses tests sont verts; RoomEditor conserve un canvas SVG distinct jusqu’à V1-R20. |
-| V1-22 | Sélection, panneaux, historique | Partiel | Consultation et historique présents; les mutations secondaires sont encore désactivées. |
-| V1-23 | Affichage éditeur global | Partiel | Options d’affichage persistées par utilisateur et projet, y compris en lecture; les droits RLS sont recettés, les interactions complètes des trois éditeurs restent suivies par V1-R20. |
+| V1-21 | Canvas partagé | À valider | Canvas2D est partagé par les éditeurs global et pièce; WallElevationCanvas reprend React-Konva, le zoom et l’échelle du socle commun. |
+| V1-22 | Sélection, panneaux, historique | À valider | Sélection synchronisée, panneaux et historique de vingt actions sont actifs dans les parcours d’édition; recette UI complète à exécuter. |
+| V1-23 | Affichage éditeur global | À valider | Options persistées par utilisateur et projet, y compris en lecture, et appliquées aux canvas global et pièce; interactions des trois éditeurs couvertes par tests frontend. |
 | V1-24 | Édition géométrique globale | À valider | Pièces, intersections et chevauchements utilisent la sauvegarde canonique; ouvertures et profils sont remappés au lieu d’être refusés ou aplatis. |
-| V1-25 | Objets secondaires globaux | À faire | Seule la création de pièce est active; autres créations explicitement désactivées. |
-| V1-26 | RoomEditor2DView | Bloqué | Consultation maintenue; toutes les écritures, mutations canvas et auto-sauvegardes sont désactivées jusqu’à la refonte V1-R20. |
-| V1-27 | WallEditor en lecture | À faire | Aucune route ni vue de production. |
-| V1-28 | Édition des profils | À faire | Logique domaine partielle seulement, sans intégration de production. |
+| V1-25 | Objets secondaires globaux | À valider | Niveaux, murs, ouvertures, côtes et notes sont chargés, sélectionnés et modifiables depuis les panneaux et le canvas; ouvertures validées avant mutation et objets non géométriques protégés par RLS. |
+| V1-26 | RoomEditor2DView | À valider | Canvas2D partagé, contexte strict de pièce, brouillon canonique, sauvegarde transactionnelle, historique, droits et navigation vers WallEditorView sont actifs. |
+| V1-27 | WallEditor en lecture | À valider | Route de production et vue de face React-Konva disponibles depuis les éditeurs global et pièce, avec choix initial de face et lecture seule selon les droits. |
+| V1-28 | Édition des profils | À valider | Profils multi-points, liaison/dissociation, verrous, validations d’ouvertures, historique et sauvegarde atomique sont intégrés à WallEditorView. |
 | V1-29 | Six exports PDF | Partiel | Exports Dashboard partiels et conversions d’unités branchées sur les moteurs PDF existants; variantes éditeurs absentes. |
 | V1-30 | ProjectMetricsView | À faire | Route placeholder, aucun tableau, filtre ou tri. |
 | V1-31 | Exports Métriques | Bloqué | Aucun export; contrat PDF/Excel/CSV détaillé à compléter avant code. |
 | V1-32 | Recette sécurité | À faire | Recettes droits, verrouillage géométrique et invariants base à compléter; concurrence multi-utilisateur hors V1. |
-| V1-33 | Recette fonctionnelle V1 | À faire | Portail qualité vert; fonctions V1-25 à V1-31 encore incomplètes. |
+| V1-33 | Recette fonctionnelle V1 | À faire | Portail qualité vert; recette des éditeurs à exécuter et fonctions V1-29 à V1-31 encore incomplètes. |
 
 ## Décisions de cadrage gelées
 

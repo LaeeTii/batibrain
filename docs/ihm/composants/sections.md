@@ -170,6 +170,7 @@
 	- nom de la pièce,
 	- type de pièce obligatoire,
 	- couleur du sol,
+	- la couleur du sol est choisie avec un sélecteur chromatique Mantine affichant un aperçu et conservant une valeur hexadécimale,
 	- epaisseur,
 	- hauteur,
 	- dimensions previsualisees pendant la creation.

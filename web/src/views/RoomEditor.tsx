@@ -1,226 +1,73 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActionIcon, Button, NativeSelect, NumberInput, TextInput, UnstyledButton } from '@mantine/core';
-import { LuEye } from 'react-icons/lu';
-import { RoomCanvas } from '../components/RoomCanvas';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ActionIcon,
+  Alert,
+  Button,
+  ColorInput,
+  Group,
+  Menu,
+  NativeSelect,
+  NumberInput,
+  Stack,
+  Text,
+  Textarea,
+  TextInput,
+} from '@mantine/core';
+import {
+  LuArrowLeft,
+  LuArrowUpRight,
+  LuCircleCheck,
+  LuCloudAlert,
+  LuEye,
+  LuLoaderCircle,
+  LuLock,
+  LuRedo2,
+  LuTrash2,
+  LuUndo2,
+} from 'react-icons/lu';
+import { ActionHistoryProvider, useActionHistory } from '../components/ActionHistory';
+import {
+  Canvas2D,
+  CanvasDisplayOptionsMenu,
+  DEFAULT_CANVAS_DISPLAY_OPTIONS,
+  type CanvasDisplayOptions,
+  type CanvasLevelData,
+} from '../components/Canvas2D';
 import { DashboardLayout } from '../components/DashboardLayout';
+import { EditorDetailPanel } from '../components/EditorPanels';
+import { ManualLockButton } from '../components/ManualLockButton';
 import { usePreferences } from '../components/PreferencesContext';
-import { useUnsavedChanges } from '../components/UnsavedChangesContext';
-import type { Level, Opening, Project, Room, Vertex, Wall } from '../domain/types';
-import type { DashboardRoomTarget } from './RoomsDashboard';
+import { SelectionSyncBridge, useEditorSelection } from '../components/SelectionSyncBridge';
+import { useEditorAutosave } from '../components/useEditorAutosave';
 import {
-  angleAtVertexDegrees,
-  centroid,
-  createRectangleRoomGeometryFromPoints,
-  formatOpeningValidationIssue,
-  polygonAreaCm2,
-  remapWallsToVertices,
-  syncOpeningsWithWalls,
-  syncWallsWithVertices,
-  validateOpeningOnWall,
-  validateOpenings,
-  wallsFromVertices,
-} from '../domain/geometry';
-import { hasSupabaseConfig } from '../lib/supabase';
-import { createLevel, listLevelsByProject } from '../services/levels';
-import { createProject, listProjects } from '../services/projects';
-import {
-  createRoom,
-  deleteRoom,
-  listRoomsByLevel,
-  loadRoomSnapshot,
-  replaceRoomOpenings,
-  replaceRoomWalls,
-  replaceRoomVertices,
-  updateRoom,
-} from '../services/rooms';
-import type { RoomSnapshot } from '../services/rooms';
+  assertOpeningValidInLevel,
+  setSharedVertexLock,
+} from '../domain/editorGeometry';
+import { validateRoomPolygon } from '../domain/globalGeometry';
+import type { EditorSelection } from '../domain/editorSelection';
+import type { Level, Opening, Point, Project, RoomType, Wall } from '../domain/types';
 import {
   centimetersToDisplay,
   displayToCentimeters,
   formatLength,
-  formatSurfaceFromSquareMeters,
 } from '../domain/userPreferences';
-
-const EMPTY_LEVEL_ID = '';
-const EMPTY_PROJECT_ID = '';
-const DEMO_PIECE_ID = 'piece_demo';
-const DEFAULT_ROOM_NAME = '';
-const DEFAULT_LEVEL_NAME = '';
-const DEFAULT_PROJECT_NAME = '';
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const OPENING_REMAP_EPSILON = 1e-6;
-const ROOM_EDITOR_WRITES_ENABLED = false;
-
-type OpeningDraft = {
-  type: Opening['type'];
-  offsetCm: string;
-  widthCm: string;
-  bottomCm: string;
-  heightCm: string;
-};
-
-const DEFAULT_OPENING_DRAFT: OpeningDraft = {
-  type: 'door',
-  offsetCm: '0',
-  widthCm: '90',
-  bottomCm: '0',
-  heightCm: '215',
-};
-
-function prepareVerticesForRoom(
-  sourceVertices: Vertex[],
-  roomId: string,
-  regenerateIds = false,
-): Vertex[] {
-  return sourceVertices.map((vertex, index) => ({
-    ...vertex,
-    id: regenerateIds ? crypto.randomUUID() : vertex.id,
-    pieceId: roomId,
-    order: index,
-  }));
-}
-
-function formatErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  if (typeof error === 'object' && error !== null && 'message' in error) {
-    const message = error.message;
-    if (typeof message === 'string') {
-      return message;
-    }
-  }
-
-  return 'Une erreur inattendue est survenue.';
-}
-
-function isUuid(value: string): boolean {
-  return UUID_PATTERN.test(value);
-}
-
-function parseMetricInput(value: string): number {
-  return Number(value.replace(',', '.'));
-}
-
-function openingTypeLabel(type: Opening['type']): string {
-  if (type === 'door') return 'Porte';
-  if (type === 'window') return 'Fenêtre';
-  return 'Ouverture';
-}
-
-function getEditableWallHeightCm(wall: Wall): number | null {
-  return wall.heightLeftCm ?? wall.heightRightCm ?? null;
-}
-
-function hasSplitWallHeight(wall: Wall): boolean {
-  return wall.heightLeftCm !== null
-    && wall.heightRightCm !== null
-    && wall.heightLeftCm !== wall.heightRightCm;
-}
-
-function remapOpeningsToWalls(sourceWalls: Wall[], targetWalls: Wall[], openings: Opening[]): Opening[] {
-  const wallIndexById = new Map(sourceWalls.map((wall, index) => [wall.id, index]));
-
-  return openings.flatMap((opening) => {
-    const wallIndex = wallIndexById.get(opening.wallId);
-    if (wallIndex === undefined) {
-      return [];
-    }
-
-    const targetWall = targetWalls[wallIndex];
-    if (!targetWall) {
-      return [];
-    }
-
-    return [{
-      ...opening,
-      wallId: targetWall.id,
-    }];
-  });
-}
-
-function wallLengthsById(vertices: Vertex[], walls: Wall[]): Map<string, number> {
-  const verticesById = new Map(vertices.map((vertex) => [vertex.id, vertex]));
-  return new Map(
-    walls.map((wall) => {
-      const startVertex = verticesById.get(wall.startVertexId);
-      const endVertex = verticesById.get(wall.endVertexId);
-
-      if (!startVertex || !endVertex) {
-        return [wall.id, 0];
-      }
-
-      return [wall.id, Math.hypot(endVertex.x - startVertex.x, endVertex.y - startVertex.y)];
-    }),
-  );
-}
-
-function remapOpeningsAfterWallSplit(
-  targetVertices: Vertex[],
-  sourceWalls: Wall[],
-  targetWalls: Wall[],
-  openings: Opening[],
-): Opening[] {
-  const targetWallIds = new Set(targetWalls.map((wall) => wall.id));
-  const sourceWallsById = new Map(sourceWalls.map((wall) => [wall.id, wall]));
-  const targetWallsByStartVertex = new Map<string, Wall[]>();
-  const targetWallLengths = wallLengthsById(targetVertices, targetWalls);
-
-  for (const wall of targetWalls) {
-    const wallsStartingAtVertex = targetWallsByStartVertex.get(wall.startVertexId) ?? [];
-    wallsStartingAtVertex.push(wall);
-    targetWallsByStartVertex.set(wall.startVertexId, wallsStartingAtVertex);
-  }
-
-  return openings.flatMap((opening) => {
-    if (targetWallIds.has(opening.wallId)) {
-      return [opening];
-    }
-
-    const sourceWall = sourceWallsById.get(opening.wallId);
-    if (!sourceWall) {
-      return [];
-    }
-
-    const firstSegmentCandidates = targetWallsByStartVertex.get(sourceWall.startVertexId) ?? [];
-
-    for (const firstSegment of firstSegmentCandidates) {
-      const secondSegment = (targetWallsByStartVertex.get(firstSegment.endVertexId) ?? []).find(
-        (candidateWall) => candidateWall.endVertexId === sourceWall.endVertexId,
-      );
-
-      if (!secondSegment) {
-        continue;
-      }
-
-      const firstSegmentLengthCm = targetWallLengths.get(firstSegment.id) ?? 0;
-      const secondSegmentLengthCm = targetWallLengths.get(secondSegment.id) ?? 0;
-      const openingCenterCm = opening.offsetCm + opening.widthCm / 2;
-      const keepOnFirstSegment = openingCenterCm <= firstSegmentLengthCm + OPENING_REMAP_EPSILON;
-      const targetWall = keepOnFirstSegment ? firstSegment : secondSegment;
-      const targetWallLengthCm = keepOnFirstSegment ? firstSegmentLengthCm : secondSegmentLengthCm;
-      const rawOffsetCm = keepOnFirstSegment
-        ? opening.offsetCm
-        : opening.offsetCm - firstSegmentLengthCm;
-      const offsetCm = Math.max(0, rawOffsetCm);
-      const availableWidthCm = targetWallLengthCm - offsetCm;
-
-      if (availableWidthCm <= OPENING_REMAP_EPSILON) {
-        return [];
-      }
-
-      return [{
-        ...opening,
-        wallId: targetWall.id,
-        offsetCm,
-        widthCm: Math.min(opening.widthCm, availableWidthCm),
-      }];
-    }
-
-    return [];
-  });
-}
+import {
+  assertLockedGeometryPreserved,
+  linkCoincidentWalls,
+  linkedVertexIds,
+  moveLinkedVertex,
+  moveRoomWithLinkedVertices,
+} from '../domain/roomOverlap';
+import { hasSupabaseConfig } from '../lib/supabase';
+import { supabaseViewSettingsGateway } from '../data/supabase/viewSettings';
+import { getLevel } from '../services/levels';
+import { canWriteProject, getProject } from '../services/projects';
+import {
+  loadLevelGeometrySnapshot,
+  saveLevelRoomSnapshots,
+  type RoomSnapshot,
+} from '../services/rooms';
+import type { DashboardRoomTarget } from './RoomsDashboard';
 
 type HistoryUpdateMode = 'push' | 'replace';
 
@@ -230,1109 +77,434 @@ interface RoomEditorProps {
   initialRoomId?: string;
   onBack?: () => void;
   onContextChange?: (target: DashboardRoomTarget, historyMode?: HistoryUpdateMode) => void;
+  onOpenWall?: (target: { projectId: string; levelId: string; roomId: string; wallId: string }) => void;
 }
 
-export function RoomEditor({
-  initialProjectId,
-  initialLevelId,
-  initialRoomId,
-  onBack,
-  onContextChange,
-}: RoomEditorProps) {
-  const supabaseConfigured = hasSupabaseConfig();
-  const { setSourceDirty } = useUnsavedChanges();
-  const { preferences } = usePreferences();
-  const [vertices, setVertices] = useState<Vertex[]>([]);
-  const [wallDefinitions, setWallDefinitions] = useState<Wall[]>([]);
-  const [openings, setOpenings] = useState<Opening[]>([]);
-  const [openingDraft, setOpeningDraft] = useState<OpeningDraft>(DEFAULT_OPENING_DRAFT);
-  const [selectedWallIndex, setSelectedWallIndex] = useState<number | null>(null);
-  const [activeRoom, setActiveRoom] = useState<Room | null>(null);
-  const [availableProjects, setAvailableProjects] = useState<Project[]>([]);
-  const [availableLevels, setAvailableLevels] = useState<Level[]>([]);
-  const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
-  const [levelRoomSnapshots, setLevelRoomSnapshots] = useState<RoomSnapshot[]>([]);
-  const [newProjectNameInput, setNewProjectNameInput] = useState(DEFAULT_PROJECT_NAME);
-  const [selectedProjectId, setSelectedProjectId] = useState(EMPTY_PROJECT_ID);
-  const [newLevelProjectId, setNewLevelProjectId] = useState(EMPTY_PROJECT_ID);
-  const [newLevelNameInput, setNewLevelNameInput] = useState(DEFAULT_LEVEL_NAME);
-  const [selectedLevelId, setSelectedLevelId] = useState(EMPTY_LEVEL_ID);
-  const [newRoomNameInput, setNewRoomNameInput] = useState(DEFAULT_ROOM_NAME);
-  const [roomNameInput, setRoomNameInput] = useState(DEFAULT_ROOM_NAME);
-  const [selectedRoomId, setSelectedRoomId] = useState('');
-  const [busyAction, setBusyAction] = useState<string | null>(null);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'dirty' | 'saving' | 'synced' | 'error'>('idle');
-  const [openingFormMessage, setOpeningFormMessage] = useState<string | null>(null);
-  const [inspectorTab, setInspectorTab] = useState<'metrics' | 'objects'>('metrics');
+const ROOM_TYPES: { value: RoomType; label: string }[] = [
+  ['cuisine', 'Cuisine'], ['chambre', 'Chambre'], ['salon', 'Salon'],
+  ['salle_de_bain', 'Salle de bain'], ['toilettes', 'Toilettes'], ['bureau', 'Bureau'],
+  ['garage', 'Garage'], ['hall', 'Hall'], ['salle_de_jeu', 'Salle de jeu'],
+  ['bibliotheque', 'Bibliothèque'], ['autre', 'Autre'],
+].map(([value, label]) => ({ value: value as RoomType, label }));
 
-  const walls = useMemo(() => wallsFromVertices(vertices), [vertices]);
-  const selectedWall = selectedWallIndex === null ? null : walls[selectedWallIndex] ?? null;
-  const selectedWallDefinition = selectedWallIndex === null ? null : wallDefinitions[selectedWallIndex] ?? null;
-  const selectedWallOpenings = useMemo(() => {
-    if (!selectedWallDefinition) return [];
+function message(error: unknown): string {
+  return error instanceof Error ? error.message : 'La pièce n’a pas pu être chargée.';
+}
 
-    return openings.filter((opening) => opening.wallId === selectedWallDefinition.id);
-  }, [openings, selectedWallDefinition]);
-  const openingValidationIssues = useMemo(
-    () => validateOpenings(vertices, wallDefinitions, openings),
-    [vertices, wallDefinitions, openings],
-  );
-  const selectedWallOpeningIssues = useMemo(() => {
-    if (!selectedWallDefinition) return [];
+export function RoomEditor(props: RoomEditorProps) {
+  const projectId = props.initialProjectId ?? '';
+  const levelId = props.initialLevelId ?? '';
+  const roomId = props.initialRoomId ?? '';
+  return <RoomEditorLoader {...props} projectId={projectId} levelId={levelId} roomId={roomId} />;
+}
 
-    return openingValidationIssues.filter(
-      (issue) => issue.opening.wallId === selectedWallDefinition.id,
-    );
-  }, [openingValidationIssues, selectedWallDefinition]);
-  const center = useMemo(() => centroid(vertices), [vertices]);
-  const selectedProject = useMemo(
-    () => availableProjects.find((project) => project.id === selectedProjectId) ?? null,
-    [availableProjects, selectedProjectId],
-  );
-  const selectedLevel = useMemo(
-    () => availableLevels.find((level) => level.id === selectedLevelId) ?? null,
-    [availableLevels, selectedLevelId],
-  );
-  const contextRooms = useMemo(() => {
-    if (!activeRoom) {
-      return [];
+function RoomEditorLoader(props: RoomEditorProps & { projectId: string; levelId: string; roomId: string }) {
+  const { projectId, levelId, roomId } = props;
+  const [project, setProject] = useState<Project | null>(null);
+  const [level, setLevel] = useState<Level | null>(null);
+  const [levelData, setLevelData] = useState<CanvasLevelData | null>(null);
+  const [canWrite, setCanWrite] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [options, setOptions] = useState<CanvasDisplayOptions>(DEFAULT_CANVAS_DISPLAY_OPTIONS);
+  const [optionsError, setOptionsError] = useState('');
+
+  const load = useCallback(async () => {
+    if (!projectId || !levelId || !roomId) {
+      setLoadError('Le contexte projet, niveau et pièce est incomplet.');
+      setLoading(false);
+      return;
     }
-
-    return levelRoomSnapshots
-      .filter((snapshot) => snapshot.room.id !== activeRoom.id)
-      .map((snapshot) => ({
-        room: snapshot.room,
-        vertices: snapshot.vertices,
-      }));
-  }, [activeRoom, levelRoomSnapshots]);
-  const areaM2 = useMemo(() => polygonAreaCm2(vertices) / 10000, [vertices]);
-  const perimeterM = useMemo(
-    () => walls.reduce((sum, wall) => sum + wall.lengthCm, 0) / 100,
-    [walls],
-  );
-  const roomHeightM = useMemo(() => {
-    const heightsCm = wallDefinitions
-      .flatMap((wall) => [wall.heightLeftCm, wall.heightRightCm])
-      .filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
-
-    if (heightsCm.length === 0) {
-      return null;
-    }
-
-    const averageHeight = heightsCm.reduce((sum, value) => sum + value, 0) / heightsCm.length;
-    return averageHeight / 100;
-  }, [wallDefinitions]);
-  const isBusy = busyAction !== null;
-
-  function notifyContextChange(target: DashboardRoomTarget, historyMode: HistoryUpdateMode = 'replace') {
-    onContextChange?.(target, historyMode);
-  }
-
-  const markDirty = useCallback(() => {
-    if (!ROOM_EDITOR_WRITES_ENABLED) return;
-    setHasUnsavedChanges(true);
-    setSaveStatus('dirty');
-  }, []);
-
-  const clearDirty = useCallback(() => {
-    setHasUnsavedChanges(false);
-    setSaveStatus('idle');
-  }, []);
-
-  useEffect(() => {
-    setSourceDirty('room-editor', hasUnsavedChanges);
-    return () => setSourceDirty('room-editor', false);
-  }, [hasUnsavedChanges, setSourceDirty]);
-
-  async function runRoomAction(
-    actionLabel: string,
-    action: () => Promise<void>,
-    options: { propagateError?: boolean } = {},
-  ) {
-    setBusyAction(actionLabel);
-    setErrorMessage(null);
-    setStatusMessage(null);
-
+    setLoading(true);
+    setLoadError('');
     try {
-      await action();
-    } catch (error) {
-      setErrorMessage(formatErrorMessage(error));
-      if (options.propagateError) {
-        throw error;
+      const [nextProject, nextLevel, geometry, writeAllowed, settings] = await Promise.all([
+        getProject(projectId),
+        getLevel(levelId),
+        loadLevelGeometrySnapshot(levelId),
+        canWriteProject(projectId),
+        supabaseViewSettingsGateway.load(projectId).catch(() => null),
+      ]);
+      if (nextLevel.projectId !== projectId) throw new Error('Le niveau n’appartient pas au projet courant.');
+      if (!geometry.rooms.some(({ room }) => room.id === roomId)) {
+        throw new Error('La pièce demandée n’existe plus ou n’est pas accessible.');
       }
+      setProject(nextProject);
+      setLevel(nextLevel);
+      setLevelData({ level: nextLevel, rooms: geometry.rooms, geometryRevision: geometry.revision });
+      setCanWrite(writeAllowed);
+      if (settings) setOptions(settings.display);
+      else setOptionsError('Les options d’affichage n’ont pas pu être relues.');
+    } catch (caught) {
+      setLoadError(message(caught));
     } finally {
-      setBusyAction(null);
+      setLoading(false);
     }
-  }
-
-  function applyRoomGeometry(nextVertices: Vertex[], nextWalls: Wall[], nextOpenings: Opening[]) {
-    const syncedWalls = syncWallsWithVertices(nextVertices, nextWalls);
-    setVertices(nextVertices);
-    setWallDefinitions(syncedWalls);
-    setOpenings(syncOpeningsWithWalls(syncedWalls, nextOpenings));
-  }
-
-  function handleVerticesChange(nextVertices: Vertex[]) {
-    if (!ROOM_EDITOR_WRITES_ENABLED) return;
-    const previousWalls = wallDefinitions;
-    const nextWalls = syncWallsWithVertices(nextVertices, previousWalls);
-    setVertices(nextVertices);
-    setWallDefinitions(nextWalls);
-    setOpenings((currentOpenings) => syncOpeningsWithWalls(
-      nextWalls,
-      remapOpeningsAfterWallSplit(nextVertices, previousWalls, nextWalls, currentOpenings),
-    ));
-    markDirty();
-  }
-
-  function updateSelectedWall(nextWall: Wall) {
-    if (!ROOM_EDITOR_WRITES_ENABLED || selectedWallIndex === null) return;
-
-    setWallDefinitions((currentWalls) => currentWalls.map((wall, index) => (
-      index === selectedWallIndex ? nextWall : wall
-    )));
-    markDirty();
-  }
-
-  function handleSelectedWallThicknessChange(event: React.ChangeEvent<HTMLInputElement>) {
-    if (!selectedWallDefinition) return;
-
-    const nextThickness = event.target.value === '' ? null : event.target.valueAsNumber;
-    updateSelectedWall({
-      ...selectedWallDefinition,
-      thicknessCm: Number.isFinite(nextThickness) ? nextThickness : null,
-    });
-  }
-
-  function handleSelectedWallHeightChange(event: React.ChangeEvent<HTMLInputElement>) {
-    if (!selectedWallDefinition) return;
-
-    const nextHeight = event.target.value === '' ? null : event.target.valueAsNumber;
-    const normalizedHeight = Number.isFinite(nextHeight) ? nextHeight : null;
-
-    updateSelectedWall({
-      ...selectedWallDefinition,
-      heightLeftCm: normalizedHeight,
-      heightRightCm: normalizedHeight,
-    });
-  }
-
-  function handleSelectedWallMaterialChange(event: React.ChangeEvent<HTMLInputElement>) {
-    if (!selectedWallDefinition) return;
-
-    updateSelectedWall({
-      ...selectedWallDefinition,
-      material: event.target.value.trim() === '' ? null : event.target.value,
-    });
-  }
-
-  function handleOpeningDraftChange(field: keyof OpeningDraft, value: string) {
-    setOpeningFormMessage(null);
-    setOpeningDraft((currentDraft) => ({
-      ...currentDraft,
-      [field]: value,
-    }));
-  }
-
-  function handleAddOpening() {
-    if (!ROOM_EDITOR_WRITES_ENABLED || !selectedWall || !selectedWallDefinition) return;
-
-    const offsetCm = parseMetricInput(openingDraft.offsetCm);
-    const widthCm = parseMetricInput(openingDraft.widthCm);
-    const bottomCm = parseMetricInput(openingDraft.bottomCm);
-    const heightCm = parseMetricInput(openingDraft.heightCm);
-
-    if (!Number.isFinite(offsetCm) || offsetCm < 0) {
-      setOpeningFormMessage('La position de l’ouverture doit être positive ou nulle.');
-      return;
-    }
-
-    if (!Number.isFinite(widthCm) || widthCm <= 0) {
-      setOpeningFormMessage('La largeur de l’ouverture doit être strictement positive.');
-      return;
-    }
-
-    if (!Number.isFinite(bottomCm) || bottomCm < 0) {
-      setOpeningFormMessage('L’allège de l’ouverture doit être positive ou nulle.');
-      return;
-    }
-
-    if (!Number.isFinite(heightCm) || heightCm <= 0) {
-      setOpeningFormMessage('La hauteur de l’ouverture doit être strictement positive.');
-      return;
-    }
-
-    const nextOpening: Opening = {
-      id: crypto.randomUUID(),
-      wallId: selectedWallDefinition.id,
-      type: openingDraft.type,
-      offsetCm,
-      widthCm,
-      bottomCm,
-      heightCm,
-      notes: null,
-    };
-
-    const validationIssue = validateOpeningOnWall(
-      selectedWall.lengthCm,
-      selectedWallDefinition,
-      nextOpening,
-      selectedWallOpenings,
-    );
-
-    if (validationIssue) {
-      setOpeningFormMessage(formatOpeningValidationIssue(validationIssue, preferences.lengthUnit));
-      return;
-    }
-
-    setOpenings((currentOpenings) => [...currentOpenings, nextOpening]);
-    setOpeningFormMessage(null);
-    setErrorMessage(null);
-    markDirty();
-    setStatusMessage(`Ouverture ajoutée sur le mur ${selectedWall.index + 1}.`);
-  }
-
-  function handleRemoveOpening(openingId: string) {
-    if (!ROOM_EDITOR_WRITES_ENABLED) return;
-    setOpenings((currentOpenings) => currentOpenings.filter((opening) => opening.id !== openingId));
-    setOpeningFormMessage(null);
-    setErrorMessage(null);
-    markDirty();
-    setStatusMessage('Ouverture supprimée.');
-  }
-
-  async function refreshProjects(preferredProjectId?: string): Promise<Project[]> {
-    const nextProjects = await listProjects();
-    setAvailableProjects(nextProjects);
-    setSelectedProjectId((currentProjectId) => {
-      const candidateProjectId = preferredProjectId ?? currentProjectId;
-      return nextProjects.some((project) => project.id === candidateProjectId)
-        ? candidateProjectId
-        : nextProjects[0]?.id ?? EMPTY_PROJECT_ID;
-    });
-    setNewLevelProjectId((currentProjectId) => {
-      const candidateProjectId = preferredProjectId ?? currentProjectId;
-      return nextProjects.some((project) => project.id === candidateProjectId)
-        ? candidateProjectId
-        : nextProjects[0]?.id ?? EMPTY_PROJECT_ID;
-    });
-    return nextProjects;
-  }
-
-  async function refreshLevelsForProject(
-    projectId: string,
-    preferredLevelId?: string,
-  ): Promise<Level[]> {
-    const trimmedProjectId = projectId.trim();
-
-    if (!trimmedProjectId) {
-      setAvailableLevels([]);
-      setSelectedLevelId(EMPTY_LEVEL_ID);
-      setAvailableRooms([]);
-      setLevelRoomSnapshots([]);
-      setSelectedRoomId('');
-      return [];
-    }
-
-    const nextLevels = await listLevelsByProject(trimmedProjectId);
-    setAvailableLevels(nextLevels);
-    setAvailableRooms([]);
-    setLevelRoomSnapshots([]);
-    setSelectedRoomId('');
-    setSelectedLevelId((currentLevelId) => {
-      const candidateLevelId = preferredLevelId ?? currentLevelId;
-      return nextLevels.some((level) => level.id === candidateLevelId)
-        ? candidateLevelId
-        : EMPTY_LEVEL_ID;
-    });
-    return nextLevels;
-  }
-
-  async function refreshRoomsForLevel(levelId: string): Promise<Room[]> {
-    const trimmedLevelId = levelId.trim();
-
-    if (!trimmedLevelId) {
-      setAvailableRooms([]);
-      setLevelRoomSnapshots([]);
-      setSelectedRoomId('');
-      return [];
-    }
-
-    const nextRooms = await listRoomsByLevel(trimmedLevelId);
-    setAvailableRooms(nextRooms);
-    return nextRooms;
-  }
-
-  async function refreshRoomSnapshotsForRooms(rooms: Room[]): Promise<RoomSnapshot[]> {
-    if (rooms.length === 0) {
-      setLevelRoomSnapshots([]);
-      return [];
-    }
-
-    const nextSnapshots = await Promise.all(rooms.map((room) => loadRoomSnapshot(room.id)));
-    setLevelRoomSnapshots(nextSnapshots);
-    return nextSnapshots;
-  }
-
-  function resetCanvasToDraft() {
-    setActiveRoom(null);
-    setRoomNameInput(DEFAULT_ROOM_NAME);
-    setOpeningDraft(DEFAULT_OPENING_DRAFT);
-    setOpeningFormMessage(null);
-    applyRoomGeometry([], [], []);
-    setSelectedWallIndex(null);
-    clearDirty();
-  }
-
-  function openDraftRoom(nextRoomName = DEFAULT_ROOM_NAME) {
-    resetCanvasToDraft();
-    setSelectedRoomId('');
-    setRoomNameInput(nextRoomName);
-  }
-
-  function clearActiveRoomSelection() {
-    openDraftRoom();
-  }
-
-  function applyActiveRoomSnapshot(snapshot: RoomSnapshot) {
-    setActiveRoom(snapshot.room);
-    setSelectedRoomId(snapshot.room.id);
-    setRoomNameInput(snapshot.room.name);
-    setOpeningDraft(DEFAULT_OPENING_DRAFT);
-    setOpeningFormMessage(null);
-    applyRoomGeometry(snapshot.vertices, snapshot.walls, snapshot.openings);
-    setSelectedWallIndex(null);
-    clearDirty();
-  }
+  }, [levelId, projectId, roomId]);
 
   useEffect(() => {
-    if (!supabaseConfigured) {
-      return;
-    }
+    if (hasSupabaseConfig()) void load();
+  }, [load]);
 
-    void runRoomAction('bootstrap', async () => {
-      const nextProjects = await refreshProjects(initialProjectId);
-      const preferredProject = nextProjects.find((project) => project.id === initialProjectId) ?? nextProjects[0];
+  const validObjects = useMemo(() => new Set(levelData?.rooms.flatMap(({ room, walls, openings }) => [
+    `room:${room.id}`,
+    ...walls.map(({ id }) => `wall:${id}`),
+    ...openings.map(({ id }) => `opening:${id}`),
+  ]) ?? []), [levelData]);
 
-      if (!preferredProject) {
-        notifyContextChange({ projectId: EMPTY_PROJECT_ID, levelId: EMPTY_LEVEL_ID, roomId: '' }, 'replace');
-        setStatusMessage('Aucun projet trouvé.');
-        return;
-      }
+  if (!hasSupabaseConfig()) return <DashboardLayout><Alert color="red">Configure Supabase pour afficher la pièce.</Alert></DashboardLayout>;
 
-      setSelectedProjectId(preferredProject.id);
-      const nextLevels = await refreshLevelsForProject(preferredProject.id, initialLevelId);
-      const preferredLevel = nextLevels.find((level) => level.id === initialLevelId) ?? nextLevels[0];
+  return <ActionHistoryProvider key={`${projectId}:${levelId}:${roomId}`}>
+    <SelectionSyncBridge validObjects={validObjects}>
+      <RoomEditorContent
+        {...props}
+        project={project}
+        level={level}
+        initialData={levelData}
+        canWrite={canWrite}
+        loading={loading}
+        loadError={loadError}
+        options={options}
+        optionsError={optionsError}
+        onOptionsChange={(next) => {
+          setOptions(next);
+          setOptionsError('');
+          void supabaseViewSettingsGateway.saveDisplayOptions(projectId, next).catch(() => {
+            setOptionsError('Les options d’affichage n’ont pas pu être enregistrées.');
+          });
+        }}
+      />
+    </SelectionSyncBridge>
+  </ActionHistoryProvider>;
+}
 
-      if (!preferredLevel) {
-        notifyContextChange({ projectId: preferredProject.id, levelId: EMPTY_LEVEL_ID, roomId: '' }, 'replace');
-        setStatusMessage('Projet sélectionné automatiquement. Aucun niveau trouvé pour ce projet.');
-        return;
-      }
+interface RoomEditorContentProps extends RoomEditorProps {
+  projectId: string;
+  levelId: string;
+  roomId: string;
+  project: Project | null;
+  level: Level | null;
+  initialData: CanvasLevelData | null;
+  canWrite: boolean;
+  loading: boolean;
+  loadError: string;
+  options: CanvasDisplayOptions;
+  optionsError: string;
+  onOptionsChange(options: CanvasDisplayOptions): void;
+}
 
-      setSelectedLevelId(preferredLevel.id);
-      const nextRooms = await refreshRoomsForLevel(preferredLevel.id);
-      const nextSnapshots = await refreshRoomSnapshotsForRooms(nextRooms);
-
-      if (initialRoomId === '') {
-        openDraftRoom();
-        notifyContextChange({
-          projectId: preferredProject.id,
-          levelId: preferredLevel.id,
-          roomId: '',
-        }, 'replace');
-        setStatusMessage('Clique sur le plan pour placer les deux coins opposés de la pièce.');
-        return;
-      }
-
-      const preferredSnapshot = nextSnapshots.find((snapshot) => snapshot.room.id === initialRoomId) ?? nextSnapshots[0];
-
-      if (!preferredSnapshot) {
-        clearActiveRoomSelection();
-        notifyContextChange({ projectId: preferredProject.id, levelId: preferredLevel.id, roomId: '' }, 'replace');
-        setStatusMessage('Projet et niveau sélectionnés automatiquement. Aucune pièce trouvée pour ce niveau.');
-        return;
-      }
-
-      applyActiveRoomSnapshot(preferredSnapshot);
-      notifyContextChange({
-        projectId: preferredProject.id,
-        levelId: preferredLevel.id,
-        roomId: preferredSnapshot.room.id,
-      }, 'replace');
-      setStatusMessage(`Pièce affichée : ${preferredSnapshot.room.name}.`);
-    });
-  }, [supabaseConfigured, initialLevelId, initialProjectId, initialRoomId]);
-
-  const handleSelectedProjectChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const nextProjectId = event.target.value;
-
-    setSelectedProjectId(nextProjectId);
-    setSelectedLevelId(EMPTY_LEVEL_ID);
-    setAvailableLevels([]);
-    setAvailableRooms([]);
-    setLevelRoomSnapshots([]);
-    clearActiveRoomSelection();
-    setStatusMessage(null);
-    setErrorMessage(null);
-    notifyContextChange({ projectId: nextProjectId, levelId: EMPTY_LEVEL_ID, roomId: '' }, 'push');
-  };
-
-  const handleSelectedLevelChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const nextLevelId = event.target.value;
-
-    setSelectedLevelId(nextLevelId);
-    setAvailableRooms([]);
-    setLevelRoomSnapshots([]);
-    clearActiveRoomSelection();
-    setStatusMessage(null);
-    setErrorMessage(null);
-
-    if (!supabaseConfigured || !nextLevelId) {
-      notifyContextChange({ projectId: selectedProjectId, levelId: nextLevelId, roomId: '' }, 'push');
-      return;
-    }
-
-    void runRoomAction('select-level', async () => {
-      const nextRooms = await refreshRoomsForLevel(nextLevelId);
-      const nextSnapshots = await refreshRoomSnapshotsForRooms(nextRooms);
-      const firstSnapshot = nextSnapshots[0] ?? null;
-
-      if (!firstSnapshot) {
-        notifyContextChange({ projectId: selectedProjectId, levelId: nextLevelId, roomId: '' }, 'push');
-        setStatusMessage('Aucune pièce trouvée pour ce niveau.');
-        return;
-      }
-
-      applyActiveRoomSnapshot(firstSnapshot);
-      notifyContextChange({
-        projectId: selectedProjectId,
-        levelId: nextLevelId,
-        roomId: firstSnapshot.room.id,
-      }, 'push');
-      setStatusMessage(`Pièce affichée : ${firstSnapshot.room.name}.`);
-    });
-  };
-
-  const handleNewLevelProjectChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setNewLevelProjectId(event.target.value);
-    setStatusMessage(null);
-    setErrorMessage(null);
-  };
-
-  const handleListProjects = () => {
-    void runRoomAction('list-projects', async () => {
-      const nextProjects = await refreshProjects();
-
-      setStatusMessage(
-        nextProjects.length === 0
-          ? 'Aucun projet trouvé.'
-          : `${nextProjects.length} projet(s) trouvé(s).`,
-      );
-    });
-  };
-
-  const handleCreateProject = () => {
-    if (!ROOM_EDITOR_WRITES_ENABLED) return;
-    void runRoomAction('create-project', async () => {
-      const projectName = newProjectNameInput.trim();
-
-      if (!projectName) {
-        throw new Error('Renseigne un nom avant de créer le projet.');
-      }
-
-      const createdProject = await createProject({
-        name: projectName,
-      });
-
-      const nextProjects = await listProjects();
-      setAvailableProjects(nextProjects);
-      setSelectedProjectId((currentProjectId) => (
-        nextProjects.some((project) => project.id === currentProjectId)
-          ? currentProjectId
-          : EMPTY_PROJECT_ID
-      ));
-      setNewLevelProjectId((currentProjectId) => {
-        if (nextProjects.some((project) => project.id === currentProjectId)) {
-          return currentProjectId;
-        }
-
-        return createdProject.id;
-      });
-      setNewProjectNameInput(DEFAULT_PROJECT_NAME);
-      setStatusMessage(`Projet créé : ${createdProject.name}. Sélectionne-le dans la liste pour l'activer.`);
-    });
-  };
-
-  const handleListLevels = () => {
-    void runRoomAction('list-levels', async () => {
-      if (!selectedProjectId) {
-        throw new Error('Sélectionne un projet avant de lister les niveaux.');
-      }
-
-      if (!isUuid(selectedProjectId)) {
-        throw new Error('Le projet sélectionné est invalide.');
-      }
-
-      const nextLevels = await refreshLevelsForProject(selectedProjectId);
-      setStatusMessage(
-        nextLevels.length === 0
-          ? 'Aucun niveau trouvé pour le projet sélectionné.'
-          : `${nextLevels.length} niveau(x) trouvé(s) pour le projet sélectionné.`,
-      );
-    });
-  };
-
-  const handleCreateLevel = () => {
-    if (!ROOM_EDITOR_WRITES_ENABLED) return;
-    void runRoomAction('create-level', async () => {
-      const projectId = newLevelProjectId.trim();
-      const levelName = newLevelNameInput.trim();
-
-      if (!projectId) {
-        throw new Error('Sélectionne un projet avant de créer un niveau.');
-      }
-
-      if (!isUuid(projectId)) {
-        throw new Error('Le projet sélectionné est invalide.');
-      }
-
-      if (!levelName) {
-        throw new Error('Renseigne un nom avant de créer le niveau.');
-      }
-
-      const createdLevel = await createLevel({
-        projectId,
-        name: levelName,
-      });
-
-      if (createdLevel.projectId === selectedProjectId) {
-        await refreshLevelsForProject(createdLevel.projectId);
-      }
-
-      setNewLevelNameInput(DEFAULT_LEVEL_NAME);
-      setStatusMessage(`Niveau créé : ${createdLevel.name}. Sélectionne-le dans la liste si tu veux l'afficher.`);
-    });
-  };
-
-  const handleCreateRoom = () => {
-    if (!ROOM_EDITOR_WRITES_ENABLED) return;
-    const roomName = newRoomNameInput.trim();
-
-    if (!selectedLevelId) {
-      setErrorMessage('Sélectionne un niveau avant de préparer la pièce.');
-      return;
-    }
-
-    if (!isUuid(selectedLevelId)) {
-      setErrorMessage('Le niveau sélectionné est invalide.');
-      return;
-    }
-
-    openDraftRoom(roomName);
-    setNewRoomNameInput(DEFAULT_ROOM_NAME);
-    setStatusMessage('Clique sur le plan pour placer les deux coins opposés de la pièce.');
-    setErrorMessage(null);
-    notifyContextChange({ projectId: selectedProjectId, levelId: selectedLevelId, roomId: '' }, 'push');
-  };
-
-  function selectRoom(nextRoomId: string, historyMode: HistoryUpdateMode = 'push') {
-    setSelectedRoomId(nextRoomId);
-
-    setStatusMessage(null);
-    setErrorMessage(null);
-
-    if (!nextRoomId) {
-      clearActiveRoomSelection();
-      notifyContextChange({ projectId: selectedProjectId, levelId: selectedLevelId, roomId: '' }, historyMode);
-      return;
-    }
-
-    const cachedSnapshot = levelRoomSnapshots.find((snapshot) => snapshot.room.id === nextRoomId);
-    if (cachedSnapshot) {
-      applyActiveRoomSnapshot(cachedSnapshot);
-      notifyContextChange({
-        projectId: selectedProjectId,
-        levelId: selectedLevelId,
-        roomId: cachedSnapshot.room.id,
-      }, historyMode);
-      setStatusMessage(`Pièce affichée : ${cachedSnapshot.room.name}.`);
-      return;
-    }
-
-    void runRoomAction('select-room', async () => {
-      const snapshot = await loadRoomSnapshot(nextRoomId);
-      applyActiveRoomSnapshot(snapshot);
-      notifyContextChange({
-        projectId: selectedProjectId,
-        levelId: selectedLevelId,
-        roomId: snapshot.room.id,
-      }, historyMode);
-      setStatusMessage(`Pièce affichée : ${snapshot.room.name}.`);
-    });
-  }
-
-  const handleSelectedRoomChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    selectRoom(event.target.value, 'push');
-  };
-
-  const handleSaveRoom = (mode: 'manual' | 'auto' = 'manual') => {
-    if (!ROOM_EDITOR_WRITES_ENABLED) return;
-    void runRoomAction('save', async () => {
-      setSaveStatus('saving');
-      const draftRoomName = roomNameInput.trim();
-      const newRoomDraftName = newRoomNameInput.trim();
-      const roomName = draftRoomName || (!activeRoom ? newRoomDraftName : '');
-
-      if (!selectedLevelId) {
-        throw new Error('Sélectionne un niveau avant d’enregistrer la pièce.');
-      }
-
-      if (!isUuid(selectedLevelId)) {
-        throw new Error('Le niveau sélectionné est invalide.');
-      }
-
-      if (!roomName) {
-        throw new Error('Renseigne un nom avant de sauvegarder la pièce.');
-      }
-
-      if (!activeRoom && vertices.length !== 4) {
-        throw new Error('Place deux points sur le plan avant de créer la pièce.');
-      }
-
-      const isCreatingRoom = !activeRoom;
-      const savedRoom = activeRoom
-        ? await updateRoom({
-          ...activeRoom,
-          levelId: selectedLevelId,
-          name: roomName,
-        })
-        : await createRoom({
-          levelId: selectedLevelId,
-          name: roomName,
-        });
-
-      const sourceVertices = isCreatingRoom
-        ? prepareVerticesForRoom(vertices, savedRoom.id, true)
-        : prepareVerticesForRoom(vertices, savedRoom.id);
-
-      const savedVertices = await replaceRoomVertices(
-        savedRoom.id,
-        sourceVertices,
-      );
-      const savedWalls = await replaceRoomWalls(
-        savedRoom.id,
-        savedVertices,
-        remapWallsToVertices(vertices, savedVertices, wallDefinitions),
-      );
-      const savedOpenings = await replaceRoomOpenings(
-        savedVertices,
-        savedWalls,
-        isCreatingRoom ? remapOpeningsToWalls(wallDefinitions, savedWalls, openings) : openings,
-      );
-
-      setAvailableRooms((currentRooms) => {
-        const index = currentRooms.findIndex((room) => room.id === savedRoom.id);
-        if (index < 0) return [...currentRooms, savedRoom];
-        const nextRooms = [...currentRooms];
-        nextRooms[index] = savedRoom;
-        return nextRooms;
-      });
-      setLevelRoomSnapshots((currentSnapshots) => {
-        const nextSnapshot: RoomSnapshot = {
-          room: savedRoom,
-          vertices: savedVertices,
-          walls: savedWalls,
-          openings: savedOpenings,
-        };
-        const index = currentSnapshots.findIndex((snapshot) => snapshot.room.id === savedRoom.id);
-        if (index < 0) return [...currentSnapshots, nextSnapshot];
-        const nextSnapshots = [...currentSnapshots];
-        nextSnapshots[index] = nextSnapshot;
-        return nextSnapshots;
-      });
-
-      setActiveRoom(savedRoom);
-      setSelectedRoomId(savedRoom.id);
-      setRoomNameInput(savedRoom.name);
-      applyRoomGeometry(savedVertices, savedWalls, savedOpenings);
-      notifyContextChange({
-        projectId: selectedProjectId,
-        levelId: selectedLevelId,
-        roomId: savedRoom.id,
-      }, 'replace');
-      setHasUnsavedChanges(false);
-      setSaveStatus('synced');
-      setStatusMessage(
-        mode === 'auto'
-          ? `Auto-sauvegarde effectuée : ${savedRoom.name}.`
-          : isCreatingRoom
-          ? `Pièce créée et enregistrée : ${savedRoom.name}.`
-          : `Pièce enregistrée : ${savedRoom.name}.`,
-      );
-    }, { propagateError: true }).catch(() => {
-      setSaveStatus('error');
-    });
-  };
+function RoomEditorContent({
+  projectId,
+  levelId,
+  roomId,
+  project,
+  level,
+  initialData,
+  canWrite,
+  loading,
+  loadError,
+  options,
+  optionsError,
+  onOptionsChange,
+  onBack,
+  onOpenWall,
+}: RoomEditorContentProps) {
+  const { preferences } = usePreferences();
+  const { selection, select, clear } = useEditorSelection();
+  const { canUndo, canRedo, record, undo, redo } = useActionHistory();
+  const [data, setData] = useState<CanvasLevelData | null>(initialData);
+  const dataRef = useRef<CanvasLevelData | null>(initialData);
+  const [dirty, setDirty] = useState(false);
+  const [validationError, setValidationError] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    if (!ROOM_EDITOR_WRITES_ENABLED || !supabaseConfigured || !hasUnsavedChanges || isBusy || !selectedLevelId) {
-      return undefined;
+    if (!dirty) {
+      setData(initialData);
+      dataRef.current = initialData;
     }
-    const interval = window.setInterval(() => {
-      void handleSaveRoom('auto');
-    }, 300_000);
-    return () => window.clearInterval(interval);
-  }, [handleSaveRoom, hasUnsavedChanges, isBusy, selectedLevelId, supabaseConfigured]);
+  }, [dirty, initialData]);
 
-  const handleDeleteRoom = () => {
-    if (!ROOM_EDITOR_WRITES_ENABLED) return;
-    void runRoomAction('delete', async () => {
-      if (!activeRoom) {
-        throw new Error('Sélectionne une pièce avant de la supprimer.');
-      }
+  const current = data?.rooms.find(({ room }) => room.id === roomId) ?? null;
+  const selectedWall = selection?.type === 'wall'
+    ? current?.walls.find(({ id }) => id === selection.id) ?? null
+    : null;
+  const selectedOpening = selection?.type === 'opening'
+    ? current?.openings.find(({ id }) => id === selection.id) ?? null
+    : null;
+  const selectedRoom = selection?.type === 'room' && selection.id === roomId ? current?.room ?? null : null;
 
-      const deletedRoom = activeRoom;
-      let remainingRooms: Room[] = [];
-
-      await deleteRoom(deletedRoom.id);
-
-      if (deletedRoom.levelId && isUuid(deletedRoom.levelId)) {
-        remainingRooms = await refreshRoomsForLevel(deletedRoom.levelId);
-        await refreshRoomSnapshotsForRooms(remainingRooms);
-      } else {
-        setAvailableRooms([]);
-        setLevelRoomSnapshots([]);
-      }
-
-      clearActiveRoomSelection();
-      notifyContextChange({ projectId: selectedProjectId, levelId: selectedLevelId, roomId: '' }, 'replace');
-      clearDirty();
-      setStatusMessage(
-        remainingRooms.length === 0
-          ? `Pièce supprimée : ${deletedRoom.name}. Aucune pièce restante pour ce niveau.`
-          : `Pièce supprimée : ${deletedRoom.name}. Sélectionne une autre pièce dans la liste pour l'afficher.`,
+  const autosave = useEditorAutosave({
+    source: 'room-editor',
+    dirty,
+    enabled: canWrite && Boolean(data) && !loadError,
+    save: async () => {
+      const draft = dataRef.current;
+      if (!draft) return;
+      const saved = await saveLevelRoomSnapshots(
+        levelId,
+        draft.rooms,
+        draft.geometryRevision ?? 0,
       );
+      const next = { ...draft, rooms: saved.rooms, geometryRevision: saved.revision };
+      dataRef.current = next;
+      setData(next);
+      setDirty(false);
+    },
+  });
+
+  const applyData = useCallback((label: string, next: CanvasLevelData) => {
+    const previous = dataRef.current;
+    if (!previous) return;
+    dataRef.current = next;
+    setData(next);
+    setDirty(true);
+    setValidationError('');
+    record({
+      label,
+      undo: async () => { dataRef.current = previous; setData(previous); setDirty(true); },
+      redo: async () => { dataRef.current = next; setData(next); setDirty(true); },
     });
+  }, [record]);
+
+  const replaceRooms = (label: string, rooms: RoomSnapshot[]) => {
+    const draft = dataRef.current;
+    if (draft) applyData(label, { ...draft, rooms });
   };
 
-  return (
-    <DashboardLayout>
-      <header className="room-editor__header">
-        <div>
-          <h2 className="dashboard-pageTitle">Éditeur de pièce (vue du dessus)</h2>
-          <p className="room-editor__breadcrumbs">
-            {selectedProject?.name || 'Projet'}
-            {' > '}
-            {selectedLevel?.name || 'Niveau'}
-            {' > '}
-            {roomNameInput.trim() || activeRoom?.name || 'Nouvelle pièce'}
-          </p>
-        </div>
-        <div className="room-editor__headerActions">
-          <span className="room-editor__readOnlyStatus" role="status">
-            <LuEye aria-hidden="true" />
-            Lecture seule
-          </span>
-          {onBack ? (
-            <Button variant="default" className="dashboard-outlineButton" onClick={onBack}>
-              Retour
-            </Button>
-          ) : null}
-        </div>
-      </header>
+  const updateCurrentSnapshot = (label: string, update: (snapshot: RoomSnapshot) => RoomSnapshot) => {
+    const draft = dataRef.current;
+    if (!draft) return;
+    replaceRooms(label, draft.rooms.map((snapshot) => snapshot.room.id === roomId ? update(snapshot) : snapshot));
+  };
 
-      {errorMessage ? (
-        <div className="dashboard-banner dashboard-banner--error">{errorMessage}</div>
-      ) : null}
+  const selectionBelongsToCurrentRoom = (next: EditorSelection) => {
+    if (!current) return false;
+    if (next.type === 'room') return next.id === roomId;
+    if (next.type === 'wall') return current.walls.some(({ id }) => id === next.id);
+    if (next.type === 'opening') return current.openings.some(({ id }) => id === next.id);
+    return false;
+  };
 
-      {hasUnsavedChanges && saveStatus === 'error' ? (
-        <div className="dashboard-banner dashboard-banner--error">
-          Échec de l’enregistrement automatique. Nouvelle tentative dans 5 minutes.
-        </div>
-      ) : null}
+  const moveVertex = (targetRoomId: string, vertexId: string, point: Point) => {
+    const draft = dataRef.current;
+    if (!draft || targetRoomId !== roomId || !current || !canWrite) return;
+    const linkedIds = linkedVertexIds(draft.rooms, roomId, vertexId);
+    if (draft.rooms.some(({ vertices }) => vertices.some((vertex) => linkedIds.has(vertex.id) && vertex.isLocked))) return;
+    try {
+      const moved = moveLinkedVertex(draft.rooms, roomId, vertexId, point) as RoomSnapshot[];
+      const linked = linkCoincidentWalls(moved) as RoomSnapshot[];
+      const issue = linked.map(({ vertices }) => validateRoomPolygon(vertices)).find(Boolean);
+      if (issue) throw new Error(issue);
+      replaceRooms('Déplacer un sommet de la pièce', linked);
+    } catch (caught) {
+      setValidationError(message(caught));
+    }
+  };
 
-      {!supabaseConfigured ? (
-        <section className="dashboard-emptyState">
-          <h3>Supabase non configuré</h3>
-          <p>
-            Définis VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY dans web/.env.local pour activer
-            la gestion des projets, niveaux et pièces.
-          </p>
-        </section>
-      ) : (
-        <section className="room-editor__workspace">
-          <aside className="room-editor__roomsPanel">
-            <div className="room-editor__panelHeader">
-              <h3 className="dashboard-panelTitle">Pièces</h3>
-              <ActionIcon
-                variant="light"
-                className="room-editor__iconAction"
-                onClick={handleCreateRoom}
-                disabled
-                aria-label="Préparer une nouvelle pièce"
-              >
-                +
-              </ActionIcon>
-            </div>
+  const moveRoom = (targetRoomId: string, delta: Point) => {
+    const draft = dataRef.current;
+    if (!draft || targetRoomId !== roomId || !current || current.vertices.some(({ isLocked }) => isLocked) || !canWrite) return;
+    try {
+      const moved = moveRoomWithLinkedVertices(draft.rooms, roomId, delta) as RoomSnapshot[];
+      const issue = moved.map(({ vertices }) => validateRoomPolygon(vertices)).find(Boolean);
+      if (issue) throw new Error(issue);
+      replaceRooms('Déplacer la pièce', linkCoincidentWalls(moved) as RoomSnapshot[]);
+    } catch (caught) {
+      setValidationError(message(caught));
+    }
+  };
 
-            <div className="room-editor__filtersRow">
-              <NativeSelect className="dashboard-field dashboard-field--compact" label="Projet"
-                  value={selectedProjectId}
-                  onChange={handleSelectedProjectChange}
-                  disabled={isBusy || availableProjects.length === 0}
-                data={[{ value: '', label: availableProjects.length === 0 ? 'Aucun projet' : 'Sélectionner un projet' }, ...availableProjects.map((project) => ({ value: project.id, label: project.name }))]}
-              />
+  const updateWall = (wall: Wall) => {
+    const draft = dataRef.current;
+    if (!draft || !selectedWall) return;
+    replaceRooms('Modifier le mur', draft.rooms.map((snapshot) => snapshot.walls.some(({ id }) => id === wall.id) ? {
+      ...snapshot,
+      walls: snapshot.walls.map((candidate) => candidate.id === wall.id ? {
+        ...candidate,
+        thicknessCm: wall.thicknessCm,
+        material: wall.material,
+        insulation: wall.insulation,
+        notes: wall.notes,
+      } : candidate),
+    } : snapshot));
+  };
 
-              <NativeSelect className="dashboard-field dashboard-field--compact" label="Niveau"
-                  value={selectedLevelId}
-                  onChange={handleSelectedLevelChange}
-                  disabled={isBusy || !selectedProjectId || availableLevels.length === 0}
-                data={[{ value: '', label: availableLevels.length === 0 ? 'Aucun niveau' : 'Sélectionner un niveau' }, ...availableLevels.map((level) => ({ value: level.id, label: level.name }))]}
-              />
-            </div>
+  const updateOpening = (opening: Opening) => {
+    const draft = dataRef.current;
+    if (!draft) return;
+    try {
+      assertOpeningValidInLevel(draft.rooms, opening);
+    } catch (caught) {
+      setValidationError(message(caught));
+      return;
+    }
+    replaceRooms('Modifier l’ouverture', draft.rooms.map((snapshot) => snapshot.openings.some(({ id }) => id === opening.id) ? {
+      ...snapshot,
+      openings: snapshot.openings.map((candidate) => candidate.id === opening.id ? opening : candidate),
+    } : snapshot));
+  };
 
-            <TextInput className="dashboard-field dashboard-field--compact" label="Nom de la nouvelle pièce"
-                value={newRoomNameInput}
-                onChange={(event) => setNewRoomNameInput(event.target.value)}
-                placeholder="Cuisine, salon, chambre..."
-                disabled
-            />
+  const roomLocked = current?.vertices.length ? current.vertices.every(({ isLocked }) => isLocked) : false;
+  const selectedWallVertices = selectedWall
+    ? current?.vertices.filter(({ id }) => id === selectedWall.startVertexId || id === selectedWall.endVertexId) ?? []
+    : [];
+  const selectedWallLocked = selectedWallVertices.length > 0 && selectedWallVertices.every(({ isLocked }) => isLocked);
 
-            <div className="room-editor__list">
-              {availableRooms.length === 0 ? (
-                <p className="room-editor__hint">Aucune pièce pour ce niveau.</p>
-              ) : (
-                availableRooms.map((room) => {
-                  const roomSnapshot = levelRoomSnapshots.find((snapshot) => snapshot.room.id === room.id);
-                  const roomArea = roomSnapshot ? polygonAreaCm2(roomSnapshot.vertices) / 10000 : null;
-                  const isSelected = room.id === selectedRoomId;
-
-                  return (
-                    <UnstyledButton
-                      key={room.id}
-                      className={`room-editor__roomRow ${isSelected ? 'is-active' : ''}`}
-                      onClick={() => selectRoom(room.id, 'push')}
-                    >
-                      <strong>{room.name}</strong>
-                      <span>{roomArea === null ? 'Surface...' : formatSurfaceFromSquareMeters(roomArea, preferences.surfaceUnit)}</span>
-                    </UnstyledButton>
-                  );
-                })
-              )}
-            </div>
-          </aside>
-
-          <div className="room-editor__canvasPanel">
-            <div className="room-editor__toolbar">
-              <div className="room-editor__toolGroup">
-                <Button variant="light" className="room-editor__toolButton" disabled>Dessiner</Button>
-                <Button variant="subtle" className="room-editor__toolButton" disabled>Sélection</Button>
-                <Button variant="subtle" className="room-editor__toolButton" disabled>Déplacer</Button>
-                <Button variant="subtle" className="room-editor__toolButton" disabled>Mesurer</Button>
-                <Button variant="subtle" className="room-editor__toolButton" disabled>Annoter</Button>
-              </div>
-              <Button
-                className="dashboard-primaryButton room-editor__toolbarSave"
-                onClick={() => handleSaveRoom('manual')}
-                disabled
-              >
-                {busyAction === 'save' ? 'Enregistrement...' : activeRoom ? 'Enregistrer' : 'Créer la pièce'}
-              </Button>
-            </div>
-
-            <RoomCanvas
-              vertices={vertices}
-              wallDefinitions={wallDefinitions}
-              openings={openings}
-              contextRooms={contextRooms}
-              viewportStateKey={`room:${selectedProjectId}:${selectedLevelId}:${selectedRoomId || 'draft'}`}
-              selectedWallIndex={selectedWallIndex}
-              showInspector={false}
-              readOnly
-              lengthUnit={preferences.lengthUnit}
-              surfaceUnit={preferences.surfaceUnit}
-              height={760}
-              onVerticesChange={handleVerticesChange}
-              onWallSelect={setSelectedWallIndex}
-              rectangleCreationEnabled={!activeRoom && vertices.length === 0}
-              onRectangleCreate={(firstPoint, secondPoint) => {
-                try {
-                  const geometry = createRectangleRoomGeometryFromPoints(DEMO_PIECE_ID, firstPoint, secondPoint, {
-                    wallThicknessCm: preferences.defaultWallThicknessCm,
-                    wallHeightCm: preferences.defaultWallHeightCm,
-                  });
-                  applyRoomGeometry(geometry.vertices, geometry.walls, []);
-                  markDirty();
-                  setStatusMessage('Rectangle défini. Vérifie ses propriétés puis crée la pièce.');
-                  setErrorMessage(null);
-                } catch (caught) {
-                  setErrorMessage(formatErrorMessage(caught));
-                }
+  return <DashboardLayout>
+    <header className="global-editor__header">
+      <div>
+        <p className="dashboard-eyebrow">Éditeur 2D par pièce</p>
+        <h1 className="dashboard-pageTitle">{current?.room.name ?? 'Pièce'}</h1>
+        <Text size="sm">{project?.name ?? 'Projet'} · {level?.name ?? 'Niveau'}</Text>
+      </div>
+      <Group>
+        {autosave.status === 'saving' ? <Text><LuLoaderCircle aria-hidden /> Enregistrement…</Text> : null}
+        {autosave.status === 'synced' ? <Text><LuCircleCheck aria-hidden /> Synchronisé</Text> : null}
+        {autosave.status === 'error' ? <Text c="red"><LuCloudAlert aria-hidden /> Échec</Text> : null}
+        {!canWrite && !loading ? <Text><LuEye aria-hidden /> Lecture seule</Text> : null}
+        <Menu withinPortal>
+          <Menu.Target><Button variant="default">Affichage</Button></Menu.Target>
+          <Menu.Dropdown><CanvasDisplayOptionsMenu value={options} onChange={onOptionsChange} /></Menu.Dropdown>
+        </Menu>
+        <Button variant="default" disabled={!dirty || !canWrite || autosave.status === 'saving'} onClick={() => void autosave.saveNow().catch(() => undefined)}>Sauvegarder</Button>
+        <ActionIcon variant="default" aria-label="Annuler" disabled={!canWrite || !canUndo} onClick={undo}><LuUndo2 /></ActionIcon>
+        <ActionIcon variant="default" aria-label="Rétablir" disabled={!canWrite || !canRedo} onClick={redo}><LuRedo2 /></ActionIcon>
+        <Button variant="default" leftSection={<LuArrowLeft />} onClick={onBack}>Retour dashboard</Button>
+      </Group>
+    </header>
+    {loading ? <div className="dashboard-loading" aria-live="polite">Chargement de la pièce…</div> : null}
+    {loadError ? <Alert color="red" role="alert">{loadError}<Button variant="subtle" onClick={onBack}>Retour dashboard</Button></Alert> : null}
+    {autosave.error ? <Alert color="red" role="status">Échec de l’enregistrement automatique : {autosave.error}</Alert> : null}
+    {validationError ? <Alert color="red" role="alert">{validationError}</Alert> : null}
+    {optionsError ? <Alert color="red" role="status">{optionsError}</Alert> : null}
+    {!loading && !loadError && data && current ? <section className="global-editor__body room-editor2d__body">
+      <aside className="editor-panel room-editor2d__panel">
+        <Stack>
+          <Text fw={700}>Pièce</Text>
+          <ManualLockButton
+            isLocked={roomLocked}
+            canChangeLock={canWrite}
+            onChange={(locked) => {
+              const ids = new Set(current.vertices.map(({ id }) => id));
+              const next = setSharedVertexLock(dataRef.current!.rooms, ids, locked).map((snapshot) => ({
+                ...snapshot,
+                unlockedVertexIds: locked ? snapshot.unlockedVertexIds : [...new Set([...(snapshot.unlockedVertexIds ?? []), ...ids])],
+              }));
+              replaceRooms(locked ? 'Verrouiller la pièce' : 'Déverrouiller la pièce', next);
+            }}
+          />
+          <TextInput label="Nom" disabled={!canWrite} value={current.room.name} onChange={(event) => updateCurrentSnapshot('Renommer la pièce', (snapshot) => ({ ...snapshot, room: { ...snapshot.room, name: event.currentTarget.value } }))} />
+          <NativeSelect label="Type" disabled={!canWrite} value={current.room.type} data={ROOM_TYPES} onChange={(event) => updateCurrentSnapshot('Modifier le type de pièce', (snapshot) => ({ ...snapshot, room: { ...snapshot.room, type: event.currentTarget.value as RoomType } }))} />
+          <ColorInput
+            label="Couleur du sol"
+            format="hex"
+            disabled={!canWrite}
+            value={current.room.floorColor}
+            popoverProps={{ withinPortal: true }}
+            onChange={(floorColor) => updateCurrentSnapshot('Modifier la couleur du sol', (snapshot) => ({ ...snapshot, room: { ...snapshot.room, floorColor } }))}
+          />
+          <Textarea label="Notes" disabled={!canWrite} value={current.room.notes ?? ''} onChange={(event) => updateCurrentSnapshot('Modifier les notes de la pièce', (snapshot) => ({ ...snapshot, room: { ...snapshot.room, notes: event.currentTarget.value || null } }))} />
+          <Button
+            color="red"
+            variant="light"
+            leftSection={<LuTrash2 />}
+            loading={deleting}
+            disabled={!canWrite || roomLocked}
+            onClick={() => {
+              if (!window.confirm(`Supprimer la pièce « ${current.room.name} » ?`)) return;
+              const remainingRooms = data.rooms
+                .filter(({ room }) => room.id !== roomId)
+                .map((snapshot) => ({
+                  ...snapshot,
+                  walls: snapshot.walls.map((wall) => ({
+                    ...wall,
+                    pieceIds: wall.pieceIds?.filter((pieceId) => pieceId !== roomId),
+                  })),
+                }));
+              try {
+                assertLockedGeometryPreserved(data.rooms, remainingRooms);
+              } catch (caught) {
+                setValidationError(message(caught));
+                return;
+              }
+              setDeleting(true);
+              void saveLevelRoomSnapshots(levelId, remainingRooms, data.geometryRevision ?? 0)
+                .then(() => { setDirty(false); clear(); onBack?.(); })
+                .catch((caught) => setValidationError(message(caught)))
+                .finally(() => setDeleting(false));
+            }}
+          >Supprimer la pièce</Button>
+          <Text fw={700}>Murs</Text>
+          {current.walls.map((wall, index) => <Button key={wall.id} variant={selection?.type === 'wall' && selection.id === wall.id ? 'light' : 'subtle'} onClick={() => select({ source: 'creation-list', type: 'wall', id: wall.id, levelId })}>Mur {index + 1} · {formatLength(Math.hypot(current.vertices.find(({ id }) => id === wall.endVertexId)!.x - current.vertices.find(({ id }) => id === wall.startVertexId)!.x, current.vertices.find(({ id }) => id === wall.endVertexId)!.y - current.vertices.find(({ id }) => id === wall.startVertexId)!.y), preferences.lengthUnit)}</Button>)}
+          {selectedWall ? <Stack>
+            <ManualLockButton
+              isLocked={selectedWallLocked}
+              canChangeLock={canWrite}
+              onChange={(locked) => {
+                const ids = new Set([selectedWall.startVertexId, selectedWall.endVertexId]);
+                const next = setSharedVertexLock(dataRef.current!.rooms, ids, locked).map((snapshot) => ({
+                  ...snapshot,
+                  unlockedVertexIds: locked ? snapshot.unlockedVertexIds : [...new Set([...(snapshot.unlockedVertexIds ?? []), ...ids])],
+                }));
+                replaceRooms(locked ? 'Verrouiller le mur' : 'Déverrouiller le mur', next);
               }}
             />
-          </div>
-
-          <aside className="room-editor__inspector">
-            <div className="room-editor__panelHeader">
-              <h3 className="dashboard-panelTitle">{roomNameInput.trim() || activeRoom?.name || 'Pièce'}</h3>
-            </div>
-
-            <div className="room-editor__tabs">
-              <Button
-                variant={inspectorTab === 'metrics' ? 'filled' : 'subtle'}
-                className={`room-editor__tab ${inspectorTab === 'metrics' ? 'is-active' : ''}`}
-                onClick={() => setInspectorTab('metrics')}
-              >
-                Métriques
-              </Button>
-              <Button
-                variant={inspectorTab === 'objects' ? 'filled' : 'subtle'}
-                className={`room-editor__tab ${inspectorTab === 'objects' ? 'is-active' : ''}`}
-                onClick={() => setInspectorTab('objects')}
-              >
-                Objet
-              </Button>
-            </div>
-
-            {inspectorTab === 'metrics' ? (
-              <div className="room-editor__statsList">
-                <div className="room-editor__statRow"><span>Surface</span><strong>{formatSurfaceFromSquareMeters(areaM2, preferences.surfaceUnit)}</strong></div>
-                <div className="room-editor__statRow"><span>Périmètre</span><strong>{formatLength(perimeterM * 100, preferences.lengthUnit)}</strong></div>
-                <div className="room-editor__statRow">
-                  <span>Hauteur sous plafond</span>
-                  <strong>{roomHeightM === null ? 'N/A' : formatLength(roomHeightM * 100, preferences.lengthUnit)}</strong>
-                </div>
-
-                <h4 className="room-editor__sectionTitle">Murs ({walls.length})</h4>
-                <ul className="room-editor__wallList">
-                  {walls.map((wall) => (
-                    <li key={wall.index}>
-                      <UnstyledButton
-                        className={`room-editor__wallItem ${selectedWallIndex === wall.index ? 'is-active' : ''}`}
-                        onClick={() => setSelectedWallIndex(wall.index)}
-                      >
-                        <span>{wall.index + 1}</span>
-                        <strong>{formatLength(wall.lengthCm, preferences.lengthUnit)}</strong>
-                      </UnstyledButton>
-                    </li>
-                  ))}
-                </ul>
-
-                <h4 className="room-editor__sectionTitle">Angles</h4>
-                <ul className="room-editor__anglesList">
-                  {vertices.map((vertex, index) => {
-                    const prev = vertices[(index - 1 + vertices.length) % vertices.length];
-                    const next = vertices[(index + 1) % vertices.length];
-                    return (
-                      <li key={vertex.id}>
-                        v{index + 1}: {angleAtVertexDegrees(prev, vertex, next).toFixed(1)}°
-                      </li>
-                    );
-                  })}
-                </ul>
-                <p className="room-editor__hint">
-                  Centre: ({formatLength(center.x, preferences.lengthUnit)}, {formatLength(center.y, preferences.lengthUnit)})
-                </p>
-              </div>
-            ) : (
-              <div className="room-editor__propertiesPanel">
-                {selectedWall && selectedWallDefinition ? (
-                  <div className="room-editor__wallEditor">
-                    <h4 className="room-editor__sectionTitle">Ouvertures du mur {selectedWall.index + 1}</h4>
-
-                    {selectedWallOpeningIssues.length > 0 ? (
-                      <div className="dashboard-banner dashboard-banner--error">
-                        {selectedWallOpeningIssues.map((issue) => (
-                          <p key={`${issue.opening.id}:${issue.code}`}>
-                            {formatOpeningValidationIssue(issue, preferences.lengthUnit)}
-                          </p>
-                        ))}
-                      </div>
-                    ) : null}
-
-                    <h5 className="room-editor__sectionTitle">Ouvertures</h5>
-                    <div className="room-editor__fieldGrid">
-                      <NativeSelect className="dashboard-field dashboard-field--compact room-editor__openingTypeField" label="Type"
-                          value={openingDraft.type}
-                          onChange={(event) => handleOpeningDraftChange('type', event.target.value)}
-                          disabled
-                        data={[{ value: 'door', label: 'Porte' }, { value: 'window', label: 'Fenêtre' }, { value: 'other', label: 'Autre' }]}
-                      />
-                      <NumberInput className="dashboard-field dashboard-field--compact" label={`Position (${preferences.lengthUnit})`}
-                          min={0}
-                          step={1}
-                          value={centimetersToDisplay(Number(openingDraft.offsetCm), preferences.lengthUnit)}
-                          onChange={(value) => handleOpeningDraftChange('offsetCm', String(displayToCentimeters(Number(value), preferences.lengthUnit)))}
-                          disabled
-                        />
-                      <NumberInput className="dashboard-field dashboard-field--compact" label={`Largeur (${preferences.lengthUnit})`}
-                          min={1}
-                          step={1}
-                          value={centimetersToDisplay(Number(openingDraft.widthCm), preferences.lengthUnit)}
-                          onChange={(value) => handleOpeningDraftChange('widthCm', String(displayToCentimeters(Number(value), preferences.lengthUnit)))}
-                          disabled
-                        />
-                      <NumberInput className="dashboard-field dashboard-field--compact" label={`Allège (${preferences.lengthUnit})`}
-                          min={0}
-                          step={1}
-                          value={centimetersToDisplay(Number(openingDraft.bottomCm), preferences.lengthUnit)}
-                          onChange={(value) => handleOpeningDraftChange('bottomCm', String(displayToCentimeters(Number(value), preferences.lengthUnit)))}
-                          disabled
-                        />
-                      <NumberInput className="dashboard-field dashboard-field--compact" label={`Hauteur (${preferences.lengthUnit})`}
-                          min={1}
-                          step={1}
-                          value={centimetersToDisplay(Number(openingDraft.heightCm), preferences.lengthUnit)}
-                          onChange={(value) => handleOpeningDraftChange('heightCm', String(displayToCentimeters(Number(value), preferences.lengthUnit)))}
-                          disabled
-                        />
-                    </div>
-
-                    <Button className="dashboard-viewButton" onClick={handleAddOpening} disabled>
-                      Ajouter ouverture
-                    </Button>
-
-                    {openingFormMessage ? (
-                      <div className="dashboard-banner dashboard-banner--error">{openingFormMessage}</div>
-                    ) : null}
-
-                    {selectedWallOpenings.length === 0 ? (
-                      <p className="room-editor__hint">Aucune ouverture sur ce mur.</p>
-                    ) : (
-                      <ul className="room-editor__openingsList">
-                        {selectedWallOpenings.map((opening) => (
-                          <li key={opening.id}>
-                            <span>
-                              {openingTypeLabel(opening.type)} - {formatLength(opening.widthCm, preferences.lengthUnit)} × {formatLength(opening.heightCm, preferences.lengthUnit)}
-                            </span>
-                            <ActionIcon
-                              color="red"
-                              variant="subtle"
-                              className="room-editor__openingDeleteButton"
-                              onClick={() => handleRemoveOpening(opening.id)}
-                              disabled
-                              aria-label={`Supprimer l'ouverture ${openingTypeLabel(opening.type)}`}
-                              title="Supprimer"
-                            >
-                              X
-                            </ActionIcon>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                ) : (
-                  <p className="room-editor__hint">Sélectionne un mur dans le plan pour ajouter une ouverture.</p>
-                )}
-              </div>
-            )}
-          </aside>
-        </section>
-      )}
-    </DashboardLayout>
-  );
+            <NumberInput
+              label={`Épaisseur (${preferences.lengthUnit})`}
+              disabled={!canWrite || selectedWallLocked}
+              value={centimetersToDisplay(selectedWall.thicknessCm ?? 0, preferences.lengthUnit)}
+              onChange={(value) => updateWall({ ...selectedWall, thicknessCm: displayToCentimeters(Number(value), preferences.lengthUnit) })}
+            />
+            <TextInput label="Matériau" disabled={!canWrite} value={selectedWall.material ?? ''} onChange={(event) => updateWall({ ...selectedWall, material: event.currentTarget.value || null })} />
+            <TextInput label="Isolation" disabled={!canWrite} value={selectedWall.insulation ?? ''} onChange={(event) => updateWall({ ...selectedWall, insulation: event.currentTarget.value || null })} />
+            <Button leftSection={<LuArrowUpRight />} onClick={() => onOpenWall?.({ projectId, levelId, roomId, wallId: selectedWall.id })}>Ouvrir la vue Mur</Button>
+          </Stack> : null}
+          <Text fw={700}>Ouvertures</Text>
+          {current.openings.map((opening) => <Button key={opening.id} variant={selection?.type === 'opening' && selection.id === opening.id ? 'light' : 'subtle'} onClick={() => select({ source: 'creation-list', type: 'opening', id: opening.id, levelId })}>{opening.openingKind ?? opening.type} · {formatLength(opening.widthCm, preferences.lengthUnit)}</Button>)}
+          {selectedOpening ? <Stack>
+            {(['offsetCm', 'widthCm', 'heightCm', 'bottomCm'] as const).map((key) => <NumberInput
+              key={key}
+              label={{ offsetCm: 'Position', widthCm: 'Largeur', heightCm: 'Hauteur', bottomCm: 'Allège' }[key]}
+              disabled={!canWrite}
+              min={key === 'offsetCm' || key === 'bottomCm' ? 0 : 0.01}
+              value={centimetersToDisplay(selectedOpening[key], preferences.lengthUnit)}
+              onChange={(value) => updateOpening({ ...selectedOpening, [key]: displayToCentimeters(Number(value), preferences.lengthUnit) })}
+            />)}
+          </Stack> : null}
+        </Stack>
+      </aside>
+      <div className="global-editor__canvasArea">
+        <Canvas2D
+          levels={[data]}
+          activeLevelId={levelId}
+          visibleLevelIds={[levelId]}
+          viewportStateKey={`room:${roomId}`}
+          options={options}
+          lengthUnit={preferences.lengthUnit}
+          surfaceUnit={preferences.surfaceUnit}
+          selection={selection}
+          onSelect={(next) => { if (selectionBelongsToCurrentRoom(next)) select(next); }}
+          editingEnabled={canWrite && autosave.status !== 'saving'}
+          snapPoint={(point) => point}
+          onVertexMove={moveVertex}
+          onVertexMoveEnd={() => undefined}
+          onRoomMove={moveRoom}
+          onVertexContextMenu={(targetRoomId, vertexId) => {
+            if (targetRoomId !== roomId || !canWrite) return;
+            const vertex = current.vertices.find(({ id }) => id === vertexId);
+            if (!vertex) return;
+            const ids = linkedVertexIds(dataRef.current!.rooms, roomId, vertexId);
+            const locked = !vertex.isLocked;
+            const next = setSharedVertexLock(dataRef.current!.rooms, ids, locked).map((snapshot) => ({
+              ...snapshot,
+              unlockedVertexIds: locked ? snapshot.unlockedVertexIds : [...new Set([...(snapshot.unlockedVertexIds ?? []), ...ids])],
+            }));
+            replaceRooms(locked ? 'Verrouiller un sommet' : 'Déverrouiller un sommet', next);
+          }}
+        />
+      </div>
+      <EditorDetailPanel data={data} lengthUnit={preferences.lengthUnit} surfaceUnit={preferences.surfaceUnit} allowedRoomId={roomId} />
+    </section> : null}
+  </DashboardLayout>;
 }
