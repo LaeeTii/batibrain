@@ -34,6 +34,15 @@
 
 - Toujours utiliser les accents en français dans le Markdown, les commentaires, les libellés, les messages et les chaînes, sauf contrainte technique explicite.
 
+## Environnement local
+
+- Utiliser Podman comme runtime de conteneurs local, pas Docker Desktop.
+- Avant toute commande Supabase locale, vérifier que la machine Podman est démarrée avec `podman machine start`.
+- Utiliser le socket compatible Docker exposé par Podman pour les commandes Supabase CLI.
+- Si Supabase CLI tente d’accéder au socket Docker par défaut, configurer `DOCKER_HOST` avec le socket indiqué par Podman.
+- Ne jamais enregistrer dans Git un chemin de socket temporaire propre à une session ou à une machine.
+- Ne pas conclure que le runtime de conteneurs est indisponible sans avoir vérifié l’état de Podman.
+
 ## État de fraîcheur
 
 Ne pas considérer le code et la documentation sous `web/` comme sources de vérité fonctionnelles tant qu’ils ne sont pas remis à jour.
