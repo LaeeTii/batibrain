@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createRectangleRoomGeometry } from './geometry';
 import { linkCoincidentWalls, linkedVertexIds, moveLinkedVertex, moveRoomWithLinkedVertices, normalizeCreatedRoomOverlaps, reconcilePersistedRoomIds, uniqueLevelWalls } from './roomOverlap';
 import type { RoomSnapshot } from '../services/rooms';
-import { createUniformWallHeightProfiles } from './wallHeightProfile';
+import { createUniformWallHeightProfiles, validateWallHeightProfiles } from './wallHeightProfile';
 
 function room(id: string, x: number, y: number, width: number, height: number): RoomSnapshot {
   const geometry = createRectangleRoomGeometry(id, width, height, { originX: x, originY: y, wallThicknessCm: 10, wallHeightCm: 250 });
@@ -62,6 +62,30 @@ describe('normalisation des chevauchements de pièces', () => {
       .toEqual(new Set([sourceVertex.id]));
     const moved = moveLinkedVertex([left, right], left.room.id, sourceVertex.id, { x: 120, y: 10 });
     expect(moved.flatMap(({ vertices }) => vertices).filter(({ x, y }) => x === 120 && y === 10)).toHaveLength(2);
+  });
+
+  it('recale les profils des murs dont la longueur change avec un sommet', () => {
+    const current = room('A', 0, 0, 100, 100);
+    current.walls = current.walls.map((wall) => ({
+      ...wall,
+      heightProfilesLinked: true,
+      heightProfiles: createUniformWallHeightProfiles(wall.id, 100, 250),
+    }));
+    const vertex = current.vertices.find(({ x, y }) => x === 100 && y === 0)!;
+
+    const [moved] = moveLinkedVertex([current], current.room.id, vertex.id, { x: 120, y: 10 });
+    const vertices = new Map(moved.vertices.map((point) => [point.id, point]));
+
+    moved.walls.forEach((wall) => {
+      const start = vertices.get(wall.startVertexId)!;
+      const end = vertices.get(wall.endVertexId)!;
+      const lengthCm = Math.hypot(end.x - start.x, end.y - start.y);
+      expect(validateWallHeightProfiles(
+        { id: wall.id, heightProfilesLinked: wall.heightProfilesLinked ?? true },
+        wall.heightProfiles!,
+        lengthCm,
+      )).toEqual([]);
+    });
   });
 
   it('déforme la pièce voisine lorsqu’une pièce liée par un mur mitoyen est déplacée', () => {

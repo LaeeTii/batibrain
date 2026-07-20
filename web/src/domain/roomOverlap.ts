@@ -11,7 +11,11 @@ import type {
   WallHeightProfilePoint,
   WallHeightProfiles,
 } from './types';
-import { createUniformWallHeightProfiles, wallHeightAtPosition } from './wallHeightProfile';
+import {
+  createUniformWallHeightProfiles,
+  resizeWallHeightProfiles,
+  wallHeightAtPosition,
+} from './wallHeightProfile';
 
 const AREA_EPSILON_CM2 = 0.01;
 type Ring = clipping.Ring;
@@ -382,14 +386,11 @@ export function linkedVertexIds(snapshots: readonly RoomGeometrySnapshot[], room
 
 export function moveLinkedVertex(snapshots: readonly RoomGeometrySnapshot[], roomId: string, vertexId: string, point: Point): RoomGeometrySnapshot[] {
   const ids = linkedVertexIds(snapshots, roomId, vertexId);
-  if (snapshots.some(({ vertices }) => vertices.some((vertex) => ids.has(vertex.id) && vertex.isLocked))) {
-    throw new Error('Un sommet verrouillé ne peut pas être déplacé.');
-  }
   const normalizedPoint = { x: normalizeCoordinateCm(point.x), y: normalizeCoordinateCm(point.y) };
-  return snapshots.map((snapshot) => {
-    const vertices = snapshot.vertices.map((vertex) => ids.has(vertex.id) ? { ...vertex, ...normalizedPoint } : vertex);
-    return vertices.some((vertex, index) => vertex !== snapshot.vertices[index]) ? { ...snapshot, vertices } : snapshot;
-  });
+  return moveVerticesAndResizeProfiles(
+    snapshots,
+    new Map([...ids].map((id) => [id, normalizedPoint])),
+  );
 }
 
 export function moveRoomWithLinkedVertices(snapshots: readonly RoomGeometrySnapshot[], roomId: string, delta: Point): RoomGeometrySnapshot[] {
@@ -398,12 +399,61 @@ export function moveRoomWithLinkedVertices(snapshots: readonly RoomGeometrySnaps
   if (source.vertices.some(({ isLocked }) => isLocked)) {
     throw new Error('Une pièce contenant un sommet verrouillé ne peut pas être déplacée.');
   }
-  return source.vertices.reduce<RoomGeometrySnapshot[]>((current, vertex) => moveLinkedVertex(
-    current,
-    roomId,
-    vertex.id,
-    { x: normalizeCoordinateCm(vertex.x + delta.x), y: normalizeCoordinateCm(vertex.y + delta.y) },
-  ), [...snapshots]);
+  const targets = new Map<string, Point>();
+  for (const vertex of source.vertices) {
+    const point = {
+      x: normalizeCoordinateCm(vertex.x + delta.x),
+      y: normalizeCoordinateCm(vertex.y + delta.y),
+    };
+    linkedVertexIds(snapshots, roomId, vertex.id).forEach((id) => targets.set(id, point));
+  }
+  return moveVerticesAndResizeProfiles(snapshots, targets);
+}
+
+function moveVerticesAndResizeProfiles(
+  snapshots: readonly RoomGeometrySnapshot[],
+  targets: ReadonlyMap<string, Point>,
+): RoomGeometrySnapshot[] {
+  if (snapshots.some(({ vertices }) => (
+    vertices.some((vertex) => targets.has(vertex.id) && vertex.isLocked)
+  ))) {
+    throw new Error('Un sommet verrouillé ne peut pas être déplacé.');
+  }
+
+  return snapshots.map((snapshot) => {
+    const previousVertices = new Map(snapshot.vertices.map((vertex) => [vertex.id, vertex]));
+    const vertices = snapshot.vertices.map((vertex) => {
+      const target = targets.get(vertex.id);
+      return target ? { ...vertex, ...target } : vertex;
+    });
+    if (!vertices.some((vertex, index) => vertex !== snapshot.vertices[index])) return snapshot;
+
+    const verticesById = new Map(vertices.map((vertex) => [vertex.id, vertex]));
+    const walls = snapshot.walls.map((wall) => {
+      if (!wall.heightProfiles) return wall;
+      const previousStart = previousVertices.get(wall.startVertexId);
+      const previousEnd = previousVertices.get(wall.endVertexId);
+      const start = verticesById.get(wall.startVertexId);
+      const end = verticesById.get(wall.endVertexId);
+      if (!previousStart || !previousEnd || !start || !end) return wall;
+      const previousLengthCm = Math.hypot(
+        previousEnd.x - previousStart.x,
+        previousEnd.y - previousStart.y,
+      );
+      const lengthCm = Math.hypot(end.x - start.x, end.y - start.y);
+      if (Math.abs(previousLengthCm - lengthCm) < 1e-9) return wall;
+      return {
+        ...wall,
+        heightProfiles: resizeWallHeightProfiles(
+          { id: wall.id, heightProfilesLinked: wall.heightProfilesLinked ?? true },
+          wall.heightProfiles,
+          previousLengthCm,
+          lengthCm,
+        ),
+      };
+    });
+    return { ...snapshot, vertices, walls };
+  });
 }
 
 export interface RoomOverlapNormalization {

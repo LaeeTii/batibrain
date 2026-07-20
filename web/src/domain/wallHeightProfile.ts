@@ -70,7 +70,7 @@ export function createUniformWallHeightProfiles(
 }
 
 export function validateWallHeightProfiles(
-  wall: TopologyWall,
+  wall: Pick<TopologyWall, 'id' | 'heightProfilesLinked'>,
   profiles: WallHeightProfiles,
   wallLengthCm: number,
 ): WallHeightProfileIssue[] {
@@ -104,12 +104,32 @@ export function validateWallHeightProfiles(
 }
 
 export function assertValidWallHeightProfiles(
-  wall: TopologyWall,
+  wall: Pick<TopologyWall, 'id' | 'heightProfilesLinked'>,
   profiles: WallHeightProfiles,
   wallLengthCm: number,
 ): void {
   const [issue] = validateWallHeightProfiles(wall, profiles, wallLengthCm);
   if (issue) throw new WallHeightProfileError(issue);
+}
+
+export function resizeWallHeightProfiles(
+  wall: Pick<TopologyWall, 'id' | 'heightProfilesLinked'>,
+  profiles: WallHeightProfiles,
+  previousWallLengthCm: number,
+  wallLengthCm: number,
+): WallHeightProfiles {
+  assertValidWallHeightProfiles(wall, profiles, previousWallLengthCm);
+  if (!Number.isFinite(wallLengthCm) || wallLengthCm <= EPSILON) {
+    throw profileError('invalid_wall_length', wall.id, null, [], 'La longueur du mur doit être positive.');
+  }
+
+  const resized: WallHeightProfiles = {
+    wallId: profiles.wallId,
+    gauche: resizeFaceProfile(profiles.gauche, previousWallLengthCm, wallLengthCm),
+    droite: resizeFaceProfile(profiles.droite, previousWallLengthCm, wallLengthCm),
+  };
+  assertValidWallHeightProfiles(wall, resized, wallLengthCm);
+  return resized;
 }
 
 export function updateWallHeightProfile(
@@ -242,7 +262,11 @@ function validateFaceProfile(
   points: readonly WallHeightProfilePoint[],
   wallLengthCm: number,
 ): WallHeightProfileIssue | null {
-  if (points.length < 2 || points[0]?.positionCm !== 0 || points.at(-1)?.positionCm !== wallLengthCm) {
+  if (
+    points.length < 2
+    || points[0]?.positionCm !== 0
+    || Math.abs((points.at(-1)?.positionCm ?? Number.NaN) - wallLengthCm) > 0.01
+  ) {
     return profileIssue(
       'missing_endpoints', wallId, side, points.map(({ id }) => id),
       'Chaque profil doit couvrir les deux extrémités du mur.',
@@ -262,7 +286,7 @@ function validateFaceProfile(
         'invalid_order', wallId, side, [point.id], 'Les points doivent être ordonnés sans rupture.',
       );
     }
-    if (!Number.isFinite(point.positionCm) || point.positionCm < 0 || point.positionCm > wallLengthCm) {
+    if (!Number.isFinite(point.positionCm) || point.positionCm < 0 || point.positionCm > wallLengthCm + 0.01) {
       return profileIssue(
         'invalid_position', wallId, side, [point.id], 'La position doit rester dans les bornes du mur.',
       );
@@ -292,9 +316,38 @@ function createUniformProfile(
   heightCm: number,
   createId: () => string,
 ): WallHeightProfilePoint[] {
-  return [0, wallLengthCm].map((positionCm, order) => ({
+  return [0, normalizeProfilePosition(wallLengthCm)].map((positionCm, order) => ({
     id: createId(), wallId, faceSide, order, positionCm, heightCm, isLocked: false,
   }));
+}
+
+function resizeFaceProfile(
+  profile: readonly WallHeightProfilePoint[],
+  previousWallLengthCm: number,
+  wallLengthCm: number,
+): WallHeightProfilePoint[] {
+  const lastIndex = profile.length - 1;
+  return profile.map((point, index) => {
+    const positionCm = index === 0
+      ? 0
+      : index === lastIndex
+        ? normalizeProfilePosition(wallLengthCm)
+        : normalizeProfilePosition((point.positionCm / previousWallLengthCm) * wallLengthCm);
+    if (point.isLocked && Math.abs(positionCm - point.positionCm) > EPSILON) {
+      throw profileError(
+        'locked_point',
+        point.wallId,
+        point.faceSide,
+        [point.id],
+        'Un point de profil verrouillé ne peut pas être déplacé.',
+      );
+    }
+    return { ...point, positionCm };
+  });
+}
+
+function normalizeProfilePosition(value: number): number {
+  return Math.round(value * 100) / 100;
 }
 
 function copyProfileValues(
@@ -323,7 +376,7 @@ function reverseProfile(
     ...point,
     faceSide: targetFace,
     order,
-    positionCm: wallLengthCm - point.positionCm,
+    positionCm: normalizeProfilePosition(wallLengthCm - point.positionCm),
   }));
 }
 

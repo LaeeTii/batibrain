@@ -51,6 +51,8 @@ Date de mise à jour: 2026-07-16
 - Pour un mur extérieur, les faces intérieure et extérieure sont toutes deux éditables.
 - Si le sens du segment est inversé par une transformation topologique, les profils sont permutés afin de rester attachés à la même face physique.
 - Lors de cette inversion, les distances des points sont recalculées depuis la nouvelle origine du segment (`nouvelle distance = longueur du mur - ancienne distance`) et leur ordre est inversé.
+- Lorsque la longueur d’un mur change sans inversion, les distances de ses points de profils sont recalculées proportionnellement sur la nouvelle longueur; leurs identifiants et hauteurs sont conservés.
+- Si ce recalage devait modifier la distance d’un point de profil verrouillé, le déplacement du sommet ou du mur est refusé avant toute mutation du brouillon.
 - L'édition géométrique d'un mur mitoyen doit impacter de facon coherente les deux pièces liees a ce mur.
 - L'état verrouillé d'un mur est calculé depuis ses deux sommets; l'état verrouillé d'une pièce est calculé depuis tous les murs de son contour.
 - Un mur n'est supprimable que lorsqu'il n'est plus lie a aucune pièce.

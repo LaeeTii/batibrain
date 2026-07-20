@@ -20,7 +20,7 @@ Une ligne ne passe à `Terminé` que si `npm run check` et les validations de ba
 ## État de référence de l’audit
 
 - Branche auditée: `main`.
-- `npm run check`: réussi; lint, 32 fichiers et 146 tests, typecheck et build sont verts.
+- `npm run check`: réussi; lint, 32 fichiers et 149 tests, typecheck et build sont verts.
 - Le build conserve un avertissement non bloquant sur le bundle principal de 1,59 Mo.
 - Les 19 migrations versionnées sont rejouées sans erreur sur une base PostgreSQL temporaire recréée; la migration canonique V1-R10 est incluse.
 - Les 6 fichiers de scénarios SQL sont rejoués; le scénario géométrique couvre sauvegarde, verrou, rollback, profils multiples, ouverture et cardinalité.
@@ -31,7 +31,7 @@ Une ligne ne passe à `Terminé` que si `npm run check` et les validations de ba
 | ID | Statut | Preuves |
 |---|---|---|
 | V1-R00 | Terminé | Base neuve rejouée, 18 migrations concordantes, 67 tests SQL verts, `npm run check` vert avec lint et 139 tests, RoomEditor2DView verrouillée en lecture seule et script générique documenté pour le premier administrateur. |
-| V1-R10 | Terminé | Modèle canonique `vertices` + associations ordonnées, murs autonomes et profils complets; `load_level_geometry`/`save_level_geometry` remplacent les RPC partielles. Migration 19/19 rejouée, 6 scénarios SQL validés (succès, verrou, rollback, profils multi-points, ouverture, cardinalité) et `npm run check` vert avec 32 fichiers et 146 tests. |
+| V1-R10 | Terminé | Modèle canonique `vertices` + associations ordonnées, murs autonomes et profils complets; `load_level_geometry`/`save_level_geometry` remplacent les RPC partielles. Migration 19/19 rejouée, 6 scénarios SQL validés (succès, verrou, rollback, profils multi-points, ouverture, cardinalité) et `npm run check` vert avec 32 fichiers et 149 tests. |
 | V1-R21 | À faire | À exécuter après V1-R20 et avant V1-R30; référence actuelle du chunk principal: 1,59 Mo minifié et environ 478 Ko compressé. |
 
 ## Matrice des tâches historiques
