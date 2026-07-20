@@ -79,6 +79,17 @@ Objectif: partager le canvas, la sélection, l’historique, les droits et la sa
 - Créer WallEditorView en lecture, puis l’édition complète des profils et ouvertures.
 - Critère de sortie: mêmes données et mêmes droits observés depuis les trois vues, sans chemin legacy.
 
+### V1-R21 — Découper le bundle frontend avant les exports
+
+Objectif: limiter le coût du premier chargement avant l’ajout des sorties PDF et des métriques.
+
+- Mesurer et conserver une référence de taille du bundle initial après V1-R20.
+- Charger à la demande les vues métier lourdes, notamment les trois éditeurs, WallEditorView et ProjectMetricsView.
+- Charger à la demande les bibliothèques et modules d’export PDF, Excel et CSV; aucun moteur d’export ne doit être inclus dans le parcours initial lorsqu’il n’est pas utilisé.
+- Définir des groupes de chunks stables uniquement lorsque le découpage automatique ne produit pas un résultat satisfaisant.
+- Vérifier le chargement, les erreurs de chunk, la navigation directe et le retour arrière sur les routes différées.
+- Critère de sortie: disparition de l’avertissement Vite sur le chunk initial ou justification documentée d’un reliquat, avec comparaison des tailles minifiées et compressées avant/après.
+
 ### V1-R30 — Finaliser les sorties PDF
 
 Objectif: produire les six exports PDF définis dans `docs/ihm/composants/pdf.md`.
@@ -115,6 +126,7 @@ Objectif: produire la preuve de livraison 1.0.
 | V1-R11 | V1-15, V1-21, unités et options de V1-29 à V1-31 |
 | V1-R12 | V1-09 à V1-20 hors V1-18 |
 | V1-R20 | V1-21 à V1-28 |
+| V1-R21 | Optimisation technique transverse du chargement frontend |
 | V1-R30 | V1-29 |
 | V1-R31 | V1-30 et V1-31 |
 | V1-R50 | V1-32 hors concurrence multi-utilisateur, et V1-33 |
