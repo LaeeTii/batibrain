@@ -15,11 +15,15 @@ import { getGlobalEditorAccess, type GlobalEditorAccess } from '../domain/global
 import type { Level, Project } from '../domain/types';
 import type { Point } from '../domain/types';
 import { snapGlobalPoint, translateRoomVertices, validateRoomPolygon } from '../domain/globalGeometry';
-import { linkCoincidentWalls, linkedVertexIds, moveLinkedVertex, moveRoomWithLinkedVertices, normalizeCreatedRoomOverlaps, reconcilePersistedRoomIds, type RoomGeometrySnapshot } from '../domain/roomOverlap';
+import { linkCoincidentWalls, linkedVertexIds, moveLinkedVertex, moveRoomWithLinkedVertices, normalizeCreatedRoomOverlaps, type RoomGeometrySnapshot } from '../domain/roomOverlap';
 import { hasSupabaseConfig } from '../lib/supabase';
 import { listLevelsByProject } from '../services/levels';
 import { canWriteProject, getProject } from '../services/projects';
-import { createRoomComplete, loadLevelRoomSnapshots, replaceRoomGeometriesAtomically, type RoomSnapshot, updateRoomGeometry } from '../services/rooms';
+import {
+  loadLevelGeometrySnapshot,
+  saveLevelRoomSnapshots,
+  type RoomSnapshot,
+} from '../services/rooms';
 import { DEFAULT_ROOM_FLOOR_COLOR, DEFAULT_ROOM_TYPE } from '../domain/room';
 import { createRectangleRoomGeometryFromPoints } from '../domain/geometry';
 
@@ -33,11 +37,13 @@ function message(error: unknown) {
   return error instanceof Error ? error.message : 'Le plan n’a pas pu être chargé.';
 }
 
-function wallIdentitiesChanged(before: readonly RoomGeometrySnapshot[], after: readonly RoomGeometrySnapshot[]): boolean {
+function topologyIdentitiesChanged(before: readonly RoomGeometrySnapshot[], after: readonly RoomGeometrySnapshot[]): boolean {
   const afterByRoomId = new Map(after.map((snapshot) => [snapshot.room.id, snapshot]));
   return before.some((snapshot) => {
     const next = afterByRoomId.get(snapshot.room.id);
     return !next
+      || snapshot.vertices.length !== next.vertices.length
+      || snapshot.vertices.some((vertex, index) => vertex.id !== next.vertices[index]?.id)
       || snapshot.walls.length !== next.walls.length
       || snapshot.walls.some((wall, index) => wall.id !== next.walls[index]?.id);
   });
@@ -81,10 +87,10 @@ export function GlobalEditor2DView({ projectId, initialLevelId = '', onLevelChan
     }
     try {
       const [nextProject, nextLevels, writeAllowed] = await Promise.all([getProject(projectId), listLevelsByProject(projectId), canWriteProject(projectId)]);
-      const nextData = await Promise.all(nextLevels.map(async (level): Promise<CanvasLevelData> => ({
-        level,
-        rooms: await retryOnce(() => loadLevelRoomSnapshots(level.id)),
-      })));
+      const nextData = await Promise.all(nextLevels.map(async (level): Promise<CanvasLevelData> => {
+        const geometry = await retryOnce(() => loadLevelGeometrySnapshot(level.id));
+        return { level, rooms: geometry.rooms, geometryRevision: geometry.revision };
+      }));
       if (sequence !== loadSequenceRef.current) return;
       const initiallyVisible = nextLevels.filter(({ isVisible }) => isVisible).map(({ id }) => id);
       const fallbackVisible = initiallyVisible.length ? initiallyVisible : nextLevels[0] ? [nextLevels[0].id] : [];
@@ -152,9 +158,14 @@ export function GlobalEditorContent({ project, levels, levelData, activeLevelId,
   const unsavedSnapshotsRef = useRef<Record<string, RoomSnapshot>>({});
   const pendingTopologiesRef = useRef<Map<string, PendingTopology>>(new Map());
   const savePromiseRef = useRef<Promise<void> | null>(null);
-  const persistedRoomIdsRef = useRef<Set<string>>(new Set(levelData.flatMap((level) => level.rooms.map((snapshot) => snapshot.room.id))));
+  const workingLevelDataRef = useRef(levelData);
   const previousLevelDataRef = useRef(levelData);
-  const selectionLocked = workingLevelData.some(({ rooms }) => rooms.some(({ room, walls, openings }) => (selection?.type === 'room' && room.id === selection.id && room.isLocked) || (selection?.type === 'wall' && walls.some(({ id, isLocked }) => id === selection.id && isLocked)) || (selection?.type === 'opening' && openings.some(({ id, isLocked }) => id === selection.id && isLocked))));
+  const selectionLocked = workingLevelData.some(({ rooms }) => rooms.some(({ room, walls }) => (
+    (selection?.type === 'room' && room.id === selection.id && room.isLocked)
+    || (selection?.type === 'wall' && walls.some(({ id, isLocked }) => (
+      id === selection.id && isLocked
+    )))
+  )));
   const allVertices = workingLevelData.flatMap(({ rooms }) => rooms.flatMap(({ vertices }) => vertices));
   const activeData = workingLevelData.find(({ level }) => level.id === activeLevelId);
   const hasUnsavedChanges = Object.keys(unsavedSnapshots).length > 0;
@@ -180,8 +191,8 @@ export function GlobalEditorContent({ project, levels, levelData, activeLevelId,
   }, [unsavedSnapshots]);
 
   useEffect(() => {
-    persistedRoomIdsRef.current = new Set(levelData.flatMap((level) => level.rooms.map((snapshot) => snapshot.room.id)));
-  }, [levelData]);
+    workingLevelDataRef.current = workingLevelData;
+  }, [workingLevelData]);
 
   const upsertLocalSnapshot = useCallback((snapshot: RoomSnapshot) => {
     setWorkingLevelData((current) => current.map((level) => {
@@ -212,18 +223,21 @@ export function GlobalEditorContent({ project, levels, levelData, activeLevelId,
     const previous = pendingTopologiesRef.current.get(levelId);
     pendingTopologiesRef.current.set(levelId, {
       levelId,
-      replacedRoomIds: [...new Set([...(previous?.replacedRoomIds ?? []), ...removedRoomIds.filter((id) => persistedRoomIdsRef.current.has(id))])],
+      replacedRoomIds: [...new Set([...(previous?.replacedRoomIds ?? []), ...removedRoomIds])],
       resultRoomIds: [...new Set([...(previous?.resultRoomIds ?? []).filter((id) => !removedIds.has(id)), ...snapshots.map(({ room }) => room.id)])],
     });
     setSaveStatus('dirty');
   }, []);
 
   const completeLevelTopology = (removedRoomIds: string[], snapshots: readonly RoomGeometrySnapshot[], baseRooms = activeData?.rooms ?? []): RoomSnapshot[] => {
-    if (baseRooms.some(({ room, walls }) => room.isLocked || walls.some(({ isLocked }) => isLocked))) {
-      throw new Error('Le niveau contient une pièce ou un mur verrouillé. Déverrouillez-le avant une normalisation topologique.');
-    }
-    if (baseRooms.some(({ openings }) => openings.length > 0)) {
-      throw new Error('Le niveau contient des ouvertures. Elles doivent être déplacées ou supprimées avant une normalisation topologique.');
+    if (baseRooms.some(({ vertices, walls }) => (
+      vertices.some(({ isLocked }) => isLocked)
+      || walls.some(({ heightProfiles }) => (
+        heightProfiles
+        && [...heightProfiles.gauche, ...heightProfiles.droite].some(({ isLocked }) => isLocked)
+      ))
+    ))) {
+      throw new Error('Le niveau contient un point géométrique verrouillé. Déverrouillez-le avant une normalisation topologique.');
     }
     const removed = new Set(removedRoomIds);
     return linkCoincidentWalls([
@@ -247,32 +261,29 @@ export function GlobalEditorContent({ project, levels, levelData, activeLevelId,
       setSaveError('');
       setGeometryError('');
       try {
-        const persistedByRoomId: Record<string, RoomSnapshot> = {};
-        const topologyIds = new Set(topologies.flatMap(({ resultRoomIds }) => resultRoomIds));
-        for (const topology of topologies) {
-          const topologySnapshots = topology.resultRoomIds.map((id) => capturedByRoomId[id]).filter((snapshot): snapshot is RoomSnapshot => Boolean(snapshot));
-          if (topologySnapshots.length !== topology.resultRoomIds.length) throw new Error('Le brouillon topologique est incomplet. Rechargez le plan avant de réessayer.');
-          const persisted = await replaceRoomGeometriesAtomically(topology.levelId, topology.replacedRoomIds, topologySnapshots);
-          persistedRoomIdsRef.current = reconcilePersistedRoomIds(
-            persistedRoomIdsRef.current,
-            topology.replacedRoomIds,
-            persisted.map((snapshot) => snapshot.room.id),
+        const dirtyLevelIds = new Set([
+          ...topologies.map(({ levelId }) => levelId),
+          ...snapshots.map(({ room }) => room.levelId),
+        ]);
+        const persistedByLevelId = new Map<string, Awaited<ReturnType<typeof saveLevelRoomSnapshots>>>();
+        for (const levelId of dirtyLevelIds) {
+          const level = workingLevelDataRef.current.find(({ level: candidate }) => candidate.id === levelId);
+          if (!level) throw new Error('Le brouillon du niveau est introuvable.');
+          const persisted = await saveLevelRoomSnapshots(
+            levelId,
+            level.rooms,
+            level.geometryRevision ?? level.rooms[0]?.geometryRevision ?? 0,
           );
-          persisted.forEach((snapshot) => {
-            persistedByRoomId[snapshot.room.id] = snapshot;
-          });
-        }
-        for (const snapshot of snapshots.filter(({ room }) => !topologyIds.has(room.id))) {
-          const alreadyPersisted = persistedRoomIdsRef.current.has(snapshot.room.id);
-          const persisted = alreadyPersisted
-            ? await updateRoomGeometry(snapshot)
-            : await createRoomComplete(snapshot);
-          persistedRoomIdsRef.current.add(snapshot.room.id);
-          persistedByRoomId[persisted.room.id] = persisted;
+          persistedByLevelId.set(levelId, persisted);
         }
         setWorkingLevelData((current) => current.map((level) => ({
-          ...level,
-          rooms: level.rooms.map((roomSnapshot) => persistedByRoomId[roomSnapshot.room.id] ?? roomSnapshot),
+          ...(persistedByLevelId.has(level.level.id)
+            ? {
+              ...level,
+              rooms: persistedByLevelId.get(level.level.id)!.rooms,
+              geometryRevision: persistedByLevelId.get(level.level.id)!.revision,
+            }
+            : level),
         })));
         pendingTopologiesRef.current.clear();
         unsavedSnapshotsRef.current = {};
@@ -333,7 +344,7 @@ export function GlobalEditorContent({ project, levels, levelData, activeLevelId,
         const currentRooms = activeData?.rooms ?? [];
         const combined = [...currentRooms, created];
         const linked = linkCoincidentWalls(combined) as RoomSnapshot[];
-        if (wallIdentitiesChanged(combined, linked)) {
+        if (topologyIdentitiesChanged(combined, linked)) {
           const currentRoomIds = currentRooms.map(({ room }) => room.id);
           applyTopologyDraft(activeLevel.id, currentRoomIds, completeLevelTopology(currentRoomIds, linked));
         } else {
@@ -349,12 +360,20 @@ export function GlobalEditorContent({ project, levels, levelData, activeLevelId,
     catch (caught) { setGeometryError(message(caught)); }
   };
   const moveVertex = async (roomId: string, vertexId: string, rawPoint: Point) => {
-    const snapshot = activeData?.rooms.find(({ room }) => room.id === roomId); if (!snapshot || access.readOnly || snapshot.room.isLocked) return;
+    const snapshot = activeData?.rooms.find(({ room }) => room.id === roomId);
+    const linkedIds = linkedVertexIds(activeData?.rooms ?? [], roomId, vertexId);
+    if (
+      !snapshot
+      || access.readOnly
+      || (activeData?.rooms ?? []).some(({ vertices }) => (
+        vertices.some((vertex) => linkedIds.has(vertex.id) && vertex.isLocked)
+      ))
+    ) return;
     const point = snapVertexPoint(rawPoint, roomId, vertexId);
     const movedSnapshots = moveLinkedVertex(activeData?.rooms ?? [], roomId, vertexId, point) as RoomSnapshot[];
     const changedSnapshots = movedSnapshots.filter((candidate, index) => candidate !== activeData?.rooms[index]);
     const linkedSnapshots = linkCoincidentWalls(movedSnapshots) as RoomSnapshot[];
-    const identityChanged = wallIdentitiesChanged(movedSnapshots, linkedSnapshots);
+    const identityChanged = topologyIdentitiesChanged(movedSnapshots, linkedSnapshots);
     const issue = linkedSnapshots.map(({ vertices }) => validateRoomPolygon(vertices)).find(Boolean); if (issue) { setGeometryError(issue); return; }
     const before = activeData?.rooms.filter(({ room }) => changedSnapshots.some(({ room: changedRoom }) => changedRoom.id === room.id)) ?? [];
     setGeometryError('');
@@ -406,7 +425,13 @@ export function GlobalEditorContent({ project, levels, levelData, activeLevelId,
     }
   };
   const moveRoom = async (roomId: string, delta: Point) => {
-    const snapshot = activeData?.rooms.find(({ room }) => room.id === roomId); if (!snapshot || access.readOnly || snapshot.room.isLocked || Math.hypot(delta.x, delta.y) < 1) return;
+    const snapshot = activeData?.rooms.find(({ room }) => room.id === roomId);
+    if (
+      !snapshot
+      || access.readOnly
+      || snapshot.vertices.some(({ isLocked }) => isLocked)
+      || Math.hypot(delta.x, delta.y) < 1
+    ) return;
     const linkedRoomVertexIds = new Set(snapshot.vertices.flatMap((vertex) => [...linkedVertexIds(activeData?.rooms ?? [], roomId, vertex.id)]));
     const anchor = snapGlobalPoint({ x: snapshot.vertices[0].x + delta.x, y: snapshot.vertices[0].y + delta.y }, allVertices.filter(({ pieceId, id }) => pieceId !== roomId && !linkedRoomVertexIds.has(id)), null);
     const snappedDelta = { x: anchor.x - snapshot.vertices[0].x, y: anchor.y - snapshot.vertices[0].y };
@@ -430,7 +455,7 @@ export function GlobalEditorContent({ project, levels, levelData, activeLevelId,
         return;
       }
       const linkedSnapshots = linkCoincidentWalls(movedSnapshots) as RoomSnapshot[];
-      const identityChanged = wallIdentitiesChanged(movedSnapshots, linkedSnapshots);
+      const identityChanged = topologyIdentitiesChanged(movedSnapshots, linkedSnapshots);
       if (identityChanged || changedSnapshots.length > 1) {
         const before = activeData?.rooms ?? [];
         const currentRoomIds = before.map(({ room }) => room.id);

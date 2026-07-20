@@ -40,7 +40,6 @@ function wall(pieceIds = ['pièce-1', 'pièce-2'], overrides: Partial<TopologyWa
     material: null,
     insulation: null,
     notes: null,
-    isLocked: false,
     heightProfilesLinked: true,
     ...overrides,
   };
@@ -74,7 +73,6 @@ describe('templates et instances d’ouverture', () => {
       type: 'porte',
       placementType: 'intérieur',
       bottomCm: 0,
-      isLocked: false,
     });
   });
 

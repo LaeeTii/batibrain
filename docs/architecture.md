@@ -83,8 +83,13 @@ Le socle de tests frontend repose sur Vitest, Testing Library et jsdom. `npm run
 - les opérations qui doivent rester indivisibles sont persistées dans une même transaction, sans déplacer pour autant leur décision métier dans la base de données
 - une sauvegarde peut déverrouiller des points et appliquer leurs modifications géométriques dans la même transaction atomique
 - la frontière transactionnelle refuse toute modification d'un point verrouillé dans l'état courant de la base, sauf si le même instantané autorisé demande son déverrouillage
-- les RPC PostgreSQL `create_piece_complete`, `replace_wall_topology` et `write_wall_height_profiles` constituent les frontières transactionnelles respectives de création d'une pièce, de remplacement d'un ensemble ciblé de murs et d'écriture des profils d'un mur
-- ces RPC reçoivent des instantanés JSON validés par le domaine frontend avec des identifiants explicites; `replace_wall_topology` retire uniquement les murs explicitement remplacés, persiste leurs murs résultants et leurs relations mur-pièce, puis ne réinsère parmi leurs ouvertures que celles dont le placement intérieur ou extérieur reste compatible
+- `load_level_geometry` charge l’instantané géométrique canonique complet d’un niveau et sa révision.
+- `save_level_geometry` est l’unique frontière d’écriture géométrique V1 pour la création, la mise à jour, la scission, l’intersection, le chevauchement, les profils, les ouvertures et les verrous de points.
+- la sauvegarde reçoit un instantané JSON validé par le domaine frontend avec des identifiants explicites; elle verrouille la révision du niveau, revérifie les verrous persistés, remplace atomiquement la géométrie active et incrémente la révision.
+- les anciennes RPC partielles de pièce, mur et profil sont supprimées et les mutations directes des tables géométriques sont retirées au rôle `authenticated`; les métadonnées non géométriques d’une pièce restent modifiables séparément.
+- les sommets sont persistés une seule fois dans `vertices`; `piece_vertices` ne porte que l’association ordonnée entre une pièce et ses sommets partagés.
+- la suppression logique d’une pièce passe par le même instantané: sa géométrie active est retirée atomiquement et sa ligne métier est conservée avec `is_soft_deleted = true`.
+- une révision obsolète, un point verrouillé modifié sans déverrouillage dans le même instantané ou une validation structurelle invalide annule la transaction entière.
 - toute modification d'une règle ou d'une valeur par défaut fonctionnelle doit pouvoir être réalisée dans le code et ses tests sans nécessiter de migration SQL
 
 ## Séquencement

@@ -42,7 +42,7 @@ Ce document ne remplace pas les sources fonctionnelles principales (`docs/ihm/`)
 | Projet / niveaux / pièces / murs / faces / profils de hauteur / ouvertures / côtes / notes | Stabilisé | Contrats IHM détaillés disponibles (vues + logique + composants). |
 | Authentification / session / profil | Stabilisé | Contrats détaillés disponibles dans LoginView, AccountModal et PreferencesModal. |
 | Collaboration projet | Stabilisé | Propriété, rôles globaux et invitations applicatives définis pour la V1. |
-| Verrouillage manuel | Stabilisé | État persistant indépendant pour les pièces, murs et ouvertures. |
+| Verrouillage géométrique | Stabilisé | Verrous persistés sur les sommets et points de profils; états des autres objets calculés. |
 | Exports PDF plan et plan + détail | Stabilisé | Matrice complète de templates et données minimales définies. |
 | Tâches | Legacy minimal | Intention et exigences minimales définies, détail IHM à compléter. |
 | Documents | Legacy minimal | Intention et exigences minimales définies, détail IHM à compléter. |
@@ -230,11 +230,16 @@ Champs minimaux:
 
 Règles:
 - Un sommet possède une identité unique même lorsqu'il est référencé par plusieurs murs ou contours de pièces.
-- Une pièce est un polygone fermé ordonné de sommets; l'ordre est porté par l'association entre la pièce et ses sommets.
+- Le sommet est persisté une seule fois dans `vertices`; une pièce est un polygone fermé ordonné dont l’ordre est porté par l’association `piece_vertices`.
 - L'ordre des sommets d'une pièce doit rester stable pour garantir le calcul des murs, angles, surfaces et périmètres.
 - Le sommet est l'unique source persistée du verrouillage géométrique du plan.
 - Un sommet verrouillé ne peut être ni déplacé ni supprimé.
 - Un point partagé transmet son état verrouillé à tous les murs, pièces et côtes qui le référencent.
+
+Garanties de persistance:
+- `vertices.level_id` fixe le repère commun du niveau.
+- `piece_vertices` garantit un ordre unique par pièce et interdit la répétition d’un même sommet dans un contour.
+- Les extrémités d’un mur référencent directement les identifiants canoniques de `vertices`.
 
 ### Wall
 Segment support et propriétés métier associées.
@@ -271,6 +276,11 @@ Règles:
 - Son matériau, son isolation et ses notes restent modifiables.
 - Une modification de longueur conserve le sommet verrouillé comme ancrage; si aucun sommet n'est verrouillé, le sommet de début est l'ancrage par défaut; si les deux le sont, la modification est refusée.
 
+Garanties de persistance:
+- `walls.level_id` rattache aussi les murs détachés à un niveau.
+- Un trigger structurel refuse l’insertion d’une troisième relation dans `wall_pieces` et toute relation entre un mur et une pièce de niveaux différents.
+- Le mur ne possède plus de colonne de verrou métier; son état est toujours projeté depuis ses deux sommets.
+
 ### WallFaceHeightProfilePoint
 Point du profil de hauteur d'une face d'un mur.
 
@@ -298,6 +308,9 @@ Règles:
 - Verrouiller ou déverrouiller un profil modifie le verrou de tous ses points.
 - Lorsque les profils sont liés, les états `isLocked` des points correspondants sont synchronisés avec leurs positions et hauteurs.
 
+Garantie transactionnelle:
+- Un point verrouillé ne peut être modifié ou supprimé par `save_level_geometry` que si le même instantané contient son déverrouillage autorisé.
+
 ### Opening
 Ouverture positionnée sur un mur (porte, fenêtre, baie, autre).
 
@@ -323,6 +336,17 @@ Règles:
 - Après une modification topologique, une ouverture devenue incompatible avec la qualification calculée du mur est supprimée.
 - Une ouverture ne possède aucun verrou géométrique propre.
 - Sa position, ses dimensions, ses propriétés et sa suppression restent modifiables lorsque son mur support est verrouillé, sous réserve des droits projet et des autres validations.
+- Aucune colonne de verrou n’est persistée sur une ouverture.
+
+## Frontière transactionnelle géométrique
+
+- `load_level_geometry(levelId)` renvoie les pièces actives, sommets partagés, murs, relations, profils complets, ouvertures, templates et la révision courante du niveau.
+- `save_level_geometry(levelId, expectedRevision, snapshot)` est l’unique écriture géométrique V1.
+- Le domaine valide l’instantané avant l’appel: contours, arêtes, cardinalité, profils, ouvertures et verrous.
+- PostgreSQL verrouille la ligne du niveau, contrôle la révision attendue et revérifie les sommets et points de profils verrouillés avant la première mutation.
+- Un déverrouillage et la modification du même point peuvent être persistés ensemble.
+- Toute erreur restaure l’état complet précédent, y compris ouvertures, profils et révision.
+- Les anciennes RPC partielles et les écritures directes des tables géométriques ne sont plus exposées au rôle applicatif.
 
 ### OpeningTemplate
 Modèle sélectionnable utilisé pour créer une ouverture.

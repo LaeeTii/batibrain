@@ -24,7 +24,6 @@ function wall(overrides: Partial<TopologyWall> = {}): TopologyWall {
     material: null,
     insulation: null,
     notes: null,
-    isLocked: false,
     heightProfilesLinked: true,
     ...overrides,
   };

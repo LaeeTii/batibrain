@@ -26,6 +26,7 @@ export interface Vertex extends Point {
   id: Id;
   pieceId: Id;
   order: number;
+  isLocked?: boolean;
 }
 
 export interface Project {
@@ -98,11 +99,13 @@ export interface Room {
   floorColor: string;
   notes?: string | null;
   isSoftDeleted?: boolean;
+  /** État calculé depuis les sommets du contour. */
   isLocked?: boolean;
 }
 
 export interface Wall {
   id: Id;
+  /** Contexte de projection pour les vues historiques par pièce. */
   pieceId: Id;
   startVertexId: Id;
   endVertexId: Id;
@@ -112,6 +115,11 @@ export interface Wall {
   material?: string | null;
   insulation?: string | null;
   notes?: string | null;
+  /** Relations et profils canoniques conservés par l’adaptateur de vue. */
+  pieceIds?: Id[];
+  heightProfilesLinked?: boolean;
+  heightProfiles?: WallHeightProfiles;
+  /** État calculé depuis les deux sommets. */
   isLocked?: boolean;
 }
 
@@ -128,6 +136,7 @@ export interface WallHeightProfilePoint {
   order: number;
   positionCm: number;
   heightCm: number;
+  isLocked?: boolean;
 }
 
 export interface WallHeightProfiles {
@@ -152,7 +161,6 @@ export interface TopologyWall {
   material: string | null;
   insulation: string | null;
   notes: string | null;
-  isLocked: boolean;
   heightProfilesLinked: boolean;
 }
 
@@ -167,7 +175,10 @@ export interface Opening {
   bottomCm: number;
   heightCm: number;
   notes?: string | null;
-  isLocked?: boolean;
+  templateId?: Id;
+  openingKind?: OpeningKind;
+  placementType?: OpeningPlacementType;
+  orientation?: string | null;
 }
 
 export type OpeningKind = 'porte' | 'fenêtre' | 'baie_vitree' | 'autre';
@@ -192,7 +203,6 @@ export interface TopologyOpening {
   heightCm: number;
   bottomCm: number;
   orientation: string | null;
-  isLocked: boolean;
 }
 
 export interface DerivedWall {

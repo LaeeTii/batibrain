@@ -68,7 +68,6 @@ export function createWallsFromVertices(
       material: null,
       insulation: null,
       notes: null,
-      isLocked: false,
       heightProfilesLinked: true,
     };
   });
@@ -111,6 +110,14 @@ export function assertWallRelations(wall: TopologyWall): void {
   }
 }
 
+export function isWallLocked(
+  wall: Pick<TopologyWall, 'startVertexId' | 'endVertexId'>,
+  verticesById: ReadonlyMap<string, { isLocked: boolean }>,
+): boolean {
+  return verticesById.get(wall.startVertexId)?.isLocked === true
+    && verticesById.get(wall.endVertexId)?.isLocked === true;
+}
+
 export interface SplitWallAtJunctionInput {
   wall: TopologyWall;
   joiningWall: TopologyWall;
@@ -128,6 +135,16 @@ export function splitWallAtThirdPieceJunction(
 
   const start = verticesById.get(wall.startVertexId);
   const end = verticesById.get(wall.endVertexId);
+  if (
+    (start && 'isLocked' in start && start.isLocked === true)
+    || (end && 'isLocked' in end && end.isLocked === true)
+  ) {
+    throw new WallTopologyError(
+      'junction_not_inside_wall',
+      wall.id,
+      'Un mur dont un sommet est verrouillé ne peut pas être scindé.',
+    );
+  }
   if (!start || !end || !isStrictlyInsideSegment(junction, start, end)) {
     throw new WallTopologyError(
       'junction_not_inside_wall',

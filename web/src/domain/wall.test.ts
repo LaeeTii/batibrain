@@ -30,8 +30,7 @@ function topologyWall(overrides: Partial<TopologyWall> = {}): TopologyWall {
     material: null,
     insulation: null,
     notes: null,
-    isLocked: false,
-    heightProfilesLinked: true,
+      heightProfilesLinked: true,
     ...overrides,
   };
 }
@@ -61,7 +60,6 @@ describe('génération des murs d’une pièce', () => {
       thicknessCm: 18,
       material: 'brique',
       notes: 'Mur porteur',
-      isLocked: true,
     };
     const moved = rectangleVertices().map((vertex) => (
       vertex.id === 'b' ? { ...vertex, x: 250 } : vertex
@@ -106,7 +104,6 @@ describe('jonction d’une troisième pièce', () => {
       material: 'pierre',
       insulation: 'liège',
       notes: 'Mitoyen',
-      isLocked: true,
     });
     const joining = topologyWall({
       id: 'mur-aboutissant',
@@ -140,7 +137,6 @@ describe('jonction d’une troisième pièce', () => {
       && wall.material === 'pierre'
       && wall.insulation === 'liège'
       && wall.notes === 'Mitoyen'
-      && wall.isLocked
     ))).toBe(true);
     expect(walls.every(({ pieceIds }) => pieceIds.length <= 2)).toBe(true);
   });

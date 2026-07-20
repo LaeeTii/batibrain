@@ -68,6 +68,7 @@ export interface CanvasDimension {
 export interface CanvasLevelData {
   level: Level;
   rooms: RoomSnapshot[];
+  geometryRevision?: number;
   notes?: CanvasNote[];
   dimensions?: CanvasDimension[];
 }
@@ -712,10 +713,11 @@ export function Canvas2D({
                   y={vertex.y}
                   radius={7}
                   fill="#ffffff"
-                  stroke="#0f172a"
+                  stroke={vertex.isLocked ? '#dc2626' : '#0f172a'}
                   strokeWidth={2}
-                  draggable
+                  draggable={!vertex.isLocked}
                   onDragMove={(event) => {
+                    if (vertex.isLocked) return;
                     const position = snapPoint?.({
                       x: event.target.x(),
                       y: event.target.y(),
@@ -727,6 +729,7 @@ export function Canvas2D({
                     onVertexMove?.(selectedEditableRoom.room.id, vertex.id, position);
                   }}
                   onDragEnd={(event) => {
+                    if (vertex.isLocked) return;
                     const position = snapPoint?.({
                       x: event.target.x(),
                       y: event.target.y(),

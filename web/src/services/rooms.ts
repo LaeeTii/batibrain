@@ -1,15 +1,36 @@
 import {
-  createRectangleRoomGeometryFromPoints,
-  formatOpeningValidationIssue,
-  remapWallsToVertices,
-  sortVertices,
-  syncOpeningsWithWalls,
-  syncWallsWithVertices,
-  validateOpenings,
-} from '../domain/geometry';
+  loadLevelGeometry,
+  saveLevelGeometry,
+  type PersistedLevelGeometry,
+} from '../data/supabase/transactions';
+import {
+  assertLevelGeometrySnapshot,
+  type GeometryPiece,
+  type GeometryVertex,
+  type LevelGeometrySnapshot,
+} from '../domain/levelGeometry';
 import { DEFAULT_ROOM_FLOOR_COLOR, DEFAULT_ROOM_TYPE } from '../domain/room';
 import { normalizeCoordinateCm } from '../domain/roomOverlap';
-import type { Opening, Room, RoomType, Vertex, Wall } from '../domain/types';
+import type {
+  Opening,
+  OpeningKind,
+  OpeningPlacementType,
+  OpeningTemplate,
+  Room,
+  RoomType,
+  TopologyOpening,
+  TopologyWall,
+  Vertex,
+  Wall,
+  WallFaceSide,
+  WallHeightProfilePoint,
+  WallHeightProfiles,
+} from '../domain/types';
+import { createStableWallFaces } from '../domain/wall';
+import {
+  createUniformWallHeightProfiles,
+  invertWallSegmentAndProfiles,
+} from '../domain/wallHeightProfile';
 import { getSupabaseClient } from '../lib/supabase';
 
 type PieceRow = {
@@ -20,65 +41,97 @@ type PieceRow = {
   floor_color: string;
   notes: string | null;
   is_soft_deleted: boolean;
-  is_locked?: boolean;
 };
 
-type PieceVertexRow = {
+type RawVertex = {
   id: string;
-  piece_id: string;
-  vertex_order: number;
   x_cm: number | string;
   y_cm: number | string;
-};
-
-type PieceWallRow = {
-  id: string;
-  piece_id: string;
-  start_vertex_id: string;
-  end_vertex_id: string;
-  thickness_cm: number | string | null;
-  height_left_cm: number | string | null;
-  height_right_cm: number | string | null;
-  material: string | null;
-  insulation: string | null;
-  notes: string | null;
-  is_locked?: boolean;
-};
-
-type PieceOpeningRow = {
-  id: string;
-  wall_id: string;
-  opening_type: Opening['type'];
-  offset_cm: number | string;
-  width_cm: number | string;
-  bottom_cm: number | string;
-  height_cm: number | string;
-  notes: string | null;
-  is_locked?: boolean;
-};
-
-type CurrentWallRow = {
-  id: string;
-  start_vertex_id: string;
-  end_vertex_id: string;
-  thickness_cm: number | string | null;
-  material: string | null;
-  insulation: string | null;
-  notes: string | null;
   is_locked: boolean;
 };
 
-type WallPieceRelationRow = { wall_id: string; piece_id: string };
-type WallEndpointRow = { id: string; x_cm: number | string; y_cm: number | string };
+type RawPiece = {
+  id: string;
+  name: string;
+  room_type: RoomType;
+  floor_color: string;
+  wall_thickness_cm: number | string;
+  wall_height_cm: number | string;
+  notes: string | null;
+  is_soft_deleted: boolean;
+  vertex_ids: string[];
+};
 
-type WallHeightPointRow = { wall_id: string; face_side: 'gauche' | 'droite'; point_order: number; height_cm: number | string };
-type CurrentOpeningRow = Omit<PieceOpeningRow, 'opening_type' | 'offset_cm'> & { opening_type: string; position_cm: number | string };
+type RawHeightPoint = {
+  id: string;
+  point_order: number;
+  position_cm: number | string;
+  height_cm: number | string;
+  is_locked: boolean;
+};
+
+type RawWall = {
+  id: string;
+  start_vertex_id: string;
+  end_vertex_id: string;
+  thickness_cm: number | string | null;
+  height_profiles_linked: boolean;
+  material: string | null;
+  insulation: string | null;
+  notes: string | null;
+  piece_ids: string[];
+  profiles: {
+    gauche: RawHeightPoint[];
+    droite: RawHeightPoint[];
+  };
+};
+
+type RawOpening = {
+  id: string;
+  wall_id: string;
+  template_id: string;
+  opening_type: OpeningKind;
+  placement_type: OpeningPlacementType;
+  position_cm: number | string;
+  width_cm: number | string;
+  bottom_cm: number | string;
+  height_cm: number | string;
+  orientation: string | null;
+  notes: string | null;
+};
+
+type RawTemplate = {
+  id: string;
+  name: string;
+  opening_type: OpeningKind;
+  placement_type: OpeningPlacementType;
+};
+
+type RawLevelGeometry = {
+  level_id: string;
+  revision: number | string;
+  vertices: RawVertex[];
+  pieces: RawPiece[];
+  walls: RawWall[];
+  openings: RawOpening[];
+  templates: RawTemplate[];
+};
 
 export interface RoomSnapshot {
   room: Room;
   vertices: Vertex[];
   walls: Wall[];
   openings: Opening[];
+  geometryRevision?: number;
+  openingTemplates?: Record<string, OpeningTemplate>;
+  unlockedVertexIds?: string[];
+  unlockedProfilePointIds?: string[];
+}
+
+export interface LevelRoomSnapshot {
+  levelId: string;
+  revision: number;
+  rooms: RoomSnapshot[];
 }
 
 export interface CreateRoomInput {
@@ -90,30 +143,6 @@ export interface CreateRoomInput {
   notes?: string | null;
 }
 
-export async function createRectangleRoom(input: CreateRoomInput & { firstPoint: { x: number; y: number }; secondPoint: { x: number; y: number }; wallThicknessCm: number; wallHeightCm: number }): Promise<RoomSnapshot> {
-  const id = input.id ?? crypto.randomUUID();
-  const geometry = createRectangleRoomGeometryFromPoints(id, input.firstPoint, input.secondPoint, { wallThicknessCm: input.wallThicknessCm, wallHeightCm: input.wallHeightCm });
-  return saveRoomSnapshot({
-    room: {
-      id,
-      levelId: input.levelId,
-      name: input.name.trim() || 'Nouvelle pièce',
-      type: input.type ?? DEFAULT_ROOM_TYPE,
-      floorColor: input.floorColor?.trim() || DEFAULT_ROOM_FLOOR_COLOR,
-      notes: input.notes ?? null,
-      isSoftDeleted: false,
-      isLocked: false,
-    },
-    vertices: geometry.vertices,
-    walls: geometry.walls,
-    openings: [],
-  });
-}
-
-export async function updateRoomGeometryAtomically(snapshot: RoomSnapshot): Promise<RoomSnapshot> {
-  return saveRoomSnapshot(snapshot);
-}
-
 function mapPieceRow(row: PieceRow): Room {
   return {
     id: row.id,
@@ -123,300 +152,51 @@ function mapPieceRow(row: PieceRow): Room {
     floorColor: row.floor_color,
     notes: row.notes,
     isSoftDeleted: row.is_soft_deleted,
-    isLocked: row.is_locked === true,
   };
-}
-
-function mapPieceVertexRow(row: PieceVertexRow): Vertex {
-  return {
-    id: row.id,
-    pieceId: row.piece_id,
-    order: row.vertex_order,
-    x: Number(row.x_cm),
-    y: Number(row.y_cm),
-  };
-}
-
-function mapPieceWallRow(row: PieceWallRow): Wall {
-  return {
-    id: row.id,
-    pieceId: row.piece_id,
-    startVertexId: row.start_vertex_id,
-    endVertexId: row.end_vertex_id,
-    thicknessCm: row.thickness_cm === null ? null : Number(row.thickness_cm),
-    heightLeftCm: row.height_left_cm === null ? null : Number(row.height_left_cm),
-    heightRightCm: row.height_right_cm === null ? null : Number(row.height_right_cm),
-    material: row.material,
-    insulation: row.insulation,
-    notes: row.notes,
-    isLocked: row.is_locked === true,
-  };
-}
-
-function mapPieceOpeningRow(row: PieceOpeningRow): Opening {
-  return {
-    id: row.id,
-    wallId: row.wall_id,
-    type: row.opening_type,
-    offsetCm: Number(row.offset_cm),
-    widthCm: Number(row.width_cm),
-    bottomCm: Number(row.bottom_cm),
-    heightCm: Number(row.height_cm),
-    notes: row.notes,
-    isLocked: row.is_locked === true,
-  };
-}
-
-function mapCurrentOpeningRow(row: CurrentOpeningRow): Opening {
-  const type: Opening['type'] = row.opening_type === 'porte'
-    ? 'door'
-    : row.opening_type === 'fenêtre' || row.opening_type === 'baie_vitree' ? 'window' : 'other';
-  return mapPieceOpeningRow({ ...row, opening_type: type, offset_cm: row.position_cm });
-}
-
-function toPieceRow(room: Room): PieceRow {
-  return {
-    id: room.id,
-    level_id: room.levelId,
-    name: room.name,
-    room_type: room.type,
-    floor_color: room.floorColor,
-    notes: room.notes ?? null,
-    is_soft_deleted: room.isSoftDeleted ?? false,
-  };
-}
-
-function toPieceInsertRow(room: CreateRoomInput): Partial<PieceRow> {
-  return {
-    ...(room.id ? { id: room.id } : {}),
-    level_id: room.levelId,
-    name: room.name,
-    room_type: room.type ?? DEFAULT_ROOM_TYPE,
-    floor_color: room.floorColor?.trim() || DEFAULT_ROOM_FLOOR_COLOR,
-    notes: room.notes ?? null,
-    is_soft_deleted: false,
-  };
-}
-
-function toPieceVertexRows(roomId: string, vertices: Vertex[]): PieceVertexRow[] {
-  return sortVertices(vertices).map((vertex, index) => ({
-    id: vertex.id,
-    piece_id: roomId,
-    vertex_order: index,
-    x_cm: normalizeCoordinateCm(vertex.x),
-    y_cm: normalizeCoordinateCm(vertex.y),
-  }));
-}
-
-function toPieceWallRows(roomId: string, vertices: Vertex[], walls: Wall[]): PieceWallRow[] {
-  return syncWallsWithVertices(vertices, walls).map((wall) => ({
-    id: wall.id,
-    piece_id: roomId,
-    start_vertex_id: wall.startVertexId,
-    end_vertex_id: wall.endVertexId,
-    thickness_cm: wall.thicknessCm ?? null,
-    height_left_cm: wall.heightLeftCm ?? null,
-    height_right_cm: wall.heightRightCm ?? null,
-    material: wall.material ?? null,
-    insulation: wall.insulation ?? null,
-    notes: wall.notes ?? null,
-  }));
-}
-
-function toPieceOpeningRows(walls: Wall[], openings: Opening[]): PieceOpeningRow[] {
-  return syncOpeningsWithWalls(walls, openings).map((opening) => ({
-    id: opening.id,
-    wall_id: opening.wallId,
-    opening_type: opening.type,
-    offset_cm: opening.offsetCm,
-    width_cm: opening.widthCm,
-    bottom_cm: opening.bottomCm,
-    height_cm: opening.heightCm,
-    notes: opening.notes ?? null,
-  }));
 }
 
 export async function getRoom(roomId: string): Promise<Room> {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
+  const { data, error } = await getSupabaseClient()
     .from('pieces')
-    .select('id, level_id, name, room_type, floor_color, notes, is_soft_deleted, is_locked')
+    .select('id, level_id, name, room_type, floor_color, notes, is_soft_deleted')
     .eq('id', roomId)
     .single();
-
-  if (error) {
-    throw error;
-  }
-
+  if (error) throw error;
   return mapPieceRow(data as PieceRow);
 }
 
 export async function listRoomsByLevel(levelId: string): Promise<Room[]> {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
+  const { data, error } = await getSupabaseClient()
     .from('pieces')
-    .select('id, level_id, name, room_type, floor_color, notes, is_soft_deleted, is_locked')
+    .select('id, level_id, name, room_type, floor_color, notes, is_soft_deleted')
     .eq('level_id', levelId)
     .eq('is_soft_deleted', false)
     .order('created_at');
-
-  if (error) {
-    throw error;
-  }
-
+  if (error) throw error;
   return (data ?? []).map((row) => mapPieceRow(row as PieceRow));
 }
 
-function databaseReadError(context: string, error: { message: string }): Error {
-  return new Error(`${context} : ${error.message}`);
-}
-
-async function loadSnapshotsForRooms(rooms: Room[]): Promise<RoomSnapshot[]> {
-  if (rooms.length === 0) return [];
-  const supabase = getSupabaseClient();
-  const roomIds = rooms.map(({ id }) => id);
-
-  const [verticesResult, relationsResult] = await Promise.all([
-    supabase
-      .from('piece_vertices')
-      .select('id, piece_id, vertex_order, x_cm, y_cm')
-      .in('piece_id', roomIds)
-      .order('vertex_order'),
-    supabase
-      .from('wall_pieces')
-      .select('wall_id, piece_id')
-      .in('piece_id', roomIds),
-  ]);
-
-  if (verticesResult.error) throw databaseReadError('Chargement des sommets impossible', verticesResult.error);
-  if (relationsResult.error) throw databaseReadError('Chargement des relations mur–pièce impossible', relationsResult.error);
-
-  const mappedVertices = (verticesResult.data ?? []).map((row) => mapPieceVertexRow(row as PieceVertexRow));
-  const wallRelations = (relationsResult.data ?? []) as WallPieceRelationRow[];
-  const wallIds = [...new Set(wallRelations.map(({ wall_id }) => wall_id))];
-
-  const { data: walls, error: wallsError } = wallIds.length === 0
-    ? { data: [], error: null }
-    : await supabase.from('walls')
-      .select('id, start_vertex_id, end_vertex_id, thickness_cm, material, insulation, notes, is_locked')
-      .in('id', wallIds);
-
-  if (wallsError) throw databaseReadError('Chargement des murs impossible', wallsError);
-
-  const rawWalls = (walls ?? []) as CurrentWallRow[];
-  const endpointIds = [...new Set(rawWalls.flatMap((wall) => [wall.start_vertex_id, wall.end_vertex_id]))];
-  const [endpointsResult, heightsResult, openingsResult] = await Promise.all([
-    endpointIds.length === 0
-      ? Promise.resolve({ data: [], error: null })
-      : supabase.from('piece_vertices')
-        .select('id, x_cm, y_cm')
-        .in('id', endpointIds),
-    wallIds.length === 0
-      ? Promise.resolve({ data: [], error: null })
-      : supabase.from('wall_height_points')
-        .select('wall_id, face_side, point_order, height_cm')
-        .in('wall_id', wallIds)
-        .order('point_order'),
-    wallIds.length === 0
-      ? Promise.resolve({ data: [], error: null })
-      : supabase.from('openings')
-        .select('id, wall_id, opening_type, position_cm, width_cm, bottom_cm, height_cm, notes, is_locked')
-        .in('wall_id', wallIds),
-  ]);
-
-  if (endpointsResult.error) throw databaseReadError('Chargement des extrémités de murs impossible', endpointsResult.error);
-  if (heightsResult.error) throw databaseReadError('Chargement des profils de murs impossible', heightsResult.error);
-  if (openingsResult.error) throw databaseReadError('Chargement des ouvertures impossible', openingsResult.error);
-
-  const wallEndpoints = endpointsResult.data;
-  const endpointById = new Map((wallEndpoints ?? []).map((row) => {
-    const endpoint = row as WallEndpointRow;
-    return [endpoint.id, { x: Number(endpoint.x_cm), y: Number(endpoint.y_cm) }];
-  }));
-  const samePoint = (left: { x: number; y: number }, right: { x: number; y: number }) => Math.hypot(left.x - right.x, left.y - right.y) < 0.005;
-  const heights = heightsResult.data as WallHeightPointRow[];
-  const openings = (openingsResult.data ?? []).map((row) => mapCurrentOpeningRow(row as CurrentOpeningRow));
-  const rawWallsById = new Map(rawWalls.map((wall) => [wall.id, wall]));
-
-  return rooms.map((room) => {
-    const roomVertices = sortVertices(mappedVertices.filter(({ pieceId }) => pieceId === room.id));
-    const roomWallIds = new Set(wallRelations.filter(({ piece_id }) => piece_id === room.id).map(({ wall_id }) => wall_id));
-    const roomRawWalls = [...roomWallIds].flatMap((id) => {
-      const wall = rawWallsById.get(id);
-      return wall ? [wall] : [];
-    });
-    const localWalls = roomVertices.map((start, index, sorted) => {
-      const end = sorted[(index + 1) % sorted.length];
-      const wall = roomRawWalls.find((candidate) => {
-        const candidateStart = endpointById.get(candidate.start_vertex_id);
-        const candidateEnd = endpointById.get(candidate.end_vertex_id);
-        return Boolean(candidateStart && candidateEnd && (
-          (samePoint(start, candidateStart) && samePoint(end, candidateEnd))
-          || (samePoint(start, candidateEnd) && samePoint(end, candidateStart))
-        ));
-      });
-      if (!wall) {
-        // Identité de secours stable : elle permet d’afficher un ancien plan incomplet sans
-        // fabriquer un nouvel UUID différent à chaque rechargement.
-        return mapPieceWallRow({
-          id: start.id,
-          piece_id: room.id,
-          start_vertex_id: start.id,
-          end_vertex_id: end.id,
-          thickness_cm: null,
-          height_left_cm: null,
-          height_right_cm: null,
-          material: null,
-          insulation: null,
-          notes: null,
-          is_locked: false,
-        });
-      }
-      const left = heights.find((point) => point.wall_id === wall.id && point.face_side === 'gauche');
-      const right = heights.find((point) => point.wall_id === wall.id && point.face_side === 'droite');
-      return mapPieceWallRow({ ...wall, piece_id: room.id, start_vertex_id: start.id, end_vertex_id: end.id, height_left_cm: left?.height_cm ?? null, height_right_cm: right?.height_cm ?? null });
-    });
-    const localWallIds = new Set(localWalls.map(({ id }) => id));
-    return {
-      room,
-      vertices: roomVertices,
-      walls: localWalls,
-      openings: syncOpeningsWithWalls(localWalls, openings.filter(({ wallId }) => localWallIds.has(wallId))),
-    };
-  });
+export async function loadLevelGeometrySnapshot(levelId: string): Promise<LevelRoomSnapshot> {
+  const raw = await loadLevelGeometry<RawLevelGeometry>(getSupabaseClient(), levelId);
+  return projectRawLevelGeometry(raw);
 }
 
 export async function loadLevelRoomSnapshots(levelId: string): Promise<RoomSnapshot[]> {
-  return loadSnapshotsForRooms(await listRoomsByLevel(levelId));
+  return (await loadLevelGeometrySnapshot(levelId)).rooms;
 }
 
 export async function loadRoomSnapshot(roomId: string): Promise<RoomSnapshot> {
-  const [snapshot] = await loadSnapshotsForRooms([await getRoom(roomId)]);
+  const room = await getRoom(roomId);
+  const level = await loadLevelGeometrySnapshot(room.levelId);
+  const snapshot = level.rooms.find(({ room: candidate }) => candidate.id === roomId);
   if (!snapshot) throw new Error('La pièce demandée n’existe plus.');
   return snapshot;
 }
 
-export async function createRoom(room: CreateRoomInput): Promise<Room> {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from('pieces')
-    .insert(toPieceInsertRow(room))
-    .select('id, level_id, name, room_type, floor_color, notes, is_soft_deleted, is_locked')
-    .single();
-
-  if (error) {
-    throw error;
-  }
-
-  return mapPieceRow(data as PieceRow);
-}
-
 export async function updateRoom(room: Room): Promise<Room> {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
+  const { data, error } = await getSupabaseClient()
     .from('pieces')
     .update({
-      level_id: room.levelId,
       name: room.name,
       room_type: room.type,
       floor_color: room.floorColor,
@@ -425,323 +205,476 @@ export async function updateRoom(room: Room): Promise<Room> {
     .eq('id', room.id)
     .select('id, level_id, name, room_type, floor_color, notes, is_soft_deleted')
     .single();
-
-  if (error) {
-    throw error;
-  }
-
+  if (error) throw error;
   return mapPieceRow(data as PieceRow);
 }
 
-export async function saveRoom(room: Room): Promise<Room> {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from('pieces')
-    .upsert(toPieceRow(room), { onConflict: 'id' })
-    .select('id, level_id, name, room_type, floor_color, notes, is_soft_deleted')
-    .single();
+export async function saveLevelRoomSnapshots(
+  levelId: string,
+  snapshots: readonly RoomSnapshot[],
+  expectedRevision?: number,
+): Promise<LevelRoomSnapshot> {
+  const canonical = roomSnapshotsToCanonical(
+    levelId,
+    expectedRevision ?? snapshots[0]?.geometryRevision ?? 0,
+    snapshots,
+  );
+  assertLevelGeometrySnapshot(canonical);
+  const saved = await saveLevelGeometry<RawLevelGeometry>(
+    getSupabaseClient(),
+    levelId,
+    canonical.revision,
+    canonicalToPersisted(canonical),
+  );
+  return projectRawLevelGeometry(saved);
+}
 
-  if (error) {
-    throw error;
-  }
+export async function createRoomComplete(snapshot: RoomSnapshot): Promise<RoomSnapshot> {
+  const current = await loadLevelGeometrySnapshot(snapshot.room.levelId);
+  const saved = await saveLevelRoomSnapshots(
+    snapshot.room.levelId,
+    [...current.rooms, snapshot],
+    current.revision,
+  );
+  return saved.rooms.find(({ room }) => room.id === snapshot.room.id) ?? snapshot;
+}
 
-  return mapPieceRow(data as PieceRow);
+export async function updateRoomGeometry(snapshot: RoomSnapshot): Promise<RoomSnapshot> {
+  const current = await loadLevelGeometrySnapshot(snapshot.room.levelId);
+  const nextRooms = current.rooms.map((candidate) => (
+    candidate.room.id === snapshot.room.id ? snapshot : candidate
+  ));
+  const saved = await saveLevelRoomSnapshots(snapshot.room.levelId, nextRooms, current.revision);
+  const persisted = saved.rooms.find(({ room }) => room.id === snapshot.room.id);
+  if (!persisted) throw new Error('La pièce sauvegardée n’a pas été relue.');
+  return persisted;
+}
+
+export async function replaceRoomGeometriesAtomically(
+  levelId: string,
+  replacedRoomIds: string[],
+  snapshots: RoomSnapshot[],
+): Promise<RoomSnapshot[]> {
+  const current = await loadLevelGeometrySnapshot(levelId);
+  const replaced = new Set(replacedRoomIds);
+  const saved = await saveLevelRoomSnapshots(
+    levelId,
+    [...current.rooms.filter(({ room }) => !replaced.has(room.id)), ...snapshots],
+    current.revision,
+  );
+  const resultIds = new Set(snapshots.map(({ room }) => room.id));
+  return saved.rooms.filter(({ room }) => resultIds.has(room.id));
 }
 
 export async function softDeleteRoom(roomId: string): Promise<void> {
-  const supabase = getSupabaseClient();
-  const { error } = await supabase
-    .from('pieces')
-    .update({ is_soft_deleted: true, deleted_at: new Date().toISOString() })
-    .eq('id', roomId);
-
-  if (error) {
-    throw error;
-  }
+  const room = await getRoom(roomId);
+  const current = await loadLevelGeometrySnapshot(room.levelId);
+  await saveLevelRoomSnapshots(
+    room.levelId,
+    current.rooms.filter(({ room: candidate }) => candidate.id !== roomId),
+    current.revision,
+  );
 }
 
 export const deleteRoom = softDeleteRoom;
 
+export async function createRoom(_room: CreateRoomInput): Promise<Room> {
+  throw new Error('La création sans géométrie canonique est désactivée.');
+}
 
-export async function replaceRoomVertices(roomId: string, vertices: Vertex[]): Promise<Vertex[]> {
-  if (vertices.length < 3) {
-    throw new Error('Une pièce doit contenir au moins 3 sommets.');
-  }
-
-  const supabase = getSupabaseClient();
-  const rows = toPieceVertexRows(roomId, vertices);
-
-  const { error: deleteError } = await supabase
-    .from('piece_vertices')
-    .delete()
-    .eq('piece_id', roomId);
-
-  if (deleteError) {
-    throw deleteError;
-  }
-
-  const { data, error } = await supabase
-    .from('piece_vertices')
-    .insert(rows)
-    .select('id, piece_id, vertex_order, x_cm, y_cm')
-    .order('vertex_order');
-
-  if (error) {
-    throw error;
-  }
-
-  return (data ?? []).map((row) => mapPieceVertexRow(row as PieceVertexRow));
+export async function replaceRoomVertices(
+  _roomId: string,
+  _vertices: Vertex[],
+): Promise<Vertex[]> {
+  throw new Error('Le chemin legacy de sauvegarde des sommets est désactivé.');
 }
 
 export async function replaceRoomWalls(
-  roomId: string,
-  vertices: Vertex[],
-  walls: Wall[],
+  _roomId: string,
+  _vertices: Vertex[],
+  _walls: Wall[],
 ): Promise<Wall[]> {
-  const supabase = getSupabaseClient();
-  const rows = toPieceWallRows(roomId, vertices, walls);
-
-  const { error: deleteError } = await supabase
-    .from('walls')
-    .delete()
-    .eq('piece_id', roomId);
-
-  if (deleteError) {
-    throw deleteError;
-  }
-
-  if (rows.length === 0) {
-    return [];
-  }
-
-  const { data, error } = await supabase
-    .from('walls')
-    .insert(rows)
-    .select('id, piece_id, start_vertex_id, end_vertex_id, thickness_cm, height_left_cm, height_right_cm, material, insulation, notes');
-
-  if (error) {
-    throw error;
-  }
-
-  return syncWallsWithVertices(
-    vertices,
-    (data ?? []).map((row) => mapPieceWallRow(row as PieceWallRow)),
-  );
+  throw new Error('Le chemin legacy de sauvegarde des murs est désactivé.');
 }
 
 export async function replaceRoomOpenings(
-  vertices: Vertex[],
-  walls: Wall[],
-  openings: Opening[],
+  _vertices: Vertex[],
+  _walls: Wall[],
+  _openings: Opening[],
 ): Promise<Opening[]> {
-  const issues = validateOpenings(vertices, walls, openings);
-  if (issues.length > 0) {
-    throw new Error(formatOpeningValidationIssue(issues[0]));
-  }
-
-  const supabase = getSupabaseClient();
-  const wallIds = walls.map((wall) => wall.id);
-
-  if (wallIds.length === 0) {
-    return [];
-  }
-
-  const rows = toPieceOpeningRows(walls, openings);
-
-  const { error: deleteError } = await supabase
-    .from('openings')
-    .delete()
-    .in('wall_id', wallIds);
-
-  if (deleteError) {
-    throw deleteError;
-  }
-
-  if (rows.length === 0) {
-    return [];
-  }
-
-  const { data, error } = await supabase
-    .from('openings')
-    .insert(rows)
-    .select('id, wall_id, opening_type, offset_cm, width_cm, bottom_cm, height_cm, notes');
-
-  if (error) {
-    throw error;
-  }
-
-  return syncOpeningsWithWalls(
-    walls,
-    (data ?? []).map((row) => mapPieceOpeningRow(row as PieceOpeningRow)),
-  );
+  throw new Error('Le chemin legacy de sauvegarde des ouvertures est désactivé.');
 }
 
-export async function saveRoomSnapshot(snapshot: RoomSnapshot): Promise<RoomSnapshot> {
-  const room = await saveRoom(snapshot.room);
-  const vertices = await replaceRoomVertices(
-    room.id,
-    snapshot.vertices.map((vertex) => ({
-      ...vertex,
-      pieceId: room.id,
-    })),
+function projectRawLevelGeometry(raw: RawLevelGeometry): LevelRoomSnapshot {
+  const revision = Number(raw.revision);
+  const verticesById = new Map(raw.vertices.map((vertex) => [vertex.id, {
+    id: vertex.id,
+    x: Number(vertex.x_cm),
+    y: Number(vertex.y_cm),
+    isLocked: vertex.is_locked,
+  }]));
+  const templatesById = Object.fromEntries(raw.templates.map((template) => [template.id, {
+    id: template.id,
+    name: template.name,
+    type: template.opening_type,
+    placementType: template.placement_type,
+  } satisfies OpeningTemplate]));
+  const wallsById = new Map(raw.walls.map((wall) => {
+    const topologyWall: TopologyWall = {
+      id: wall.id,
+      startVertexId: wall.start_vertex_id,
+      endVertexId: wall.end_vertex_id,
+      faces: createStableWallFaces(),
+      pieceIds: [...wall.piece_ids],
+      thicknessCm: wall.thickness_cm === null ? null : Number(wall.thickness_cm),
+      material: wall.material,
+      insulation: wall.insulation,
+      notes: wall.notes,
+      heightProfilesLinked: wall.height_profiles_linked,
+    };
+    return [wall.id, {
+      wall: topologyWall,
+      profiles: mapProfiles(wall),
+    }];
+  }));
+
+  const openingsByWallId = new Map<string, Opening[]>();
+  for (const opening of raw.openings) {
+    const current = openingsByWallId.get(opening.wall_id) ?? [];
+    current.push({
+      id: opening.id,
+      wallId: opening.wall_id,
+      type: legacyOpeningType(opening.opening_type),
+      openingKind: opening.opening_type,
+      templateId: opening.template_id,
+      placementType: opening.placement_type,
+      offsetCm: Number(opening.position_cm),
+      widthCm: Number(opening.width_cm),
+      bottomCm: Number(opening.bottom_cm),
+      heightCm: Number(opening.height_cm),
+      orientation: opening.orientation,
+      notes: opening.notes,
+    });
+    openingsByWallId.set(opening.wall_id, current);
+  }
+
+  const rooms = raw.pieces.map((piece): RoomSnapshot => {
+    const vertices = piece.vertex_ids.map((vertexId, order): Vertex => {
+      const vertex = verticesById.get(vertexId);
+      if (!vertex) throw new Error('Le contour chargé référence un sommet absent.');
+      return {
+        ...vertex,
+        pieceId: piece.id,
+        order,
+      };
+    });
+    const localWalls = piece.vertex_ids.map((startVertexId, index): Wall => {
+      const endVertexId = piece.vertex_ids[(index + 1) % piece.vertex_ids.length];
+      const found = [...wallsById.values()].find(({ wall }) => (
+        wall.pieceIds.includes(piece.id)
+        && sameSegment(wall.startVertexId, wall.endVertexId, startVertexId, endVertexId)
+      ));
+      if (!found) throw new Error('Une arête chargée ne possède pas de mur canonique.');
+      const start = verticesById.get(found.wall.startVertexId)!;
+      const end = verticesById.get(found.wall.endVertexId)!;
+      const lengthCm = Math.hypot(end.x - start.x, end.y - start.y);
+      const state = found.wall.startVertexId === startVertexId
+        ? { wall: found.wall, profiles: found.profiles }
+        : invertWallSegmentAndProfiles({
+          wall: found.wall,
+          profiles: found.profiles,
+        }, lengthCm);
+      return {
+        id: state.wall.id,
+        pieceId: piece.id,
+        startVertexId,
+        endVertexId,
+        thicknessCm: state.wall.thicknessCm,
+        heightLeftCm: state.profiles.gauche[0]?.heightCm ?? null,
+        heightRightCm: state.profiles.droite[0]?.heightCm ?? null,
+        material: state.wall.material,
+        insulation: state.wall.insulation,
+        notes: state.wall.notes,
+        pieceIds: [...state.wall.pieceIds],
+        heightProfilesLinked: state.wall.heightProfilesLinked,
+        heightProfiles: state.profiles,
+        isLocked: verticesById.get(startVertexId)?.isLocked === true
+          && verticesById.get(endVertexId)?.isLocked === true,
+      };
+    });
+    const localWallIds = new Set(localWalls.map(({ id }) => id));
+    return {
+      room: {
+        id: piece.id,
+        levelId: raw.level_id,
+        name: piece.name,
+        type: piece.room_type,
+        floorColor: piece.floor_color,
+        notes: piece.notes,
+        isSoftDeleted: piece.is_soft_deleted,
+        isLocked: vertices.length > 0 && vertices.every(({ isLocked }) => isLocked === true),
+      },
+      vertices,
+      walls: localWalls,
+      openings: [...localWallIds].flatMap((wallId) => openingsByWallId.get(wallId) ?? []),
+      geometryRevision: revision,
+      openingTemplates: templatesById,
+    };
+  });
+
+  return { levelId: raw.level_id, revision, rooms };
+}
+
+function roomSnapshotsToCanonical(
+  levelId: string,
+  revision: number,
+  snapshots: readonly RoomSnapshot[],
+): LevelGeometrySnapshot {
+  const verticesById = new Map<string, GeometryVertex>();
+  const pieces: GeometryPiece[] = [];
+  const wallsById = new Map<string, TopologyWall>();
+  const profilesByWallId: Record<string, WallHeightProfiles> = {};
+  const openingsById = new Map<string, TopologyOpening>();
+  const templatesById: Record<string, OpeningTemplate> = {};
+  const unlockedVertexIds = new Set<string>();
+  const unlockedProfilePointIds = new Set<string>();
+
+  for (const snapshot of snapshots) {
+    Object.assign(templatesById, snapshot.openingTemplates ?? {});
+    snapshot.unlockedVertexIds?.forEach((id) => unlockedVertexIds.add(id));
+    snapshot.unlockedProfilePointIds?.forEach((id) => unlockedProfilePointIds.add(id));
+    pieces.push({
+      room: {
+        ...snapshot.room,
+        levelId,
+        isLocked: undefined,
+      },
+      vertexIds: [...snapshot.vertices]
+        .sort((left, right) => left.order - right.order)
+        .map(({ id }) => id),
+    });
+    for (const vertex of snapshot.vertices) {
+      const current = verticesById.get(vertex.id);
+      const next: GeometryVertex = {
+        id: vertex.id,
+        levelId,
+        x: normalizeCoordinateCm(vertex.x),
+        y: normalizeCoordinateCm(vertex.y),
+        isLocked: vertex.isLocked === true,
+      };
+      if (
+        current
+        && (current.x !== next.x || current.y !== next.y || current.isLocked !== next.isLocked)
+      ) {
+        throw new Error('Un sommet partagé doit conserver les mêmes coordonnées et le même verrou.');
+      }
+      verticesById.set(vertex.id, next);
+    }
+  }
+
+  for (const snapshot of snapshots) {
+    const vertices = new Map(snapshot.vertices.map((vertex) => [vertex.id, vertex]));
+    for (const wall of snapshot.walls) {
+      const start = vertices.get(wall.startVertexId);
+      const end = vertices.get(wall.endVertexId);
+      if (!start || !end) throw new Error('Un mur référence un sommet absent de sa pièce.');
+      const existing = wallsById.get(wall.id);
+      const pieceIds = [...new Set([...(existing?.pieceIds ?? wall.pieceIds ?? []), snapshot.room.id])];
+      const topologyWall: TopologyWall = {
+        id: wall.id,
+        startVertexId: wall.startVertexId,
+        endVertexId: wall.endVertexId,
+        faces: createStableWallFaces(),
+        pieceIds,
+        thicknessCm: wall.thicknessCm ?? 10,
+        material: wall.material ?? null,
+        insulation: wall.insulation ?? null,
+        notes: wall.notes ?? null,
+        heightProfilesLinked: wall.heightProfilesLinked ?? true,
+      };
+      if (pieceIds.length > 2) throw new Error('Un mur ne peut pas être lié à trois pièces.');
+      if (!existing) {
+        wallsById.set(wall.id, topologyWall);
+        profilesByWallId[wall.id] = wall.heightProfiles
+          ? cloneProfiles(wall.heightProfiles)
+          : createUniformWallHeightProfiles(
+            wall.id,
+            Math.hypot(end.x - start.x, end.y - start.y),
+            wall.heightLeftCm ?? wall.heightRightCm ?? 250,
+          );
+      } else {
+        wallsById.set(wall.id, { ...existing, pieceIds });
+      }
+    }
+  }
+
+  const compatibleWallIds = new Set(
+    [...wallsById.values()]
+      .filter(({ pieceIds }) => pieceIds.length === 1 || pieceIds.length === 2)
+      .map(({ id }) => id),
   );
-  const walls = await replaceRoomWalls(
-    room.id,
-    vertices,
-    remapWallsToVertices(snapshot.vertices, vertices, snapshot.walls),
-  );
-  const openings = await replaceRoomOpenings(vertices, walls, snapshot.openings);
+  for (const snapshot of snapshots) {
+    for (const opening of snapshot.openings) {
+      if (!compatibleWallIds.has(opening.wallId)) continue;
+      const wall = wallsById.get(opening.wallId);
+      if (!wall || !opening.templateId || !opening.openingKind || !opening.placementType) {
+        throw new Error('Une ouverture canonique doit conserver son template et son placement.');
+      }
+      const compatible = (opening.placementType === 'intérieur' && wall.pieceIds.length === 2)
+        || (opening.placementType === 'extérieur' && wall.pieceIds.length === 1);
+      if (!compatible) continue;
+      openingsById.set(opening.id, {
+        id: opening.id,
+        wallId: opening.wallId,
+        templateId: opening.templateId,
+        type: opening.openingKind,
+        placementType: opening.placementType,
+        positionCm: opening.offsetCm,
+        widthCm: opening.widthCm,
+        heightCm: opening.heightCm,
+        bottomCm: opening.bottomCm,
+        orientation: opening.orientation ?? null,
+      });
+    }
+  }
 
   return {
-    room,
-    vertices,
-    walls,
-    openings,
+    levelId,
+    revision,
+    vertices: [...verticesById.values()],
+    pieces,
+    walls: [...wallsById.values()],
+    profilesByWallId,
+    openings: [...openingsById.values()],
+    templatesById,
+    unlockedVertexIds: [...unlockedVertexIds],
+    unlockedProfilePointIds: [...unlockedProfilePointIds],
   };
 }
 
-function toGeometryVerticesPayload(vertices: Vertex[]) {
-  return sortVertices(vertices).map((vertex, index) => ({
-    id: vertex.id,
-    vertex_order: index,
-    x_cm: normalizeCoordinateCm(vertex.x),
-    y_cm: normalizeCoordinateCm(vertex.y),
-  }));
-}
-
-function buildFlatProfile(heightCm: number, lengthCm: number) {
-  const normalizedLength = Math.max(1, lengthCm);
-  return [
-    {
-      id: crypto.randomUUID(),
-      point_order: 0,
-      position_cm: 0,
-      height_cm: heightCm,
-    },
-    {
-      id: crypto.randomUUID(),
-      point_order: 1,
-      position_cm: normalizedLength,
-      height_cm: heightCm,
-    },
-  ];
-}
-
-function toCreatePieceWallsPayload(vertices: Vertex[], walls: Wall[]) {
-  const syncedWalls = syncWallsWithVertices(vertices, walls);
-  const verticesById = new Map(vertices.map((vertex) => [vertex.id, vertex]));
-  return syncedWalls.map((wall) => {
-    const start = verticesById.get(wall.startVertexId);
-    const end = verticesById.get(wall.endVertexId);
-    const lengthCm = start && end ? Math.hypot(end.x - start.x, end.y - start.y) : 1;
-    const leftHeightCm = wall.heightLeftCm ?? wall.heightRightCm ?? 250;
-    const rightHeightCm = wall.heightRightCm ?? wall.heightLeftCm ?? 250;
-    return {
+function canonicalToPersisted(snapshot: LevelGeometrySnapshot): PersistedLevelGeometry {
+  return {
+    vertices: snapshot.vertices.map((vertex) => ({
+      id: vertex.id,
+      x_cm: vertex.x,
+      y_cm: vertex.y,
+      is_locked: vertex.isLocked,
+    })),
+    pieces: snapshot.pieces.map(({ room, vertexIds }) => {
+      const walls = snapshot.walls.filter(({ pieceIds }) => pieceIds.includes(room.id));
+      const defaultWall = walls[0];
+      const defaultProfile = defaultWall ? snapshot.profilesByWallId[defaultWall.id] : undefined;
+      return {
+        id: room.id,
+        name: room.name.trim() || 'Nouvelle pièce',
+        room_type: room.type,
+        floor_color: room.floorColor || DEFAULT_ROOM_FLOOR_COLOR,
+        wall_thickness_cm: defaultWall?.thicknessCm ?? 10,
+        wall_height_cm: defaultProfile?.gauche[0]?.heightCm ?? 250,
+        notes: room.notes ?? null,
+        vertex_ids: vertexIds,
+      };
+    }),
+    walls: snapshot.walls.map((wall) => ({
       id: wall.id,
       start_vertex_id: wall.startVertexId,
       end_vertex_id: wall.endVertexId,
       thickness_cm: wall.thicknessCm ?? 10,
-      height_profiles_linked: leftHeightCm === rightHeightCm,
+      height_profiles_linked: wall.heightProfilesLinked,
       material: wall.material,
       insulation: wall.insulation,
       notes: wall.notes,
-      is_locked: wall.isLocked === true,
+      piece_ids: wall.pieceIds,
       profiles: {
-        gauche: buildFlatProfile(leftHeightCm, lengthCm),
-        droite: buildFlatProfile(rightHeightCm, lengthCm),
+        gauche: snapshot.profilesByWallId[wall.id].gauche.map(toPersistedHeightPoint),
+        droite: snapshot.profilesByWallId[wall.id].droite.map(toPersistedHeightPoint),
       },
-    };
-  });
-}
-
-function toSharedWallsPayload(snapshots: RoomSnapshot[]) {
-  const shared = new Map<string, ReturnType<typeof toCreatePieceWallsPayload>[number] & { piece_ids: string[] }>();
-  for (const snapshot of snapshots) {
-    for (const wall of toCreatePieceWallsPayload(snapshot.vertices, snapshot.walls)) {
-      const current = shared.get(wall.id);
-      if (current) {
-        current.piece_ids = [...new Set([...current.piece_ids, snapshot.room.id])];
-      } else {
-        shared.set(wall.id, { ...wall, piece_ids: [snapshot.room.id] });
-      }
-    }
-  }
-  return [...shared.values()];
-}
-
-export async function updateRoomGeometry(snapshot: RoomSnapshot): Promise<RoomSnapshot> {
-  const supabase = getSupabaseClient();
-  const { error } = await supabase.rpc('update_piece_geometry_v2', {
-    target_piece_id: snapshot.room.id,
-    vertices_data: toGeometryVerticesPayload(snapshot.vertices),
-  });
-  if (error) {
-    throw error;
-  }
-  return loadRoomSnapshot(snapshot.room.id);
-}
-
-export async function createRoomComplete(snapshot: RoomSnapshot): Promise<RoomSnapshot> {
-  const supabase = getSupabaseClient();
-  const defaultThicknessCm = snapshot.walls[0]?.thicknessCm ?? 10;
-  const defaultHeightCm = snapshot.walls[0]?.heightLeftCm ?? snapshot.walls[0]?.heightRightCm ?? 250;
-  const { error } = await supabase.rpc('create_piece_complete', {
-    piece_data: {
-      id: snapshot.room.id,
-      level_id: snapshot.room.levelId,
-      name: snapshot.room.name,
-      room_type: snapshot.room.type,
-      floor_color: snapshot.room.floorColor,
-      wall_thickness_cm: defaultThicknessCm,
-      wall_height_cm: defaultHeightCm,
-      notes: snapshot.room.notes,
-      is_soft_deleted: snapshot.room.isSoftDeleted ?? false,
-      is_locked: snapshot.room.isLocked ?? false,
-    },
-    vertices_data: toGeometryVerticesPayload(snapshot.vertices),
-    walls_data: toCreatePieceWallsPayload(snapshot.vertices, snapshot.walls),
-  });
-  if (error) {
-    throw error;
-  }
-  return loadRoomSnapshot(snapshot.room.id);
-}
-
-export async function replaceRoomGeometriesAtomically(levelId: string, replacedRoomIds: string[], snapshots: RoomSnapshot[]): Promise<RoomSnapshot[]> {
-  const supabase = getSupabaseClient();
-  const piecesData = snapshots.map((snapshot) => {
-    const defaultThicknessCm = snapshot.walls[0]?.thicknessCm ?? 10;
-    const defaultHeightCm = snapshot.walls[0]?.heightLeftCm ?? snapshot.walls[0]?.heightRightCm ?? 250;
-    return {
-      piece: {
-        id: snapshot.room.id,
-        level_id: snapshot.room.levelId,
-        name: snapshot.room.name,
-        room_type: snapshot.room.type,
-        floor_color: snapshot.room.floorColor,
-        wall_thickness_cm: defaultThicknessCm,
-        wall_height_cm: defaultHeightCm,
-        notes: snapshot.room.notes,
-        is_soft_deleted: false,
-        is_locked: snapshot.room.isLocked ?? false,
-      },
-      vertices: toGeometryVerticesPayload(snapshot.vertices),
-      walls: toCreatePieceWallsPayload(snapshot.vertices, snapshot.walls),
-    };
-  });
-  const { error } = await supabase.rpc('replace_piece_topology_v2', {
-    target_level_id: levelId,
-    replaced_piece_ids: replacedRoomIds,
-    pieces_data: piecesData,
-    walls_data: toSharedWallsPayload(snapshots),
-  });
-  if (error) throw error;
-  return snapshots.map((snapshot) => ({
-    ...snapshot,
-    vertices: snapshot.vertices.map((vertex) => ({
-      ...vertex,
-      x: normalizeCoordinateCm(vertex.x),
-      y: normalizeCoordinateCm(vertex.y),
     })),
-  }));
+    openings: snapshot.openings.map((opening) => ({
+      id: opening.id,
+      wall_id: opening.wallId,
+      template_id: opening.templateId,
+      opening_type: opening.type,
+      placement_type: opening.placementType,
+      position_cm: opening.positionCm,
+      width_cm: opening.widthCm,
+      bottom_cm: opening.bottomCm,
+      height_cm: opening.heightCm,
+      orientation: opening.orientation,
+      notes: null,
+    })),
+    unlocked_vertex_ids: snapshot.unlockedVertexIds,
+    unlocked_profile_point_ids: snapshot.unlockedProfilePointIds,
+  };
+}
+
+function mapProfiles(wall: RawWall): WallHeightProfiles {
+  return {
+    wallId: wall.id,
+    gauche: wall.profiles.gauche.map((point) => mapHeightPoint(wall.id, 'gauche', point)),
+    droite: wall.profiles.droite.map((point) => mapHeightPoint(wall.id, 'droite', point)),
+  };
+}
+
+function mapHeightPoint(
+  wallId: string,
+  faceSide: WallFaceSide,
+  point: RawHeightPoint,
+): WallHeightProfilePoint {
+  return {
+    id: point.id,
+    wallId,
+    faceSide,
+    order: point.point_order,
+    positionCm: Number(point.position_cm),
+    heightCm: Number(point.height_cm),
+    isLocked: point.is_locked,
+  };
+}
+
+function toPersistedHeightPoint(point: WallHeightProfilePoint) {
+  return {
+    id: point.id,
+    point_order: point.order,
+    position_cm: point.positionCm,
+    height_cm: point.heightCm,
+    is_locked: point.isLocked === true,
+  };
+}
+
+function cloneProfiles(profiles: WallHeightProfiles): WallHeightProfiles {
+  return {
+    wallId: profiles.wallId,
+    gauche: profiles.gauche.map((point) => ({ ...point })),
+    droite: profiles.droite.map((point) => ({ ...point })),
+  };
+}
+
+function legacyOpeningType(type: OpeningKind): Opening['type'] {
+  if (type === 'porte') return 'door';
+  if (type === 'fenêtre' || type === 'baie_vitree') return 'window';
+  return 'other';
+}
+
+function sameSegment(
+  leftStart: string,
+  leftEnd: string,
+  rightStart: string,
+  rightEnd: string,
+) {
+  return (leftStart === rightStart && leftEnd === rightEnd)
+    || (leftStart === rightEnd && leftEnd === rightStart);
+}
+
+export function createDraftRoom(input: CreateRoomInput): Room {
+  return {
+    id: input.id ?? crypto.randomUUID(),
+    levelId: input.levelId,
+    name: input.name.trim() || 'Nouvelle pièce',
+    type: input.type ?? DEFAULT_ROOM_TYPE,
+    floorColor: input.floorColor?.trim() || DEFAULT_ROOM_FLOOR_COLOR,
+    notes: input.notes ?? null,
+    isSoftDeleted: false,
+    isLocked: false,
+  };
 }

@@ -79,7 +79,6 @@ export function createOpeningFromTemplate(
     heightCm: input.heightCm,
     bottomCm: input.bottomCm ?? 0,
     orientation: input.orientation ?? null,
-    isLocked: false,
   };
 }
 

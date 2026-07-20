@@ -1,7 +1,17 @@
 import earcut from 'earcut';
 import * as clipping from 'polygon-clipping';
 import { polygonAreaCm2, sortVertices, syncWallsWithVertices } from './geometry';
-import type { Opening, Point, Room, Vertex, Wall } from './types';
+import type {
+  Opening,
+  Point,
+  Room,
+  Vertex,
+  Wall,
+  WallFaceSide,
+  WallHeightProfilePoint,
+  WallHeightProfiles,
+} from './types';
+import { createUniformWallHeightProfiles, wallHeightAtPosition } from './wallHeightProfile';
 
 const AREA_EPSILON_CM2 = 0.01;
 type Ring = clipping.Ring;
@@ -95,15 +105,143 @@ function simpleRings(geometry: MultiPolygon): Point[][] {
 }
 
 function snapshotFromPoints(source: RoomGeometrySnapshot, points: Point[], id: string, name: string): RoomGeometrySnapshot {
-  const vertices: Vertex[] = points.map((point, order) => ({ x: normalizeCoordinateCm(point.x), y: normalizeCoordinateCm(point.y), id: crypto.randomUUID(), pieceId: id, order }));
-  const sourceWall = source.walls[0];
-  const walls: Wall[] = syncWallsWithVertices(vertices, []).map((wall) => ({
-    ...wall,
-    thicknessCm: sourceWall?.thicknessCm ?? 10,
-    heightLeftCm: sourceWall?.heightLeftCm ?? sourceWall?.heightRightCm ?? 250,
-    heightRightCm: sourceWall?.heightRightCm ?? sourceWall?.heightLeftCm ?? 250,
+  const vertices: Vertex[] = points.map((point, order) => ({
+    x: normalizeCoordinateCm(point.x),
+    y: normalizeCoordinateCm(point.y),
+    id: crypto.randomUUID(),
+    pieceId: id,
+    order,
+    isLocked: false,
   }));
+  const sourceVertices = new Map(source.vertices.map((vertex) => [vertex.id, vertex]));
+  const walls: Wall[] = syncWallsWithVertices(vertices, []).map((wall) => {
+    const start = vertices.find(({ id: vertexId }) => vertexId === wall.startVertexId)!;
+    const end = vertices.find(({ id: vertexId }) => vertexId === wall.endVertexId)!;
+    const sourceMatch = source.walls.find((candidate) => {
+      const sourceStart = sourceVertices.get(candidate.startVertexId);
+      const sourceEnd = sourceVertices.get(candidate.endVertexId);
+      return Boolean(
+        sourceStart
+        && sourceEnd
+        && pointOnSegment(start, sourceStart, sourceEnd)
+        && pointOnSegment(end, sourceStart, sourceEnd),
+      );
+    });
+    if (!sourceMatch) {
+      const fallback = source.walls[0];
+      return {
+        ...wall,
+        thicknessCm: fallback?.thicknessCm ?? 10,
+        heightLeftCm: fallback?.heightLeftCm ?? fallback?.heightRightCm ?? 250,
+        heightRightCm: fallback?.heightRightCm ?? fallback?.heightLeftCm ?? 250,
+      };
+    }
+
+    const sourceStart = sourceVertices.get(sourceMatch.startVertexId)!;
+    const sourceEnd = sourceVertices.get(sourceMatch.endVertexId)!;
+    const sourceLengthCm = Math.hypot(sourceEnd.x - sourceStart.x, sourceEnd.y - sourceStart.y);
+    const startPositionCm = distanceAlongSegment(start, sourceStart, sourceEnd);
+    const endPositionCm = distanceAlongSegment(end, sourceStart, sourceEnd);
+    const targetLengthCm = Math.abs(endPositionCm - startPositionCm);
+    const exactSegment = targetLengthCm === sourceLengthCm;
+    const sourceProfiles = sourceMatch.heightProfiles
+      ?? createUniformWallHeightProfiles(
+        sourceMatch.id,
+        sourceLengthCm,
+        sourceMatch.heightLeftCm ?? sourceMatch.heightRightCm ?? 250,
+      );
+    const profiles = sliceWallProfiles(
+      exactSegment ? sourceMatch.id : wall.id,
+      sourceProfiles,
+      sourceLengthCm,
+      startPositionCm,
+      endPositionCm,
+      exactSegment,
+    );
+    return {
+      ...sourceMatch,
+      id: exactSegment ? sourceMatch.id : wall.id,
+      pieceId: id,
+      startVertexId: wall.startVertexId,
+      endVertexId: wall.endVertexId,
+      heightLeftCm: profiles.gauche[0]?.heightCm ?? sourceMatch.heightLeftCm,
+      heightRightCm: profiles.droite[0]?.heightCm ?? sourceMatch.heightRightCm,
+      heightProfiles: profiles,
+    };
+  });
   return { room: { ...source.room, id, name }, vertices, walls, openings: [] };
+}
+
+function distanceAlongSegment(point: Point, start: Point, end: Point): number {
+  const length = Math.hypot(end.x - start.x, end.y - start.y);
+  if (length === 0) return 0;
+  return ((point.x - start.x) * (end.x - start.x)
+    + (point.y - start.y) * (end.y - start.y)) / length;
+}
+
+function sliceWallProfiles(
+  wallId: string,
+  profiles: WallHeightProfiles,
+  sourceLengthCm: number,
+  startPositionCm: number,
+  endPositionCm: number,
+  preserveIds: boolean,
+): WallHeightProfiles {
+  const reversed = endPositionCm < startPositionCm;
+  const rangeStartCm = reversed
+    ? sourceLengthCm - startPositionCm
+    : startPositionCm;
+  const rangeEndCm = reversed
+    ? sourceLengthCm - endPositionCm
+    : endPositionCm;
+  const sourceLeft = reversed
+    ? reverseProfileForSlice(profiles.droite, sourceLengthCm)
+    : profiles.gauche;
+  const sourceRight = reversed
+    ? reverseProfileForSlice(profiles.gauche, sourceLengthCm)
+    : profiles.droite;
+  return {
+    wallId,
+    gauche: sliceFaceProfile(wallId, 'gauche', sourceLeft, rangeStartCm, rangeEndCm, preserveIds),
+    droite: sliceFaceProfile(wallId, 'droite', sourceRight, rangeStartCm, rangeEndCm, preserveIds),
+  };
+}
+
+function reverseProfileForSlice(
+  profile: readonly WallHeightProfilePoint[],
+  lengthCm: number,
+): WallHeightProfilePoint[] {
+  return [...profile].reverse().map((point, order) => ({
+    ...point,
+    order,
+    positionCm: lengthCm - point.positionCm,
+  }));
+}
+
+function sliceFaceProfile(
+  wallId: string,
+  faceSide: WallFaceSide,
+  profile: readonly WallHeightProfilePoint[],
+  rangeStartCm: number,
+  rangeEndCm: number,
+  preserveIds: boolean,
+): WallHeightProfilePoint[] {
+  const internal = profile.filter(({ positionCm }) => (
+    positionCm > rangeStartCm && positionCm < rangeEndCm
+  ));
+  const positions = [rangeStartCm, ...internal.map(({ positionCm }) => positionCm), rangeEndCm];
+  return positions.map((positionCm, order) => {
+    const existing = profile.find((point) => point.positionCm === positionCm);
+    return {
+      id: preserveIds && existing ? existing.id : crypto.randomUUID(),
+      wallId,
+      faceSide,
+      order,
+      positionCm: positionCm - rangeStartCm,
+      heightCm: wallHeightAtPosition(profile, positionCm) ?? existing?.heightCm ?? 250,
+      isLocked: preserveIds && existing?.isLocked === true,
+    };
+  });
 }
 
 function pointOnSegment(point: Point, start: Point, end: Point): boolean {
@@ -167,10 +305,31 @@ function segmentKey(start: Point, end: Point): string {
 }
 
 export function linkCoincidentWalls(snapshots: RoomGeometrySnapshot[]): RoomGeometrySnapshot[] {
+  const vertexIdByPoint = new Map<string, string>();
+  const snapshotsWithSharedVertices = snapshots.map((snapshot) => {
+    const idRemap = new Map<string, string>();
+    const vertices = snapshot.vertices.map((vertex) => {
+      const key = coordinateKey(vertex);
+      const sharedId = vertexIdByPoint.get(key) ?? vertex.id;
+      vertexIdByPoint.set(key, sharedId);
+      idRemap.set(vertex.id, sharedId);
+      return sharedId === vertex.id ? vertex : { ...vertex, id: sharedId };
+    });
+    const walls = snapshot.walls.map((wall) => ({
+      ...wall,
+      startVertexId: idRemap.get(wall.startVertexId) ?? wall.startVertexId,
+      endVertexId: idRemap.get(wall.endVertexId) ?? wall.endVertexId,
+    }));
+    return {
+      ...snapshot,
+      vertices,
+      walls: syncWallsWithVertices(vertices, walls),
+    };
+  });
   const wallIdBySegment = new Map<string, string>();
   const primarySegmentByWallId = new Map<string, string>();
   const replacementIdsByWallId = new Map<string, Map<string, string>>();
-  return snapshots.map((snapshot) => {
+  return snapshotsWithSharedVertices.map((snapshot) => {
     const vertices = new Map(snapshot.vertices.map((vertex) => [vertex.id, vertex]));
     return {
       ...snapshot,
@@ -190,7 +349,22 @@ export function linkCoincidentWalls(snapshots: RoomGeometrySnapshot[]): RoomGeom
         }
         const sharedId = wallIdBySegment.get(key) ?? isolatedId;
         wallIdBySegment.set(key, sharedId);
-        return sharedId === wall.id ? wall : { ...wall, id: sharedId };
+        if (sharedId === wall.id) return wall;
+        return {
+          ...wall,
+          id: sharedId,
+          heightProfiles: wall.heightProfiles ? {
+            wallId: sharedId,
+            gauche: wall.heightProfiles.gauche.map((point) => ({
+              ...point,
+              wallId: sharedId,
+            })),
+            droite: wall.heightProfiles.droite.map((point) => ({
+              ...point,
+              wallId: sharedId,
+            })),
+          } : undefined,
+        };
       }),
     };
   });
@@ -208,6 +382,9 @@ export function linkedVertexIds(snapshots: readonly RoomGeometrySnapshot[], room
 
 export function moveLinkedVertex(snapshots: readonly RoomGeometrySnapshot[], roomId: string, vertexId: string, point: Point): RoomGeometrySnapshot[] {
   const ids = linkedVertexIds(snapshots, roomId, vertexId);
+  if (snapshots.some(({ vertices }) => vertices.some((vertex) => ids.has(vertex.id) && vertex.isLocked))) {
+    throw new Error('Un sommet verrouillé ne peut pas être déplacé.');
+  }
   const normalizedPoint = { x: normalizeCoordinateCm(point.x), y: normalizeCoordinateCm(point.y) };
   return snapshots.map((snapshot) => {
     const vertices = snapshot.vertices.map((vertex) => ids.has(vertex.id) ? { ...vertex, ...normalizedPoint } : vertex);
@@ -218,6 +395,9 @@ export function moveLinkedVertex(snapshots: readonly RoomGeometrySnapshot[], roo
 export function moveRoomWithLinkedVertices(snapshots: readonly RoomGeometrySnapshot[], roomId: string, delta: Point): RoomGeometrySnapshot[] {
   const source = snapshots.find(({ room }) => room.id === roomId);
   if (!source) return [...snapshots];
+  if (source.vertices.some(({ isLocked }) => isLocked)) {
+    throw new Error('Une pièce contenant un sommet verrouillé ne peut pas être déplacée.');
+  }
   return source.vertices.reduce<RoomGeometrySnapshot[]>((current, vertex) => moveLinkedVertex(
     current,
     roomId,
@@ -236,9 +416,8 @@ export function normalizeCreatedRoomOverlaps(created: RoomGeometrySnapshot, exis
   const createdPolygon = snapshotPolygon(created);
   const affected = existing.filter((snapshot) => clipping.intersection(createdPolygon, snapshotPolygon(snapshot)).some((polygon) => simpleRings([polygon]).length > 0));
   if (affected.length === 0) return { snapshots: [created], replacedRoomIds: [], overlapCount: 0 };
-  if (affected.some(({ room }) => room.isLocked)) throw new Error('Une pièce verrouillée ne peut pas être découpée.');
-  if (affected.some(({ openings }) => openings.length > 0)) {
-    throw new Error('Le chevauchement touche une pièce avec ouverture. Déplacez l’ouverture avant de découper la pièce.');
+  if (affected.some(({ vertices }) => vertices.some(({ isLocked }) => isLocked))) {
+    throw new Error('Une pièce contenant un sommet verrouillé ne peut pas être découpée.');
   }
   const snapshots: RoomGeometrySnapshot[] = [];
   for (const source of affected) {

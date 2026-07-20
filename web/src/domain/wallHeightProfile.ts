@@ -17,6 +17,7 @@ export type WallHeightProfileErrorCode =
   | 'duplicate_position'
   | 'profile_identity_mismatch'
   | 'linked_profiles_mismatch'
+  | 'locked_point'
   | 'confirmation_required';
 
 export interface WallHeightProfileIssue {
@@ -119,6 +120,7 @@ export function updateWallHeightProfile(
   wallLengthCm: number,
   createId: () => string = () => globalThis.crypto.randomUUID(),
 ): WallHeightProfileState {
+  assertProfilePointsCanChange(profiles[faceSide], points);
   const updatedFace = points.map((point, order): WallHeightProfilePoint => ({
     id: point.id ?? createId(),
     wallId: wall.id,
@@ -126,6 +128,7 @@ export function updateWallHeightProfile(
     order,
     positionCm: point.positionCm,
     heightCm: point.heightCm,
+    isLocked: profiles[faceSide].find(({ id }) => id === point.id)?.isLocked ?? false,
   }));
   const oppositeSide = oppositeFace(faceSide);
   const nextProfiles: WallHeightProfiles = {
@@ -173,6 +176,15 @@ export function relinkWallHeightProfiles(
 
   const targetFace = oppositeFace(sourceFace);
   const profiles = cloneProfiles(state.profiles);
+  if (profiles[targetFace].some(({ isLocked }) => isLocked)) {
+    throw profileError(
+      'locked_point',
+      state.wall.id,
+      targetFace,
+      profiles[targetFace].filter(({ isLocked }) => isLocked).map(({ id }) => id),
+      'Un profil contenant un point verrouillé ne peut pas être remplacé.',
+    );
+  }
   profiles[targetFace] = copyProfileValues(
     profiles[sourceFace],
     targetFace,
@@ -281,7 +293,7 @@ function createUniformProfile(
   createId: () => string,
 ): WallHeightProfilePoint[] {
   return [0, wallLengthCm].map((positionCm, order) => ({
-    id: createId(), wallId, faceSide, order, positionCm, heightCm,
+    id: createId(), wallId, faceSide, order, positionCm, heightCm, isLocked: false,
   }));
 }
 
@@ -298,6 +310,7 @@ function copyProfileValues(
     order,
     positionCm: point.positionCm,
     heightCm: point.heightCm,
+    isLocked: existingTarget[order]?.isLocked ?? point.isLocked,
   }));
 }
 
@@ -319,8 +332,33 @@ function profilesHaveSameValues(
   right: readonly WallHeightProfilePoint[],
 ): boolean {
   return left.length === right.length && left.every((point, index) => (
-    point.positionCm === right[index].positionCm && point.heightCm === right[index].heightCm
+    point.positionCm === right[index].positionCm
+    && point.heightCm === right[index].heightCm
+    && point.isLocked === right[index].isLocked
   ));
+}
+
+function assertProfilePointsCanChange(
+  current: readonly WallHeightProfilePoint[],
+  next: readonly HeightProfilePointInput[],
+): void {
+  const nextById = new Map(next.flatMap((point) => point.id ? [[point.id, point] as const] : []));
+  const lockedChanged = current.find((point) => {
+    if (!point.isLocked) return false;
+    const nextPoint = nextById.get(point.id);
+    return !nextPoint
+      || nextPoint.positionCm !== point.positionCm
+      || nextPoint.heightCm !== point.heightCm;
+  });
+  if (lockedChanged) {
+    throw profileError(
+      'locked_point',
+      lockedChanged.wallId,
+      lockedChanged.faceSide,
+      [lockedChanged.id],
+      'Un point de profil verrouillé ne peut pas être modifié ou supprimé.',
+    );
+  }
 }
 
 function cloneProfile(profile: readonly WallHeightProfilePoint[]): WallHeightProfilePoint[] {
