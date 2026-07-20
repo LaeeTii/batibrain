@@ -49,6 +49,7 @@ describe('AdminModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Approuver' }));
     await waitFor(() => expect(adminGateway.approveRequest).toHaveBeenCalledWith('request-1'));
     await waitFor(() => expect(adminGateway.loadOverview).toHaveBeenCalledTimes(2));
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
   it('interdit de modifier ou supprimer son propre compte', async () => {

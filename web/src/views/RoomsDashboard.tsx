@@ -34,7 +34,6 @@ export function RoomsDashboard({ projectId, onCreateProject, onOpenGlobalEditor,
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(Boolean(projectId));
   const [error, setError] = useState('');
-  const [feedback, setFeedback] = useState('');
   const [noteSnapshot, setNoteSnapshot] = useState<RoomSnapshot | null>(null);
   const [noteDraft, setNoteDraft] = useState('');
   const [noteSaving, setNoteSaving] = useState(false);
@@ -55,7 +54,7 @@ export function RoomsDashboard({ projectId, onCreateProject, onOpenGlobalEditor,
   };
 
   useEffect(() => {
-    setFilterLevelId('all'); setSearch(''); setFeedback(''); setNoteSnapshot(null);
+    setFilterLevelId('all'); setSearch(''); setNoteSnapshot(null);
     if (hasSupabaseConfig()) void load();
   }, [projectId]);
 
@@ -73,14 +72,14 @@ export function RoomsDashboard({ projectId, onCreateProject, onOpenGlobalEditor,
   const runExport = (targets: RoomSnapshot[], mode: RoomPdfMode) => {
     if (!project) return;
     setError('');
-    try { exportDashboardPdf(project.name, levels, targets, mode, preferences); setFeedback(''); }
+    try { exportDashboardPdf(project.name, levels, targets, mode, preferences); }
     catch (caught) { setError(errorMessage(caught)); }
   };
 
   const deleteSnapshot = async (snapshot: RoomSnapshot) => {
     if (!window.confirm(`Supprimer logiquement « ${snapshot.room.name} » ?`)) return;
     setError('');
-    try { await softDeleteRoom(snapshot.room.id); setFeedback(`La pièce « ${snapshot.room.name} » a été supprimée.`); await load(); }
+    try { await softDeleteRoom(snapshot.room.id); await load(); }
     catch (caught) { setError(errorMessage(caught)); }
   };
 
@@ -89,14 +88,14 @@ export function RoomsDashboard({ projectId, onCreateProject, onOpenGlobalEditor,
     setNoteSaving(true); setError('');
     try {
       await updateRoom({ ...noteSnapshot.room, notes: noteDraft.trim() || null });
-      setFeedback(`Note enregistrée pour « ${noteSnapshot.room.name} ».`); setNoteSnapshot(null); await load();
+      setNoteSnapshot(null); await load();
     } catch (caught) { setError(errorMessage(caught)); }
     finally { setNoteSaving(false); }
   };
 
   if (!hasSupabaseConfig()) return <DashboardLayout><div className="dashboard-emptyState" role="alert"><h2>Configuration requise</h2><p>Configure Supabase pour charger le tableau de bord.</p></div></DashboardLayout>;
 
-  if (!projectId) return <DashboardLayout><section className="dashboard-welcome"><h1>Bienvenue dans BatiBrain</h1><p>Crée ton premier projet pour commencer à structurer ton habitation.</p><Button className="dashboard-primaryButton" onClick={onCreateProject} leftSection={<LuFolderPlus aria-hidden />}>Créer un nouveau projet</Button></section></DashboardLayout>;
+  if (!projectId) return <DashboardLayout><section className="dashboard-welcome"><Button className="dashboard-primaryButton" onClick={onCreateProject} leftSection={<LuFolderPlus aria-hidden />}>Créer un nouveau projet</Button></section></DashboardLayout>;
 
   return <DashboardLayout>
     <header className="dashboard-header">
@@ -109,7 +108,6 @@ export function RoomsDashboard({ projectId, onCreateProject, onOpenGlobalEditor,
     </header>
 
     {error ? <div className="dashboard-banner dashboard-banner--error" role="alert">{error}<Button variant="light" onClick={() => void load()}>Réessayer</Button></div> : null}
-    {feedback ? <div className="dashboard-banner dashboard-banner--success" role="status">{feedback}</div> : null}
 
     <section className="dashboard-contentPanel">
       <div className="dashboard-filters" aria-label="Filtres des pièces">

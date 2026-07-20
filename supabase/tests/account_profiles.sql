@@ -1,7 +1,28 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(9);
+select plan(14);
+
+select ok(
+  not has_table_privilege('authenticated', 'user_profiles', 'INSERT'),
+  'un utilisateur ne peut pas créer directement son profil'
+);
+select ok(
+  not has_table_privilege('authenticated', 'user_profiles', 'UPDATE'),
+  'la modification du profil passe uniquement par la RPC dédiée'
+);
+select ok(
+  not has_column_privilege('authenticated', 'user_profiles', 'display_name', 'UPDATE'),
+  'le nom d’affichage ne peut pas être modifié directement'
+);
+select ok(
+  not has_column_privilege('authenticated', 'user_profiles', 'avatar_storage_path', 'UPDATE'),
+  'le chemin d’avatar ne peut pas contourner la validation de la RPC'
+);
+select ok(
+  not has_table_privilege('authenticated', 'user_profiles', 'DELETE'),
+  'un utilisateur ne peut pas supprimer directement son profil'
+);
 
 insert into auth.users (id, email, aud, role, created_at, updated_at)
 values

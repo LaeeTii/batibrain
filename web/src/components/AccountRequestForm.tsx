@@ -132,7 +132,6 @@ export function AccountRequestForm({
         <LuArrowLeft aria-hidden="true" /> Retour
       </Button>
       <h2>Créer un compte</h2>
-      <p className="account-request__intro">Envoyez une demande d’accès. Aucun mot de passe ne vous est demandé.</p>
 
       {serverError && <div className="login-message login-message--error" role="alert"><LuCircleAlert aria-hidden="true" />{serverError}</div>}
 

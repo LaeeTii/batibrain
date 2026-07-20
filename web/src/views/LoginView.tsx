@@ -144,7 +144,6 @@ export function LoginView({ sessionExpired = false }: { sessionExpired?: boolean
         <Button variant="subtle" type="button" className="login-create" onClick={() => setRequestingAccount(true)}>
           <LuUserRoundPlus aria-hidden="true" /> Créer un compte
         </Button>
-        <p className="login-security">Votre session est sécurisée par Supabase Auth.</p>
           </>
         )}
       </section>

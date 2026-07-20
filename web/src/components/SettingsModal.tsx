@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ActionIcon, Button, FileInput, PasswordInput, TextInput } from '@mantine/core';
 import {
   LuCircleAlert,
-  LuCircleCheck,
   LuKeyRound,
   LuLoaderCircle,
   LuLogOut,
@@ -25,10 +24,12 @@ const EMPTY_PROFILE: ProfileInput = { displayName: '', firstName: '', lastName: 
 export function SettingsModal({
   onClose,
   onSignOut,
+  onProfileUpdated,
   gateway = supabaseAccountGateway,
 }: {
   onClose(): void;
   onSignOut(): Promise<void>;
+  onProfileUpdated?(profile: UserProfile): void;
   gateway?: AccountGateway;
 }) {
   const [loading, setLoading] = useState(true);
@@ -41,7 +42,8 @@ export function SettingsModal({
   const [passwordConfirmation, setPasswordConfirmation] = useState('');
   const [avatar, setAvatar] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [emailNotice, setEmailNotice] = useState('');
   const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -49,7 +51,7 @@ export function SettingsModal({
     void gateway.loadProfile().then(({ profile: loadedProfile, email, error }) => {
       setLoading(false);
       if (error || !loadedProfile) {
-        setFeedback({ kind: 'error', text: 'Le profil n’a pas pu être chargé.' });
+        setError('Le profil n’a pas pu être chargé.');
         return;
       }
       setProfile(loadedProfile);
@@ -76,75 +78,76 @@ export function SettingsModal({
     if (!file) return;
     const error = validateAvatar(file);
     if (error) {
-      setFeedback({ kind: 'error', text: error });
+      setError(error);
       return;
     }
     if (avatarPreview?.startsWith('blob:')) URL.revokeObjectURL(avatarPreview);
     setAvatar(file);
     setAvatarPreview(URL.createObjectURL(file));
-    setFeedback(null);
+    setError(null);
   }
 
   async function saveProfile(event: FormEvent) {
     event.preventDefault();
     if (!values.displayName.trim() || !values.firstName.trim() || !values.lastName.trim()) {
-      setFeedback({ kind: 'error', text: 'Le nom d’affichage, le prénom et le nom sont obligatoires.' });
+      setError('Le nom d’affichage, le prénom et le nom sont obligatoires.');
       return;
     }
     setSaving(true);
-    setFeedback(null);
+    setError(null);
+    setEmailNotice('');
     const { profile: updatedProfile, error } = await gateway.updateProfile(values, avatar);
     setSaving(false);
     if (error || !updatedProfile) {
-      setFeedback({
-        kind: 'error',
-        text: error?.message.includes('duplicate') || error?.message.includes('unique')
+      setError(
+        error?.message.includes('duplicate') || error?.message.includes('unique')
           ? 'Ce nom d’affichage est déjà utilisé.'
           : error?.message ?? 'Le profil n’a pas pu être enregistré.',
-      });
+      );
       return;
     }
     setProfile(updatedProfile);
     setValues({ displayName: updatedProfile.displayName, firstName: updatedProfile.firstName, lastName: updatedProfile.lastName });
     setAvatar(null);
     setAvatarPreview(updatedProfile.avatarUrl);
-    setFeedback({ kind: 'success', text: 'Profil enregistré.' });
+    onProfileUpdated?.(updatedProfile);
   }
 
   async function changeEmail(event: FormEvent) {
     event.preventDefault();
     if (!EMAIL_PATTERN.test(newEmail.trim())) {
-      setFeedback({ kind: 'error', text: 'Saisissez une adresse e-mail valide.' });
+      setError('Saisissez une adresse e-mail valide.');
       return;
     }
     setSaving(true);
+    setError(null);
+    setEmailNotice('');
     const { error } = await gateway.requestEmailChange(newEmail.trim().toLowerCase());
     setSaving(false);
-    setFeedback(error
-      ? { kind: 'error', text: 'Le changement d’adresse e-mail a échoué.' }
-      : { kind: 'success', text: `Un message de confirmation a été envoyé. L’adresse active reste ${activeEmail}.` });
+    if (error) setError('Le changement d’adresse e-mail a échoué.');
+    else setEmailNotice(`Un message de confirmation a été envoyé. L’adresse active reste ${activeEmail}.`);
   }
 
   async function changePassword(event: FormEvent) {
     event.preventDefault();
     if (password.length < 8) {
-      setFeedback({ kind: 'error', text: 'Le nouveau mot de passe doit contenir au moins 8 caractères.' });
+      setError('Le nouveau mot de passe doit contenir au moins 8 caractères.');
       return;
     }
     if (password !== passwordConfirmation) {
-      setFeedback({ kind: 'error', text: 'Les deux mots de passe ne correspondent pas.' });
+      setError('Les deux mots de passe ne correspondent pas.');
       return;
     }
     setSaving(true);
+    setError(null);
+    setEmailNotice('');
     const { error } = await gateway.updatePassword(password);
     setSaving(false);
     if (!error) {
       setPassword('');
       setPasswordConfirmation('');
     }
-    setFeedback(error
-      ? { kind: 'error', text: 'Le mot de passe n’a pas pu être modifié.' }
-      : { kind: 'success', text: 'Mot de passe modifié.' });
+    if (error) setError('Le mot de passe n’a pas pu être modifié.');
   }
 
   return (
@@ -158,11 +161,8 @@ export function SettingsModal({
           <ActionIcon ref={closeRef} variant="subtle" className="settings-close" aria-label="Fermer la gestion du compte" onClick={onClose}><LuX aria-hidden="true" /></ActionIcon>
         </header>
 
-        {feedback && (
-          <div className={`login-message login-message--${feedback.kind}`} role={feedback.kind === 'error' ? 'alert' : 'status'}>
-            {feedback.kind === 'error' ? <LuCircleAlert aria-hidden="true" /> : <LuCircleCheck aria-hidden="true" />}{feedback.text}
-          </div>
-        )}
+        {error && <div className="login-message login-message--error" role="alert"><LuCircleAlert aria-hidden="true" />{error}</div>}
+        {emailNotice && <div className="login-message login-message--success" role="status">{emailNotice}</div>}
 
         {loading ? <p className="settings-loading"><LuLoaderCircle className="is-spinning" aria-hidden="true" /> Chargement du profil…</p> : (
           <div className="settings-content">

@@ -21,5 +21,19 @@ describe('ProjectCollaborationModal', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Adresse e-mail' }), { target: { value: 'ami@example.test' } });
     fireEvent.click(screen.getByRole('button', { name: 'Inviter' }));
     await waitFor(() => expect(mock.invite).toHaveBeenCalledWith('p1', 'ami@example.test', 'lecture'));
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Adresse e-mail' })).toHaveValue(''));
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('conserve l’adresse et affiche une erreur lorsque l’invitation échoue', async () => {
+    const mock = gateway();
+    mock.invite = vi.fn().mockRejectedValue(new Error('Compte introuvable.'));
+    render(<MantineProvider><ProjectCollaborationModal projectId="p1" projectName="Maison" onClose={vi.fn()} gateway={mock} /></MantineProvider>);
+    await screen.findByText(/invite@example.test/);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Adresse e-mail' }), { target: { value: 'inconnu@example.test' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Inviter' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Compte introuvable.');
+    expect(screen.getByRole('textbox', { name: 'Adresse e-mail' })).toHaveValue('inconnu@example.test');
   });
 });

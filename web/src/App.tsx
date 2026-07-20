@@ -458,9 +458,7 @@ function AuthenticatedApp() {
   } else if (screen.name === 'metrics') {
     content = (
       <main className="app-placeholder" tabIndex={-1}>
-        <p className="dashboard-eyebrow">Projet courant</p>
         <h2>Métriques</h2>
-        <p>Cette vue sera complétée dans une prochaine tâche de la V1.</p>
       </main>
     );
   } else {
@@ -557,6 +555,7 @@ function AuthenticatedApp() {
       {accountOpen && (
         <AccountModal
           onClose={() => setAccountOpen(false)}
+          onProfileUpdated={setProfile}
           onSignOut={async () => {
             const { error } = await signOut();
             setSignOutError(error ? 'La déconnexion a échoué. Réessayez.' : '');

@@ -1,6 +1,6 @@
 begin;
 
-select plan(16);
+select plan(18);
 
 select ok(
   has_function_privilege('anon', 'submit_account_creation_request(text,text,text,text)', 'EXECUTE'),
@@ -10,6 +10,16 @@ select ok(
 select ok(
   not has_table_privilege('anon', 'account_creation_requests', 'INSERT'),
   'le rôle anonyme ne peut pas contourner la RPC par une insertion directe'
+);
+
+select ok(
+  not has_table_privilege('authenticated', 'account_creation_requests', 'UPDATE'),
+  'une demande ne peut pas être approuvée partiellement par une écriture directe'
+);
+
+select ok(
+  not has_table_privilege('authenticated', 'account_creation_requests', 'DELETE'),
+  'une demande de compte ne peut pas être supprimée directement'
 );
 
 insert into auth.users (

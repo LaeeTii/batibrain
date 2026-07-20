@@ -31,9 +31,10 @@ function gateway(overrides: Partial<AccountGateway> = {}): AccountGateway {
 
 async function renderModal(accountGateway = gateway()) {
   const onSignOut = vi.fn().mockResolvedValue(undefined);
-  render(<SettingsModal onClose={vi.fn()} onSignOut={onSignOut} gateway={accountGateway} />);
+  const onProfileUpdated = vi.fn();
+  render(<SettingsModal onClose={vi.fn()} onSignOut={onSignOut} onProfileUpdated={onProfileUpdated} gateway={accountGateway} />);
   await screen.findByLabelText('Nom d’affichage');
-  return { accountGateway, onSignOut };
+  return { accountGateway, onSignOut, onProfileUpdated };
 }
 
 describe('SettingsModal', () => {
@@ -45,7 +46,7 @@ describe('SettingsModal', () => {
   it('charge et enregistre les champs du profil', async () => {
     const updated = { ...PROFILE, displayName: 'Camille R.' };
     const accountGateway = gateway({ updateProfile: vi.fn().mockResolvedValue({ profile: updated, error: null }) });
-    await renderModal(accountGateway);
+    const { onProfileUpdated } = await renderModal(accountGateway);
 
     fireEvent.change(screen.getByLabelText('Nom d’affichage'), { target: { value: 'Camille R.' } });
     fireEvent.click(screen.getByRole('button', { name: 'Enregistrer le profil' }));
@@ -53,7 +54,9 @@ describe('SettingsModal', () => {
     await waitFor(() => expect(accountGateway.updateProfile).toHaveBeenCalledWith({
       displayName: 'Camille R.', firstName: 'Camille', lastName: 'Robert',
     }, null));
-    expect(await screen.findByRole('status')).toHaveTextContent('Profil enregistré.');
+    await waitFor(() => expect(onProfileUpdated).toHaveBeenCalledWith(updated));
+    expect(screen.getByText('Camille R.', { selector: 'strong' })).toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
   it('signale un nom d’affichage déjà utilisé sans effacer les saisies', async () => {
@@ -94,6 +97,18 @@ describe('SettingsModal', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('ne correspondent pas');
     expect(accountGateway.updatePassword).not.toHaveBeenCalled();
+  });
+
+  it('reflète un changement de mot de passe sans succès générique', async () => {
+    const { accountGateway } = await renderModal();
+    fireEvent.change(screen.getByLabelText('Nouveau mot de passe'), { target: { value: 'nouveau-secret' } });
+    fireEvent.change(screen.getByLabelText('Confirmer le mot de passe'), { target: { value: 'nouveau-secret' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Modifier le mot de passe' }));
+
+    await waitFor(() => expect(accountGateway.updatePassword).toHaveBeenCalledWith('nouveau-secret'));
+    expect(screen.getByLabelText('Nouveau mot de passe')).toHaveValue('');
+    expect(screen.getByLabelText('Confirmer le mot de passe')).toHaveValue('');
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
   it('permet la déconnexion depuis la section Compte', async () => {

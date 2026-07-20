@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActionIcon, Button, NativeSelect } from '@mantine/core';
 import {
   LuCircleAlert,
-  LuCircleCheck,
   LuLoaderCircle,
   LuShield,
   LuUserCheck,
@@ -23,7 +22,7 @@ export function AdminModal({
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminUserSummary | null>(null);
-  const [feedback, setFeedback] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
 
   const load = useCallback(async () => {
@@ -31,10 +30,11 @@ export function AdminModal({
     const { overview: loadedOverview, error } = await gateway.loadOverview();
     setLoading(false);
     if (error || !loadedOverview) {
-      setFeedback({ kind: 'error', text: error?.message ?? 'Les comptes n’ont pas pu être chargés.' });
+      setError(error?.message ?? 'Les comptes n’ont pas pu être chargés.');
       return;
     }
     setOverview(loadedOverview);
+    setError(null);
   }, [gateway]);
 
   useEffect(() => {
@@ -50,28 +50,26 @@ export function AdminModal({
 
   async function approve(requestId: string) {
     setActionId(requestId);
-    setFeedback(null);
+    setError(null);
     const { error } = await gateway.approveRequest(requestId);
     setActionId(null);
     if (error) {
-      setFeedback({ kind: 'error', text: error.message });
+      setError(error.message);
       return;
     }
-    setFeedback({ kind: 'success', text: 'Demande approuvée et invitation envoyée.' });
     await load();
   }
 
   async function changeRole(user: AdminUserSummary, role: UserRole) {
     if (role === user.role) return;
     setActionId(user.userId);
-    setFeedback(null);
+    setError(null);
     const { error } = await gateway.changeRole(user.userId, role);
     setActionId(null);
     if (error) {
-      setFeedback({ kind: 'error', text: error.message });
+      setError(error.message);
       return;
     }
-    setFeedback({ kind: 'success', text: 'Rôle mis à jour.' });
     await load();
   }
 
@@ -81,11 +79,10 @@ export function AdminModal({
     const { error } = await gateway.deleteUser(deleteTarget.userId, deleteTarget.ownedProjectCount);
     setActionId(null);
     if (error) {
-      setFeedback({ kind: 'error', text: error.message });
+      setError(error.message);
       setDeleteTarget(null);
       return;
     }
-    setFeedback({ kind: 'success', text: 'Compte supprimé.' });
     setDeleteTarget(null);
     await load();
   }
@@ -98,8 +95,8 @@ export function AdminModal({
           <ActionIcon ref={closeRef} variant="subtle" className="settings-close" aria-label="Fermer l’administration" onClick={onClose}><LuX aria-hidden="true" /></ActionIcon>
         </header>
 
-        {feedback && <div className={`login-message login-message--${feedback.kind}`} role={feedback.kind === 'error' ? 'alert' : 'status'}>
-          {feedback.kind === 'error' ? <LuCircleAlert aria-hidden="true" /> : <LuCircleCheck aria-hidden="true" />}{feedback.text}
+        {error && <div className="login-message login-message--error" role="alert">
+          <LuCircleAlert aria-hidden="true" />{error}
         </div>}
 
         {loading && !overview ? <p className="settings-loading"><LuLoaderCircle className="is-spinning" aria-hidden="true" /> Chargement des comptes…</p> : overview && (

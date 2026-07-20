@@ -39,8 +39,8 @@ export const supabaseCollaborationGateway: CollaborationGateway = {
   async invite(projectId, email, role) { const { error } = await getSupabaseClient().rpc('invite_project_member', { target_project_id: projectId, target_email: email, target_role: role }); if (error) fail(error); },
   async resend(invitationId) { const { error } = await getSupabaseClient().rpc('resend_project_invitation', { target_invitation_id: invitationId }); if (error) fail(error); },
   async cancel(invitationId) { const { error } = await getSupabaseClient().rpc('cancel_project_invitation', { target_invitation_id: invitationId }); if (error) fail(error); },
-  async changeRole(collaborationId, role) { const { error } = await getSupabaseClient().from('project_collaborations').update({ role, updated_at: new Date().toISOString() }).eq('id', collaborationId); if (error) fail(error); },
-  async remove(collaborationId) { const { error } = await getSupabaseClient().from('project_collaborations').delete().eq('id', collaborationId); if (error) fail(error); },
+  async changeRole(collaborationId, role) { const { error } = await getSupabaseClient().rpc('change_project_collaborator_role', { target_collaboration_id: collaborationId, target_role: role }); if (error) fail(error); },
+  async remove(collaborationId) { const { error } = await getSupabaseClient().rpc('remove_project_collaborator', { target_collaboration_id: collaborationId }); if (error) fail(error); },
   async listPending() { const { data, error } = await getSupabaseClient().rpc('pending_project_invitations'); if (error) fail(error); return (data ?? []).map((item: Record<string, unknown>) => ({ id: String(item.id), projectId: String(item.project_id), projectName: String(item.project_name), role: item.role as ProjectAccessRole })); },
   async accept(invitationId) { const { data, error } = await getSupabaseClient().rpc('accept_project_invitation', { target_invitation_id: invitationId }); if (error) fail(error); return String(data); },
 };

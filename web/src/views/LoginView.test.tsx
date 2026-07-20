@@ -57,6 +57,20 @@ describe('LoginView', () => {
     expect(screen.getByLabelText('Mot de passe')).toHaveValue('');
   });
 
+  it('signale explicitement le blocage temporaire du fournisseur', async () => {
+    const rateLimitError = Object.assign(new Error('Trop de requêtes'), { status: 429 });
+    const gateway = createGateway({
+      signIn: vi.fn().mockResolvedValue({ error: rateLimitError }),
+    });
+    renderLogin(gateway);
+
+    fireEvent.change(screen.getByLabelText('Adresse e-mail'), { target: { value: 'camille@example.com' } });
+    fireEvent.change(screen.getByLabelText('Mot de passe'), { target: { value: 'secret' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Trop de tentatives');
+  });
+
   it('transmet le choix de persistance lors de la connexion', async () => {
     const gateway = createGateway();
     renderLogin(gateway);

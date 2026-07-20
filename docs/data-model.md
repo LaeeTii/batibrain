@@ -1,6 +1,6 @@
 # Modèle de données BatiBrain
 
-Date de mise à jour: 2026-07-16
+Date de mise à jour: 2026-07-20
 
 ## Objectif
 Ce document décrit le modèle de données métier actuel, reconstruit à partir des spécifications dans `docs/ihm/`.
@@ -85,6 +85,7 @@ Règles:
 - Un projet supprimé logiquement est exclu des listes actives par défaut.
 - Un projet possède un propriétaire unique.
 - Un utilisateur accède à un projet s'il en est propriétaire ou si une collaboration acceptée le lui autorise.
+- La création d'un projet exige un profil BatiBrain approuvé; sa modification et sa suppression logique passent par `update_owned_project`, réservé au propriétaire.
 - Le verrou collaboratif global du projet est reporté après la V1.0 et sera respécifié avant implémentation.
 - Les éventuels champs techniques legacy de verrou collaboratif ne font pas partie du contrat métier cible de la V1.
 
@@ -106,7 +107,8 @@ Règles:
 - L'avatar est stocké dans un bucket Supabase Storage privé; seul son chemin est persisté dans le profil.
 - Un avatar est une image JPEG, PNG, WebP ou GIF de 5 Mio maximum, stockée sous le préfixe privé de l'identifiant utilisateur.
 - La modification personnelle passe par `update_own_profile`, qui ne reçoit jamais le rôle et refuse tout chemin d'avatar appartenant à un autre utilisateur.
-- L'utilisateur authentifié peut créer, lire et modifier uniquement son propre profil.
+- Le profil initial est créé uniquement lors de l'approbation serveur; les écritures directes de `user_profiles` sont révoquées au rôle authentifié.
+- L'utilisateur authentifié peut lire son propre profil et le modifier uniquement par `update_own_profile`.
 - Tout nouveau compte approuvé reçoit le rôle `user`.
 - Le rôle est modifiable uniquement par un administrateur et n'est jamais accepté depuis une mise à jour de profil personnelle.
 - Le premier administrateur est promu manuellement dans Supabase après la création de son compte, selon la [procédure dédiée](./exploitation-premier-administrateur.md), sans donnée personnelle ni provisionnement dans les migrations.
@@ -139,6 +141,7 @@ Règles:
 - Si l'adresse e-mail ou le nom d'affichage n'est plus disponible au moment de l'approbation, celle-ci échoue explicitement sans créer de compte partiel.
 - Le dépôt utilise la RPC publique `submit_account_creation_request`; elle normalise l'adresse e-mail et sérialise les contrôles d'unicité concurrents avant l'insertion.
 - L'approbation est initiée par la fonction serveur `approve-account-request`, réservée à un administrateur authentifié. La création du profil et la mise à jour de la demande sont déclenchées dans la transaction d'insertion `auth.users`, afin qu'aucun utilisateur Auth partiel ne subsiste en cas d'échec.
+- Les insertions, modifications et suppressions directes de demandes sont révoquées aux rôles applicatifs afin d'empêcher tout contournement de ces deux frontières.
 - Les demandes `en_attente`, lisibles uniquement par les administrateurs, constituent la source de leurs notifications de compte sans duplication dans une table dédiée.
 
 ### ProjectCollaboration
@@ -156,6 +159,7 @@ Règles:
 - Le rôle écriture autorise l'édition, sauf gestion des collaborateurs et modification du projet lui-même.
 - Le droit d'écriture est contrôlé avant le verrou d'édition applicable.
 - Seul le propriétaire peut modifier le rôle ou retirer la collaboration.
+- Les modifications de rôle et retraits passent respectivement par `change_project_collaborator_role` et `remove_project_collaborator`; les écritures directes sont révoquées au rôle authentifié.
 
 ### ProjectInvitation
 Représente une invitation en attente adressée à un compte BatiBrain existant.
@@ -169,7 +173,7 @@ Champs minimaux:
 - `status` (`en_attente`, `acceptée`, `annulée`)
 
 Règles:
-- L'adresse invitée doit correspondre à un compte existant.
+- L'adresse invitée doit correspondre à un compte BatiBrain approuvé disposant d'un profil; une identité Supabase Auth sans profil ne suffit pas.
 - L'acceptation explicite transforme l'accès en collaboration effective.
 - Une invitation en attente peut être renvoyée ou annulée par le propriétaire.
 - Aucune action de refus et aucune expiration ne sont prévues.
