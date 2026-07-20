@@ -162,3 +162,9 @@
 - `Canvas2D`, `CanvasOverlayMeasurements`, `CanvasZoomControls`, `CanvasScaleIndicator` et le contrôle des options d’affichage sont disponibles comme composants partagés.
 - Le viewport de navigation est un état visuel indépendant : zoom, panoramique et réinitialisation ne modifient jamais les coordonnées métier reçues en entrée.
 - `GlobalEditor2DView` utilise dès V1-21 le canvas partagé pour la consultation multi-niveaux et les options d’affichage; ses panneaux, états complets et interactions de sélection restent à intégrer dans les tâches suivantes.
+
+## État d’implémentation V1-R11
+- Les mesures du canvas partagé sont formatées dans l’unité de longueur active et les surfaces dans l’unité de surface active, sans modifier les valeurs métier en cm et cm².
+- Les sept options d’affichage du canvas global sont relues et enregistrées dans `editor_view_settings` pour le couple utilisateur-projet courant.
+- Les changements d’options sont sérialisés afin qu’une réponse réseau tardive ne puisse pas rétablir une ancienne sélection.
+- Les canvas, éditeurs et exports à finaliser dans V1-R20, V1-R30 et V1-R31 consomment le même contrat d’unités et d’options au lieu de définir leurs propres conversions.

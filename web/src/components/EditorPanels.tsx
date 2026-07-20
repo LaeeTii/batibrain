@@ -6,6 +6,7 @@ import { uniqueLevelOpenings, uniqueLevelWalls } from '../domain/roomOverlap';
 import type { Level } from '../domain/types';
 import type { CanvasLevelData } from './Canvas2D';
 import { useEditorSelection } from './SelectionSyncBridge';
+import { formatLength, formatSurface, type LengthUnit, type SurfaceUnit } from '../domain/userPreferences';
 
 type SectionType = 'level' | 'room' | 'wall' | 'opening' | 'dimension' | 'note';
 const sectionDetails = {
@@ -47,13 +48,13 @@ function DetailTreeNode({ node }: { node: TreeNode }) {
   return <li><div className={`detail-tree__row${selected ? ' is-selected' : ''}`}>{node.children?.length ? <ActionIcon size="sm" variant="subtle" onClick={() => setOpen((value) => !value)} aria-label={`${open ? 'Replier' : 'Déplier'} ${node.label}`}>{open ? <LuChevronDown /> : <LuChevronRight />}</ActionIcon> : <span className="detail-tree__spacer" />}<Button variant="subtle" onClick={() => select({ source: 'détail-tree', type: node.type, id: node.id, levelId: node.levelId })}>{node.label}</Button></div>{open && node.children?.length ? <ul>{node.children.map((child) => <DetailTreeNode key={child.key} node={child} />)}</ul> : null}</li>;
 }
 
-export function DetailTree({ data }: { data: CanvasLevelData }) {
-  const tree = useMemo<TreeNode>(() => ({ key: `level:${data.level.id}`, type: 'level', id: data.level.id, levelId: data.level.id, label: `${data.level.name} (${data.rooms.length} pièce${data.rooms.length > 1 ? 's' : ''})`, children: data.rooms.map((snapshot) => ({ key: `room:${snapshot.room.id}`, type: 'room', id: snapshot.room.id, levelId: data.level.id, label: `${snapshot.room.name} - ${(polygonAreaCm2(sortVertices(snapshot.vertices)) / 10000).toFixed(2)} m²`, children: snapshot.walls.map((wall) => ({ key: `wall:${wall.id}`, type: 'wall', id: wall.id, levelId: data.level.id, label: `Mur ${shortId(wall.id)} - ${wall.thicknessCm ?? '—'} cm`, children: snapshot.openings.filter(({ wallId }) => wallId === wall.id).map((opening) => ({ key: `opening:${opening.id}`, type: 'opening', id: opening.id, levelId: data.level.id, label: `${opening.type === 'door' ? 'Porte' : opening.type === 'window' ? 'Fenêtre' : 'Ouverture'} - ${opening.widthCm} × ${opening.heightCm} cm` })) })) })) }), [data]);
+export function DetailTree({ data, lengthUnit = 'cm', surfaceUnit = 'm2' }: { data: CanvasLevelData; lengthUnit?: LengthUnit; surfaceUnit?: SurfaceUnit }) {
+  const tree = useMemo<TreeNode>(() => ({ key: `level:${data.level.id}`, type: 'level', id: data.level.id, levelId: data.level.id, label: `${data.level.name} (${data.rooms.length} pièce${data.rooms.length > 1 ? 's' : ''})`, children: data.rooms.map((snapshot) => ({ key: `room:${snapshot.room.id}`, type: 'room', id: snapshot.room.id, levelId: data.level.id, label: `${snapshot.room.name} - ${formatSurface(polygonAreaCm2(sortVertices(snapshot.vertices)), surfaceUnit)}`, children: snapshot.walls.map((wall) => ({ key: `wall:${wall.id}`, type: 'wall', id: wall.id, levelId: data.level.id, label: `Mur ${shortId(wall.id)} - ${wall.thicknessCm === null || wall.thicknessCm === undefined ? '—' : formatLength(wall.thicknessCm, lengthUnit)}`, children: snapshot.openings.filter(({ wallId }) => wallId === wall.id).map((opening) => ({ key: `opening:${opening.id}`, type: 'opening', id: opening.id, levelId: data.level.id, label: `${opening.type === 'door' ? 'Porte' : opening.type === 'window' ? 'Fenêtre' : 'Ouverture'} - ${formatLength(opening.widthCm, lengthUnit)} × ${formatLength(opening.heightCm, lengthUnit)}` })) })) })) }), [data, lengthUnit, surfaceUnit]);
   return <ul className="detail-tree"><DetailTreeNode node={tree} /></ul>;
 }
 
-export function EditorDetailPanel({ data }: { data: CanvasLevelData | undefined }) {
+export function EditorDetailPanel({ data, lengthUnit = 'cm', surfaceUnit = 'm2' }: { data: CanvasLevelData | undefined; lengthUnit?: LengthUnit; surfaceUnit?: SurfaceUnit }) {
   const [open, setOpen] = useState(false);
   if (!open) return <aside className="editor-panel editor-panel--collapsed"><ActionIcon variant="default" size="lg" onClick={() => setOpen(true)} aria-label="Ouvrir le panneau de détail"><LuListTree aria-hidden /></ActionIcon></aside>;
-  return <aside className="editor-panel editor-panel--detail"><div className="editor-panel__header"><strong>Détail</strong><ActionIcon variant="subtle" onClick={() => setOpen(false)} aria-label="Fermer le panneau de détail"><LuPanelRightClose aria-hidden /></ActionIcon></div>{data ? <ScrollArea h={620}><DetailTree data={data} /></ScrollArea> : <Badge color="gray">Aucun niveau</Badge>}</aside>;
+  return <aside className="editor-panel editor-panel--detail"><div className="editor-panel__header"><strong>Détail</strong><ActionIcon variant="subtle" onClick={() => setOpen(false)} aria-label="Fermer le panneau de détail"><LuPanelRightClose aria-hidden /></ActionIcon></div>{data ? <ScrollArea h={620}><DetailTree data={data} lengthUnit={lengthUnit} surfaceUnit={surfaceUnit} /></ScrollArea> : <Badge color="gray">Aucun niveau</Badge>}</aside>;
 }

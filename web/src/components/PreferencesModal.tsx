@@ -16,7 +16,7 @@ export function PreferencesModal({ opened, onClose }: { opened: boolean; onClose
   const [height, setHeight] = useState<number | string>(preferences.defaultWallHeightCm);
   const [thickness, setThickness] = useState<number | string>(preferences.defaultWallThicknessCm);
   const [saving, setSaving] = useState(false);
-  const [feedback, setFeedback] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
 
   useEffect(() => {
     if (!opened) return;
@@ -40,16 +40,16 @@ export function PreferencesModal({ opened, onClose }: { opened: boolean; onClose
     };
     const validationError = validateUserPreferences(next);
     if (validationError) {
-      setFeedback({ kind: 'error', text: validationError });
+      setFeedback(validationError);
       return;
     }
     setSaving(true);
     setFeedback(null);
     try {
       await save(next);
-      setFeedback({ kind: 'success', text: 'Préférences enregistrées.' });
+      onClose();
     } catch {
-      setFeedback({ kind: 'error', text: 'Les préférences n’ont pas pu être enregistrées.' });
+      setFeedback('Les préférences n’ont pas pu être enregistrées.');
     } finally {
       setSaving(false);
     }
@@ -66,7 +66,7 @@ export function PreferencesModal({ opened, onClose }: { opened: boolean; onClose
         <Select label="Thème" data={[['system', 'Système'], ['clair', 'Clair'], ['foncé', 'Foncé']].map(([value, label]) => ({ value, label }))} value={values.theme} disabled={loading} onChange={(value) => value && setValues({ ...values, theme: value as UserPreferences['theme'] })} />
         <NumberInput label={`Hauteur de mur par défaut (${unitLabel})`} min={Number.MIN_VALUE} value={height} disabled={loading} onChange={setHeight} error={Number(height) <= 0 ? 'La valeur doit être strictement positive.' : undefined} />
         <NumberInput label={`Épaisseur de mur par défaut (${unitLabel})`} min={Number.MIN_VALUE} value={thickness} disabled={loading} onChange={setThickness} error={Number(thickness) <= 0 ? 'La valeur doit être strictement positive.' : undefined} />
-        {feedback && <p className={`preferences-feedback preferences-feedback--${feedback.kind}`} role={feedback.kind === 'error' ? 'alert' : 'status'}>{feedback.text}</p>}
+        {feedback && <p className="preferences-feedback preferences-feedback--error" role="alert">{feedback}</p>}
         <Button leftSection={<LuSave aria-hidden="true" />} loading={saving} disabled={loading || Number(height) <= 0 || Number(thickness) <= 0} onClick={() => void submit()}>Enregistrer les préférences</Button>
       </Stack>
     </Modal>

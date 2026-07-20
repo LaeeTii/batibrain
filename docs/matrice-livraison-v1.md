@@ -1,6 +1,6 @@
 # Matrice de livraison de la V1
 
-Date du dernier audit: 2026-07-16
+Date du dernier audit: 2026-07-20
 
 ## Rôle et règles de statut
 
@@ -20,10 +20,10 @@ Une ligne ne passe à `Terminé` que si `npm run check` et les validations de ba
 ## État de référence de l’audit
 
 - Branche auditée: `main`.
-- `npm run check`: réussi; lint, 32 fichiers et 149 tests, typecheck et build sont verts.
-- Le build conserve un avertissement non bloquant sur le bundle principal de 1,59 Mo.
-- Les 19 migrations versionnées sont rejouées sans erreur sur une base PostgreSQL temporaire recréée; la migration canonique V1-R10 est incluse.
-- Les 6 fichiers de scénarios SQL sont rejoués; le scénario géométrique couvre sauvegarde, verrou, rollback, profils multiples, ouverture et cardinalité.
+- `npm run check`: réussi; lint, 34 fichiers et 159 tests, typecheck et build sont verts.
+- Le build conserve un avertissement non bloquant sur le bundle principal de 1,60 Mo.
+- Les 20 migrations versionnées sont rejouées sans erreur sur une base Supabase locale recréée avec Podman; la migration de stabilisation des préférences et options est incluse.
+- Les 7 fichiers de scénarios SQL totalisent 79 tests verts; les préférences, options de vue, droits de lecture et invariants géométriques sont couverts.
 - Aucun fichier de migration n’est ignoré et le provisionnement initial est isolé dans `supabase/scripts/`, sans donnée personnelle.
 
 ## Matrice des jalons refactorés engagés
@@ -32,7 +32,8 @@ Une ligne ne passe à `Terminé` que si `npm run check` et les validations de ba
 |---|---|---|
 | V1-R00 | Terminé | Base neuve rejouée, 18 migrations concordantes, 67 tests SQL verts, `npm run check` vert avec lint et 139 tests, RoomEditor2DView verrouillée en lecture seule et script générique documenté pour le premier administrateur. |
 | V1-R10 | Terminé | Modèle canonique `vertices` + associations ordonnées, murs autonomes et profils complets; `load_level_geometry`/`save_level_geometry` remplacent les RPC partielles. Migration 19/19 rejouée, 6 scénarios SQL validés (succès, verrou, rollback, profils multi-points, ouverture, cardinalité) et `npm run check` vert avec 32 fichiers et 149 tests. |
-| V1-R21 | À faire | À exécuter après V1-R20 et avant V1-R30; référence actuelle du chunk principal: 1,59 Mo minifié et environ 478 Ko compressé. |
+| V1-R11 | Terminé | Conversions centralisées cm/m/mm et m2/cm2/mm2 sans réinterprétation des données; unités appliquées aux canvas, dashboard, éditeurs et PDF existants; options du canvas global relues et enregistrées par utilisateur et projet. Migration 20/20, 79 tests SQL et `npm run check` vert avec 34 fichiers et 159 tests. |
+| V1-R21 | À faire | À exécuter après V1-R20 et avant V1-R30; référence actuelle du chunk principal: 1,60 Mo minifié et environ 480 Ko compressé. |
 
 ## Matrice des tâches historiques
 
@@ -52,21 +53,21 @@ Une ligne ne passe à `Terminé` que si `npm run check` et les validations de ba
 | V1-12 | Profil et compte | À valider | Parcours présents; conformité Mantine et retours génériques à corriger. |
 | V1-13 | Administration | À valider | Parcours présents; modales, suppressions et dernier administrateur à recetter. |
 | V1-14 | Coquille applicative | Partiel | Coquille présente, mais routes WallEditor absentes et Métriques reste un placeholder. |
-| V1-15 | Préférences et compte | Partiel | Préférences persistées, mais unités et options ne sont pas appliquées partout. |
+| V1-15 | Préférences et compte | Terminé | Préférences relues au démarrage, conversions de saisie et d’affichage centralisées, valeurs de mur persistées en cm et contraintes de valeurs initiales validées en base. |
 | V1-16 | Projets et contexte | À valider | Parcours présent; recette propriétaire, suppression et base neuve à compléter. |
 | V1-17 | Invitations et collaborations | À valider | Parcours présent; recette multi-utilisateur complète à rejouer. |
 | V1-18 | Verrou collaboratif | Hors V1 | Reporté après la V1.0; version cible et contrat à respécifier avant réactivation. |
 | V1-19 | Verrouillage géométrique | Partiel | Modèle et RPC convergés sur les sommets et points de profils avec revérification transactionnelle; actions complètes des trois éditeurs suivies par V1-R20. |
-| V1-20 | Dashboard, niveaux et cartes | Partiel | Écran présent; notes, unités, PDF et retours utilisateur restent incohérents. |
+| V1-20 | Dashboard, niveaux et cartes | Partiel | Écran présent et unités actives appliquées aux cartes, synthèses et PDF; la recette complète des notes, niveaux et retours utilisateur reste à mener. |
 | V1-21 | Canvas partagé | Partiel | Canvas React-Konva et ses tests sont verts; RoomEditor conserve un canvas SVG distinct jusqu’à V1-R20. |
 | V1-22 | Sélection, panneaux, historique | Partiel | Consultation et historique présents; les mutations secondaires sont encore désactivées. |
-| V1-23 | Affichage éditeur global | Partiel | Vue présente, options non persistées et droits/verrous incomplets selon les parcours. |
+| V1-23 | Affichage éditeur global | Partiel | Options d’affichage persistées par utilisateur et projet, y compris en lecture; les droits et verrous complets restent à recetter avec V1-R20 et V1-R12. |
 | V1-24 | Édition géométrique globale | À valider | Pièces, intersections et chevauchements utilisent la sauvegarde canonique; ouvertures et profils sont remappés au lieu d’être refusés ou aplatis. |
 | V1-25 | Objets secondaires globaux | À faire | Seule la création de pièce est active; autres créations explicitement désactivées. |
 | V1-26 | RoomEditor2DView | Bloqué | Consultation maintenue; toutes les écritures, mutations canvas et auto-sauvegardes sont désactivées jusqu’à la refonte V1-R20. |
 | V1-27 | WallEditor en lecture | À faire | Aucune route ni vue de production. |
 | V1-28 | Édition des profils | À faire | Logique domaine partielle seulement, sans intégration de production. |
-| V1-29 | Six exports PDF | Partiel | Exports Dashboard partiels; variantes éditeurs absentes. |
+| V1-29 | Six exports PDF | Partiel | Exports Dashboard partiels et conversions d’unités branchées sur les moteurs PDF existants; variantes éditeurs absentes. |
 | V1-30 | ProjectMetricsView | À faire | Route placeholder, aucun tableau, filtre ou tri. |
 | V1-31 | Exports Métriques | Bloqué | Aucun export; contrat PDF/Excel/CSV détaillé à compléter avant code. |
 | V1-32 | Recette sécurité | À faire | Recettes droits, verrouillage géométrique et invariants base à compléter; concurrence multi-utilisateur hors V1. |

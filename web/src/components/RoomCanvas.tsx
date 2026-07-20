@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Input } from '@mantine/core';
-import { centroid, formatLengthCm, insertVertexBetween, polygonAreaCm2, polygonPerimeterCm, removeVertex, snapPointToNearbyAxes, updateVertexPosition, updateWallLength, wallsFromVertices } from '../domain/geometry';
+import { centroid, insertVertexBetween, polygonAreaCm2, polygonPerimeterCm, removeVertex, snapPointToNearbyAxes, updateVertexPosition, updateWallLength, wallsFromVertices } from '../domain/geometry';
 import type { Opening, Point, Room, Vertex, Wall } from '../domain/types';
+import { centimetersToDisplay, displayToCentimeters, formatLength, formatSurfaceFromSquareMeters, type LengthUnit, type SurfaceUnit } from '../domain/userPreferences';
 
 const SNAP_THRESHOLD_CM = 12;
 const VIEWBOX_PADDING_CM = 80;
@@ -22,6 +23,8 @@ export interface RoomCanvasProps {
   selectedWallIndex?: number | null;
   showInspector?: boolean;
   readOnly?: boolean;
+  lengthUnit?: LengthUnit;
+  surfaceUnit?: SurfaceUnit;
   onVerticesChange: (next: Vertex[]) => void;
   onWallSelect?: (wallIndex: number) => void;
   rectangleCreationEnabled?: boolean;
@@ -151,6 +154,8 @@ export function RoomCanvas({
   selectedWallIndex = null,
   showInspector = true,
   readOnly = false,
+  lengthUnit = 'cm',
+  surfaceUnit = 'm2',
   onVerticesChange,
   onWallSelect,
   rectangleCreationEnabled = false,
@@ -429,20 +434,20 @@ export function RoomCanvas({
 
     onWallSelect?.(wallIndex);
     setEditingWallIndex(wallIndex);
-    setWallLengthDraft((wall.lengthCm / 100).toFixed(2));
+    setWallLengthDraft(String(centimetersToDisplay(wall.lengthCm, lengthUnit)));
     setWallLengthError(null);
   };
 
   const handleWallLengthCommit = () => {
     if (readOnly || editingWallIndex === null) return false;
 
-    const parsedMeters = Number(wallLengthDraft.replace(',', '.'));
-    if (!Number.isFinite(parsedMeters) || parsedMeters <= 0) {
+    const parsedDisplayLength = Number(wallLengthDraft.replace(',', '.'));
+    if (!Number.isFinite(parsedDisplayLength) || parsedDisplayLength <= 0) {
       setWallLengthError('Longueur invalide');
       return false;
     }
 
-    const next = updateWallLength(sortedVertices, editingWallIndex, parsedMeters * 100);
+    const next = updateWallLength(sortedVertices, editingWallIndex, displayToCentimeters(parsedDisplayLength, lengthUnit));
     if (!next) {
       setWallLengthError('Longueur invalide');
       return false;
@@ -673,7 +678,7 @@ export function RoomCanvas({
                     fontSize={11}
                     fill="#24292f"
                   >
-                    {formatLengthCm(wall.lengthCm)}
+                    {formatLength(wall.lengthCm, lengthUnit)}
                   </text>
                 </g>
               )}
@@ -715,7 +720,7 @@ export function RoomCanvas({
             fontWeight={700}
             fill="#0e54e9"
           >
-            {areaM2.toFixed(2)} m²
+            {formatSurfaceFromSquareMeters(areaM2, surfaceUnit)}
           </text>
         )}
       </svg>
@@ -724,8 +729,8 @@ export function RoomCanvas({
         <aside style={{ border: '1px solid #d0d7de', borderRadius: 8, padding: 16, background: 'white' }}>
         <h3 style={{ marginTop: 0 }}>Métadonnées</h3>
         <p><strong>Sommets :</strong> {sortedVertices.length}</p>
-        <p><strong>Surface :</strong> {areaM2.toFixed(2)} m²</p>
-        <p><strong>Périmètre :</strong> {perimeterM.toFixed(2)} m</p>
+        <p><strong>Surface :</strong> {formatSurfaceFromSquareMeters(areaM2, surfaceUnit)}</p>
+        <p><strong>Périmètre :</strong> {formatLength(perimeterM * 100, lengthUnit)}</p>
         <p style={{ color: '#57606a', fontSize: 14 }}>
           Double-clique dans le plan pour ajouter un sommet. Double-clique sur un mur pour insérer un sommet sur ce segment.
         </p>
@@ -736,7 +741,7 @@ export function RoomCanvas({
           Clique sur un sommet pour le supprimer ou sur deux sommets consécutifs pour insérer un sommet au milieu du mur.
         </p>
         <p style={{ color: '#57606a', fontSize: 14 }}>
-          Pendant le déplacement, un sommet s'aligne automatiquement sur les axes des autres points s'il passe à moins de {SNAP_THRESHOLD_CM} cm.
+          Pendant le déplacement, un sommet s'aligne automatiquement sur les axes des autres points s'il passe à moins de {formatLength(SNAP_THRESHOLD_CM, lengthUnit)}.
         </p>
         <Button
           color="red"
@@ -790,7 +795,7 @@ export function RoomCanvas({
         <ol style={{ paddingLeft: 18 }}>
           {walls.map((wall) => (
             <li key={wall.index}>
-              Mur {wall.index + 1} — {formatLengthCm(wall.lengthCm)}
+              Mur {wall.index + 1} — {formatLength(wall.lengthCm, lengthUnit)}
             </li>
           ))}
         </ol>

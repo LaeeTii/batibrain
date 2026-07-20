@@ -1,8 +1,9 @@
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { ActionIcon } from '@mantine/core';
-import { centroid, formatLengthCm, polygonAreaCm2, wallsFromVertices } from '../domain/geometry';
+import { centroid, polygonAreaCm2, wallsFromVertices } from '../domain/geometry';
 import type { Opening, Vertex } from '../domain/types';
 import type { RoomSnapshot } from '../services/rooms';
+import { formatLength, formatSurface, type LengthUnit, type SurfaceUnit } from '../domain/userPreferences';
 
 const PLAN_PADDING_CM = 140;
 const GRID_MINOR_STEP_CM = 50;
@@ -15,6 +16,8 @@ interface LevelPlanCanvasProps {
   highlightedRoomId?: string;
   showGrid?: boolean;
   showMeasurements?: boolean;
+  lengthUnit?: LengthUnit;
+  surfaceUnit?: SurfaceUnit;
   height?: number;
   exportSvgRef?: React.MutableRefObject<SVGSVGElement | null>;
   onFocusRoom?: (roomId: string) => void;
@@ -122,6 +125,8 @@ export function LevelPlanCanvas({
   highlightedRoomId,
   showGrid = true,
   showMeasurements = true,
+  lengthUnit = 'cm',
+  surfaceUnit = 'm2',
   height,
   exportSvgRef,
   onFocusRoom,
@@ -163,10 +168,10 @@ export function LevelPlanCanvas({
       walls,
       openingSegments,
       center: centroid(vertices),
-      areaLabel: `${(polygonAreaCm2(vertices) / 10000).toFixed(1)} m²`,
+      areaLabel: formatSurface(polygonAreaCm2(vertices), surfaceUnit),
       fillColor: ROOM_FILL_COLORS[index % ROOM_FILL_COLORS.length],
     };
-  }), [snapshots]);
+  }), [snapshots, surfaceUnit]);
 
   const baseViewBox = useMemo(
     () => getViewBox(rooms.map((room) => room.vertices)),
@@ -375,7 +380,7 @@ export function LevelPlanCanvas({
                     fontSize={12}
                     fontWeight={600}
                   >
-                    {formatLengthCm(i * GRID_MAJOR_STEP_CM)}
+                    {formatLength(i * GRID_MAJOR_STEP_CM, lengthUnit)}
                   </text>
                 </g>
               );
@@ -414,7 +419,7 @@ export function LevelPlanCanvas({
                     fontSize={12}
                     fontWeight={600}
                   >
-                    {formatLengthCm(i * GRID_MAJOR_STEP_CM)}
+                    {formatLength(i * GRID_MAJOR_STEP_CM, lengthUnit)}
                   </text>
                 </g>
               );
@@ -504,7 +509,7 @@ export function LevelPlanCanvas({
                     pointerEvents="none"
                     style={{ paintOrder: 'stroke', stroke: 'rgba(255, 255, 255, 0.98)', strokeWidth: 4 }}
                   >
-                    {formatLengthCm(wall.lengthCm)}
+                    {formatLength(wall.lengthCm, lengthUnit)}
                   </text>
                 );
               }) : null}
@@ -552,7 +557,7 @@ export function LevelPlanCanvas({
             fontWeight={700}
             style={{ paintOrder: 'stroke', stroke: 'rgba(255, 255, 255, 0.98)', strokeWidth: 4 }}
           >
-            {formatLengthCm(scaleLengthCm)}
+            {formatLength(scaleLengthCm, lengthUnit)}
           </text>
         </g>
       </svg>

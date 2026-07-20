@@ -34,6 +34,12 @@ import {
   updateRoom,
 } from '../services/rooms';
 import type { RoomSnapshot } from '../services/rooms';
+import {
+  centimetersToDisplay,
+  displayToCentimeters,
+  formatLength,
+  formatSurfaceFromSquareMeters,
+} from '../domain/userPreferences';
 
 const EMPTY_LEVEL_ID = '';
 const EMPTY_PROJECT_ID = '';
@@ -44,14 +50,6 @@ const DEFAULT_PROJECT_NAME = '';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const OPENING_REMAP_EPSILON = 1e-6;
 const ROOM_EDITOR_WRITES_ENABLED = false;
-const AREA_FORMATTER = new Intl.NumberFormat('fr-FR', {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 2,
-});
-const LENGTH_FORMATTER = new Intl.NumberFormat('fr-FR', {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 2,
-});
 
 type OpeningDraft = {
   type: Opening['type'];
@@ -103,14 +101,6 @@ function isUuid(value: string): boolean {
 
 function parseMetricInput(value: string): number {
   return Number(value.replace(',', '.'));
-}
-
-function formatAreaM2(value: number): string {
-  return `${AREA_FORMATTER.format(value)} m²`;
-}
-
-function formatMeters(value: number): string {
-  return `${LENGTH_FORMATTER.format(value)} m`;
 }
 
 function openingTypeLabel(type: Opening['type']): string {
@@ -494,7 +484,7 @@ export function RoomEditor({
     );
 
     if (validationIssue) {
-      setOpeningFormMessage(formatOpeningValidationIssue(validationIssue));
+      setOpeningFormMessage(formatOpeningValidationIssue(validationIssue, preferences.lengthUnit));
       return;
     }
 
@@ -1128,7 +1118,7 @@ export function RoomEditor({
                       onClick={() => selectRoom(room.id, 'push')}
                     >
                       <strong>{room.name}</strong>
-                      <span>{roomArea === null ? 'Surface...' : formatAreaM2(roomArea)}</span>
+                      <span>{roomArea === null ? 'Surface...' : formatSurfaceFromSquareMeters(roomArea, preferences.surfaceUnit)}</span>
                     </UnstyledButton>
                   );
                 })
@@ -1163,6 +1153,8 @@ export function RoomEditor({
               selectedWallIndex={selectedWallIndex}
               showInspector={false}
               readOnly
+              lengthUnit={preferences.lengthUnit}
+              surfaceUnit={preferences.surfaceUnit}
               height={760}
               onVerticesChange={handleVerticesChange}
               onWallSelect={setSelectedWallIndex}
@@ -1208,11 +1200,11 @@ export function RoomEditor({
 
             {inspectorTab === 'metrics' ? (
               <div className="room-editor__statsList">
-                <div className="room-editor__statRow"><span>Surface</span><strong>{formatAreaM2(areaM2)}</strong></div>
-                <div className="room-editor__statRow"><span>Périmètre</span><strong>{formatMeters(perimeterM)}</strong></div>
+                <div className="room-editor__statRow"><span>Surface</span><strong>{formatSurfaceFromSquareMeters(areaM2, preferences.surfaceUnit)}</strong></div>
+                <div className="room-editor__statRow"><span>Périmètre</span><strong>{formatLength(perimeterM * 100, preferences.lengthUnit)}</strong></div>
                 <div className="room-editor__statRow">
                   <span>Hauteur sous plafond</span>
-                  <strong>{roomHeightM === null ? 'N/A' : formatMeters(roomHeightM)}</strong>
+                  <strong>{roomHeightM === null ? 'N/A' : formatLength(roomHeightM * 100, preferences.lengthUnit)}</strong>
                 </div>
 
                 <h4 className="room-editor__sectionTitle">Murs ({walls.length})</h4>
@@ -1224,7 +1216,7 @@ export function RoomEditor({
                         onClick={() => setSelectedWallIndex(wall.index)}
                       >
                         <span>{wall.index + 1}</span>
-                        <strong>{formatMeters(wall.lengthCm / 100)}</strong>
+                        <strong>{formatLength(wall.lengthCm, preferences.lengthUnit)}</strong>
                       </UnstyledButton>
                     </li>
                   ))}
@@ -1243,7 +1235,7 @@ export function RoomEditor({
                   })}
                 </ul>
                 <p className="room-editor__hint">
-                  Centre: ({center.x.toFixed(0)}, {center.y.toFixed(0)})
+                  Centre: ({formatLength(center.x, preferences.lengthUnit)}, {formatLength(center.y, preferences.lengthUnit)})
                 </p>
               </div>
             ) : (
@@ -1256,7 +1248,7 @@ export function RoomEditor({
                       <div className="dashboard-banner dashboard-banner--error">
                         {selectedWallOpeningIssues.map((issue) => (
                           <p key={`${issue.opening.id}:${issue.code}`}>
-                            {formatOpeningValidationIssue(issue)}
+                            {formatOpeningValidationIssue(issue, preferences.lengthUnit)}
                           </p>
                         ))}
                       </div>
@@ -1270,32 +1262,32 @@ export function RoomEditor({
                           disabled
                         data={[{ value: 'door', label: 'Porte' }, { value: 'window', label: 'Fenêtre' }, { value: 'other', label: 'Autre' }]}
                       />
-                      <NumberInput className="dashboard-field dashboard-field--compact" label="Position (cm)"
+                      <NumberInput className="dashboard-field dashboard-field--compact" label={`Position (${preferences.lengthUnit})`}
                           min={0}
                           step={1}
-                          value={openingDraft.offsetCm}
-                          onChange={(value) => handleOpeningDraftChange('offsetCm', String(value))}
+                          value={centimetersToDisplay(Number(openingDraft.offsetCm), preferences.lengthUnit)}
+                          onChange={(value) => handleOpeningDraftChange('offsetCm', String(displayToCentimeters(Number(value), preferences.lengthUnit)))}
                           disabled
                         />
-                      <NumberInput className="dashboard-field dashboard-field--compact" label="Largeur (cm)"
+                      <NumberInput className="dashboard-field dashboard-field--compact" label={`Largeur (${preferences.lengthUnit})`}
                           min={1}
                           step={1}
-                          value={openingDraft.widthCm}
-                          onChange={(value) => handleOpeningDraftChange('widthCm', String(value))}
+                          value={centimetersToDisplay(Number(openingDraft.widthCm), preferences.lengthUnit)}
+                          onChange={(value) => handleOpeningDraftChange('widthCm', String(displayToCentimeters(Number(value), preferences.lengthUnit)))}
                           disabled
                         />
-                      <NumberInput className="dashboard-field dashboard-field--compact" label="Allège (cm)"
+                      <NumberInput className="dashboard-field dashboard-field--compact" label={`Allège (${preferences.lengthUnit})`}
                           min={0}
                           step={1}
-                          value={openingDraft.bottomCm}
-                          onChange={(value) => handleOpeningDraftChange('bottomCm', String(value))}
+                          value={centimetersToDisplay(Number(openingDraft.bottomCm), preferences.lengthUnit)}
+                          onChange={(value) => handleOpeningDraftChange('bottomCm', String(displayToCentimeters(Number(value), preferences.lengthUnit)))}
                           disabled
                         />
-                      <NumberInput className="dashboard-field dashboard-field--compact" label="Hauteur (cm)"
+                      <NumberInput className="dashboard-field dashboard-field--compact" label={`Hauteur (${preferences.lengthUnit})`}
                           min={1}
                           step={1}
-                          value={openingDraft.heightCm}
-                          onChange={(value) => handleOpeningDraftChange('heightCm', String(value))}
+                          value={centimetersToDisplay(Number(openingDraft.heightCm), preferences.lengthUnit)}
+                          onChange={(value) => handleOpeningDraftChange('heightCm', String(displayToCentimeters(Number(value), preferences.lengthUnit)))}
                           disabled
                         />
                     </div>
@@ -1315,7 +1307,7 @@ export function RoomEditor({
                         {selectedWallOpenings.map((opening) => (
                           <li key={opening.id}>
                             <span>
-                              {openingTypeLabel(opening.type)} - {opening.widthCm} x {opening.heightCm} cm
+                              {openingTypeLabel(opening.type)} - {formatLength(opening.widthCm, preferences.lengthUnit)} × {formatLength(opening.heightCm, preferences.lengthUnit)}
                             </span>
                             <ActionIcon
                               color="red"

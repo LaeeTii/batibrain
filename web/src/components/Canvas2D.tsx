@@ -25,30 +25,23 @@ import {
 } from '../domain/canvasViewport';
 import type { Level, Point } from '../domain/types';
 import type { EditorSelection } from '../domain/editorSelection';
+import {
+  formatLength,
+  formatSurface,
+  type LengthUnit,
+  type SurfaceUnit,
+} from '../domain/userPreferences';
+import {
+  DEFAULT_CANVAS_DISPLAY_OPTIONS,
+  type CanvasDisplayOptions,
+} from '../domain/viewSettings';
 import { uniqueLevelOpenings, uniqueLevelWalls } from '../domain/roomOverlap';
 import type { RoomSnapshot } from '../services/rooms';
 
 type DragState = { x: number; y: number; viewport: CanvasViewport };
 
-export interface CanvasDisplayOptions {
-  grid: boolean;
-  rulers: boolean;
-  dimensions: boolean;
-  angles: boolean;
-  notes: boolean;
-  surfaces: boolean;
-  roomIcons: boolean;
-}
-
-export const DEFAULT_CANVAS_DISPLAY_OPTIONS: CanvasDisplayOptions = {
-  grid: true,
-  rulers: true,
-  dimensions: true,
-  angles: true,
-  notes: true,
-  surfaces: true,
-  roomIcons: true,
-};
+export { DEFAULT_CANVAS_DISPLAY_OPTIONS } from '../domain/viewSettings';
+export type { CanvasDisplayOptions } from '../domain/viewSettings';
 
 export interface CanvasNote {
   id: string;
@@ -79,6 +72,8 @@ interface Canvas2DProps {
   visibleLevelIds: string[];
   viewportStateKey?: string;
   options?: CanvasDisplayOptions;
+  lengthUnit?: LengthUnit;
+  surfaceUnit?: SurfaceUnit;
   height?: number;
   selection?: EditorSelection | null;
   onSelect?(selection: EditorSelection): void;
@@ -231,7 +226,7 @@ function roomIcon(roomType: string): string {
   }
 }
 
-export function CanvasOverlayMeasurements({ snapshot, options }: { snapshot: RoomSnapshot; options: CanvasDisplayOptions }) {
+export function CanvasOverlayMeasurements({ snapshot, options, lengthUnit = 'cm' }: { snapshot: RoomSnapshot; options: CanvasDisplayOptions; lengthUnit?: LengthUnit }) {
   const vertices = sortVertices(snapshot.vertices);
   const angles = polygonInteriorAnglesDegrees(vertices);
   const roomCenter = centroid(vertices);
@@ -268,7 +263,7 @@ export function CanvasOverlayMeasurements({ snapshot, options }: { snapshot: Roo
                 y={labelPosition.y - 6}
                 width={70}
                 align="center"
-                text={`${length.toFixed(1)} cm`}
+                text={formatLength(length, lengthUnit)}
                 fontSize={11}
                 fill="#57606a"
               />
@@ -295,15 +290,15 @@ export function CanvasZoomControls({ onZoomIn, onZoomOut, onReset }: { onZoomIn(
   );
 }
 
-export function CanvasScaleIndicator({ viewportWidth, renderedWidth }: { viewportWidth: number; renderedWidth: number }) {
+export function CanvasScaleIndicator({ viewportWidth, renderedWidth, lengthUnit = 'cm' }: { viewportWidth: number; renderedWidth: number; lengthUnit?: LengthUnit }) {
   const pixelsPerCm = renderedWidth / Math.max(viewportWidth, 1);
   const candidates = [10, 20, 50, 100, 200, 500, 1000];
   const lengthCm = candidates.find((candidate) => candidate * pixelsPerCm >= 70) ?? 1000;
 
   return (
-    <div className="canvas2d-scale" aria-label={`Échelle graphique ${lengthCm} centimètres`}>
+    <div className="canvas2d-scale" aria-label={`Échelle graphique ${formatLength(lengthCm, lengthUnit)}`}>
       <span style={{ width: `${Math.min(160, lengthCm * pixelsPerCm)}px` }} />
-      <strong>{lengthCm} cm</strong>
+      <strong>{formatLength(lengthCm, lengthUnit)}</strong>
     </div>
   );
 }
@@ -343,6 +338,8 @@ export function Canvas2D({
   visibleLevelIds,
   viewportStateKey,
   options = DEFAULT_CANVAS_DISPLAY_OPTIONS,
+  lengthUnit = 'cm',
+  surfaceUnit = 'm2',
   height = 700,
   selection = null,
   onSelect,
@@ -561,14 +558,14 @@ export function Canvas2D({
               <Text
                 x={viewport.x + 15}
                 y={viewport.y + 25}
-                text={`X : ${Math.round(viewport.x)} -> ${Math.round(viewport.x + viewport.width)} cm`}
+                text={`X : ${formatLength(viewport.x, lengthUnit)} → ${formatLength(viewport.x + viewport.width, lengthUnit)}`}
                 fontSize={12}
                 fill="#57606a"
               />
               <Text
                 x={viewport.x + 15}
                 y={viewport.y + 48}
-                text={`Y : ${Math.round(viewport.y)} -> ${Math.round(viewport.y + viewport.height)} cm`}
+                text={`Y : ${formatLength(viewport.y, lengthUnit)} → ${formatLength(viewport.y + viewport.height, lengthUnit)}`}
                 fontSize={12}
                 fill="#57606a"
               />
@@ -621,7 +618,7 @@ export function Canvas2D({
                           <Text
                             x={center.x - 24}
                             y={center.y + 6}
-                            text={`${(polygonAreaCm2(vertices) / 10000).toFixed(2)} m²`}
+                            text={formatSurface(polygonAreaCm2(vertices), surfaceUnit)}
                             fontSize={12}
                             fill="#334155"
                           />
@@ -630,7 +627,7 @@ export function Canvas2D({
                           <Text x={center.x - 12} y={center.y + 24} text={roomIcon(snapshot.room.type)} fontSize={12} fill="#475569" />
                         ) : null}
 
-                        <CanvasOverlayMeasurements snapshot={snapshot} options={options} />
+                        <CanvasOverlayMeasurements snapshot={snapshot} options={options} lengthUnit={lengthUnit} />
 
                       </Group>
                     );
@@ -683,7 +680,7 @@ export function Canvas2D({
                           <Text
                             x={(dimension.start.x + dimension.end.x) / 2}
                             y={(dimension.start.y + dimension.end.y) / 2 - 8}
-                            text={dimension.label ?? `${Math.hypot(dimension.end.x - dimension.start.x, dimension.end.y - dimension.start.y).toFixed(1)} cm`}
+                            text={dimension.label ?? formatLength(Math.hypot(dimension.end.x - dimension.start.x, dimension.end.y - dimension.start.y), lengthUnit)}
                             fontSize={11}
                             fill="#334155"
                           />
@@ -780,7 +777,7 @@ export function Canvas2D({
         onZoomOut={() => changeZoom(0.8)}
         onReset={() => setViewport(resetViewport)}
       />
-      <CanvasScaleIndicator viewportWidth={viewport.width} renderedWidth={canvasWidth} />
+      <CanvasScaleIndicator viewportWidth={viewport.width} renderedWidth={canvasWidth} lengthUnit={lengthUnit} />
     </div>
   );
 }

@@ -9,6 +9,7 @@ import type {
   Vertex,
   Wall,
 } from './types';
+import { formatLength, type LengthUnit } from './userPreferences';
 
 const EPSILON = 1e-9;
 
@@ -549,7 +550,7 @@ export function validateOpenings(
   return issues;
 }
 
-export function formatOpeningValidationIssue(issue: OpeningValidationIssue): string {
+export function formatOpeningValidationIssue(issue: OpeningValidationIssue, lengthUnit: LengthUnit = 'cm'): string {
   switch (issue.code) {
     case 'invalid_offset':
       return 'La position de l’ouverture doit être positive ou nulle.';
@@ -562,14 +563,14 @@ export function formatOpeningValidationIssue(issue: OpeningValidationIssue): str
     case 'outside_wall': {
       const wallLengthLabel = issue.wallLengthCm === null
         ? 'la longueur du mur'
-        : `${Math.round(issue.wallLengthCm)} cm`;
+        : formatLength(issue.wallLengthCm, lengthUnit);
 
       return `L’ouverture dépasse les limites du mur (${wallLengthLabel}).`;
     }
     case 'outside_wall_height': {
       const wallHeightLabel = issue.availableWallHeightCm === null
         ? 'la hauteur disponible du mur'
-        : `${Math.round(issue.availableWallHeightCm)} cm`;
+        : formatLength(issue.availableWallHeightCm, lengthUnit);
 
       return `Le haut de l’ouverture dépasse la hauteur disponible du mur à cet emplacement (${wallHeightLabel}).`;
     }
@@ -746,11 +747,4 @@ export function snapPointToNearbyAxes(
     snappedX,
     snappedY,
   };
-}
-
-export function formatLengthCm(lengthCm: number): string {
-  if (lengthCm >= 100) {
-    return `${(lengthCm / 100).toFixed(2)} m`;
-  }
-  return `${Math.round(lengthCm)} cm`;
 }

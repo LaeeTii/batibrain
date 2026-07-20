@@ -11,6 +11,8 @@ import { hasSupabaseConfig } from '../lib/supabase';
 import { listLevelsByProject } from '../services/levels';
 import { canWriteProject, getProject } from '../services/projects';
 import { listRoomsByLevel, loadRoomSnapshot, softDeleteRoom, updateRoom, type RoomSnapshot } from '../services/rooms';
+import { usePreferences } from '../components/PreferencesContext';
+import { formatSurfaceFromSquareMeters } from '../domain/userPreferences';
 
 export interface DashboardRoomTarget { projectId: string; levelId: string; roomId: string }
 interface RoomsDashboardProps {
@@ -23,6 +25,7 @@ interface RoomsDashboardProps {
 function errorMessage(error: unknown) { return error instanceof Error ? error.message : 'Une erreur inattendue est survenue.'; }
 
 export function RoomsDashboard({ projectId, onCreateProject, onOpenGlobalEditor, onOpenRoom }: RoomsDashboardProps) {
+  const { preferences } = usePreferences();
   const [project, setProject] = useState<Project | null>(null);
   const [levels, setLevels] = useState<Level[]>([]);
   const [snapshots, setSnapshots] = useState<RoomSnapshot[]>([]);
@@ -70,7 +73,7 @@ export function RoomsDashboard({ projectId, onCreateProject, onOpenGlobalEditor,
   const runExport = (targets: RoomSnapshot[], mode: RoomPdfMode) => {
     if (!project) return;
     setError('');
-    try { exportDashboardPdf(project.name, levels, targets, mode); setFeedback('Export PDF généré.'); }
+    try { exportDashboardPdf(project.name, levels, targets, mode, preferences); setFeedback(''); }
     catch (caught) { setError(errorMessage(caught)); }
   };
 
@@ -121,7 +124,7 @@ export function RoomsDashboard({ projectId, onCreateProject, onOpenGlobalEditor,
             : filteredSnapshots.length === 0 ? <div className="dashboard-emptyState"><h3>Aucun résultat</h3><p>Aucune pièce ne correspond aux filtres actifs.</p></div>
               : <div className="dashboard-roomGrid">{filteredSnapshots.map((snapshot) => <RoomCard
                 key={snapshot.room.id} snapshot={snapshot} levelName={levelsById.get(snapshot.room.levelId)?.name ?? 'Niveau non disponible'}
-                areaM2={getRoomAreaM2(snapshot.vertices)} canEdit={canEdit}
+                areaM2={getRoomAreaM2(snapshot.vertices)} canEdit={canEdit} surfaceUnit={preferences.surfaceUnit}
                 onOpen={() => onOpenRoom({ projectId, levelId: snapshot.room.levelId, roomId: snapshot.room.id })}
                 onAddNote={() => { setNoteSnapshot(snapshot); setNoteDraft(snapshot.room.notes ?? ''); }}
                 onDelete={() => void deleteSnapshot(snapshot)} onExport={(mode) => runExport([snapshot], mode)}
@@ -129,7 +132,7 @@ export function RoomsDashboard({ projectId, onCreateProject, onOpenGlobalEditor,
 
       <div className="dashboard-summaryStrip" aria-label="Synthèse des pièces visibles">
         <article className="summary-stat"><span className="summary-stat__label">Pièces</span><strong>{filteredSnapshots.length}</strong></article>
-        <article className="summary-stat"><span className="summary-stat__label">Surface totale</span><strong>{totalAreaM2.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} m²</strong></article>
+        <article className="summary-stat"><span className="summary-stat__label">Surface totale</span><strong>{formatSurfaceFromSquareMeters(totalAreaM2, preferences.surfaceUnit)}</strong></article>
         <article className="summary-stat"><span className="summary-stat__label">Murs</span><strong>{totalWalls}</strong></article>
         <article className="summary-stat"><span className="summary-stat__label">Ouvertures</span><strong>{totalOpenings}</strong></article>
       </div>

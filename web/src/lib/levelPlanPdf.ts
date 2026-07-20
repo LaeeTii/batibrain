@@ -1,7 +1,8 @@
 import jsPDF from 'jspdf';
-import { formatLengthCm, sortVertices, wallsFromVertices } from '../domain/geometry';
+import { sortVertices, wallsFromVertices } from '../domain/geometry';
 import type { LevelMetricSummary } from './roomMetrics';
 import type { RoomSnapshot } from '../services/rooms';
+import { DEFAULT_USER_PREFERENCES, formatLength, formatSurfaceFromSquareMeters, type UserPreferences } from '../domain/userPreferences';
 
 interface ExportSimpleLevelPlanPdfOptions {
   svgElement: SVGSVGElement;
@@ -17,6 +18,7 @@ interface ExportDetailedLevelPlanPdfOptions {
   metrics: LevelMetricSummary;
   snapshots: RoomSnapshot[];
   exportedAt?: Date;
+  preferences?: UserPreferences;
 }
 
 interface PageLayout {
@@ -35,11 +37,6 @@ const PX_PER_MM = 3.78;
 const PAGE_MARGIN_MM = 12;
 const CARTOUCHE_HEIGHT_MM = 24;
 const PDF_FORMAT = 'a4';
-const AREA_FORMATTER = new Intl.NumberFormat('fr-FR', {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 2,
-});
-
 function pad(value: number): string {
   return String(value).padStart(2, '0');
 }
@@ -77,12 +74,12 @@ function buildDetailedFileName(projectName: string, levelName: string, exportedA
   return `${projectSlug}-${levelSlug}-detail-${dateSegment}.pdf`;
 }
 
-function formatArea(areaM2: number): string {
-  return `${AREA_FORMATTER.format(areaM2)} m2`;
+function formatArea(areaM2: number, preferences: UserPreferences): string {
+  return formatSurfaceFromSquareMeters(areaM2, preferences.surfaceUnit);
 }
 
-function formatOptionalLength(lengthCm: number | null): string {
-  return lengthCm === null ? 'n/d' : formatLengthCm(lengthCm);
+function formatOptionalLength(lengthCm: number | null, preferences: UserPreferences): string {
+  return lengthCm === null ? 'n/d' : formatLength(lengthCm, preferences.lengthUnit);
 }
 
 function formatOpeningType(type: 'door' | 'window' | 'other'): string {
@@ -147,7 +144,7 @@ function drawTableRow(
   pdf.line(xStart, y + 1, xStart + totalWidth, y + 1);
 }
 
-function buildWallsRows(snapshots: RoomSnapshot[]): string[][] {
+function buildWallsRows(snapshots: RoomSnapshot[], preferences: UserPreferences): string[][] {
   return snapshots.flatMap((snapshot) => {
     const derivedWalls = wallsFromVertices(sortVertices(snapshot.vertices));
 
@@ -156,10 +153,10 @@ function buildWallsRows(snapshots: RoomSnapshot[]): string[][] {
       return [
         snapshot.room.name,
         `Mur ${derivedWall.index + 1}`,
-        formatLengthCm(derivedWall.lengthCm),
-        formatOptionalLength(wall?.thicknessCm ?? null),
-        formatOptionalLength(wall?.heightLeftCm ?? null),
-        formatOptionalLength(wall?.heightRightCm ?? null),
+        formatLength(derivedWall.lengthCm, preferences.lengthUnit),
+        formatOptionalLength(wall?.thicknessCm ?? null, preferences),
+        formatOptionalLength(wall?.heightLeftCm ?? null, preferences),
+        formatOptionalLength(wall?.heightRightCm ?? null, preferences),
       ];
     });
   });
@@ -398,6 +395,7 @@ export async function exportDetailedLevelPlanPdf({
   metrics,
   snapshots,
   exportedAt = new Date(),
+  preferences = DEFAULT_USER_PREFERENCES,
 }: ExportDetailedLevelPlanPdfOptions): Promise<string> {
   const renderedRect = svgElement.getBoundingClientRect();
   const renderedAspectRatio = renderedRect.width > 0 && renderedRect.height > 0
@@ -518,7 +516,7 @@ export async function exportDetailedLevelPlanPdf({
   pdf.setTextColor(52, 63, 84);
   pdf.setFontSize(9.5);
   const metricLine1 = [
-    `Surface totale: ${formatArea(metrics.totalAreaM2)}`,
+    `Surface totale: ${formatArea(metrics.totalAreaM2, preferences)}`,
     `Pièces: ${metrics.roomCount}`,
     `Murs exterieurs: ${metrics.exteriorWallsCount}`,
   ].join(' | ');
@@ -526,7 +524,7 @@ export async function exportDetailedLevelPlanPdf({
     `Ouvertures: ${metrics.openingsCount}`,
     `Portes: ${metrics.doorsCount}`,
     `Fenêtres: ${metrics.windowsCount}`,
-    `H min/max: ${formatOptionalLength(metrics.minHeightCm)} / ${formatOptionalLength(metrics.maxHeightCm)}`,
+    `H min/max: ${formatOptionalLength(metrics.minHeightCm, preferences)} / ${formatOptionalLength(metrics.maxHeightCm, preferences)}`,
   ].join(' | ');
   pdf.text(metricLine1, layout.marginMm + 3, cursorY + 6);
   pdf.text(metricLine2, layout.marginMm + 3, cursorY + 12);
@@ -545,12 +543,12 @@ export async function exportDetailedLevelPlanPdf({
     ],
     metrics.rooms.map((room) => [
       room.name,
-      formatArea(room.areaM2),
+      formatArea(room.areaM2, preferences),
       String(room.wallCount),
       String(room.openingsCount),
       String(room.doorsCount),
       String(room.windowsCount),
-      `${formatOptionalLength(room.minHeightCm)} / ${formatOptionalLength(room.maxHeightCm)}`,
+      `${formatOptionalLength(room.minHeightCm, preferences)} / ${formatOptionalLength(room.maxHeightCm, preferences)}`,
     ]),
   );
 
@@ -564,7 +562,7 @@ export async function exportDetailedLevelPlanPdf({
       { label: 'H gauche', widthMm: 28, align: 'right' },
       { label: 'H droite', widthMm: 28, align: 'right' },
     ],
-    buildWallsRows(snapshots),
+    buildWallsRows(snapshots, preferences),
   );
 
   drawTableSection(
@@ -583,10 +581,10 @@ export async function exportDetailedLevelPlanPdf({
       opening.roomName,
       `M${opening.wallIndex + 1}`,
       formatOpeningType(opening.type),
-      formatLengthCm(opening.widthCm),
-      formatLengthCm(opening.heightCm),
-      formatLengthCm(opening.bottomCm),
-      formatLengthCm(opening.offsetCm),
+      formatLength(opening.widthCm, preferences.lengthUnit),
+      formatLength(opening.heightCm, preferences.lengthUnit),
+      formatLength(opening.bottomCm, preferences.lengthUnit),
+      formatLength(opening.offsetCm, preferences.lengthUnit),
       opening.openingId.slice(0, 8),
     ]),
   );

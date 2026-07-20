@@ -56,7 +56,7 @@ describe('Canvas2D', () => {
   it('affiche le nom, la surface, l’icône métier, le repère et l’échelle', () => {
     renderWithMantine(<Canvas2D levels={levels} activeLevelId="niveau-rdc" visibleLevelIds={['niveau-rdc']} />);
     expect(screen.getByText('Cuisine')).toBeInTheDocument();
-    expect(screen.getByText('6.00 m²')).toBeInTheDocument();
+    expect(screen.getByText('6 m²')).toBeInTheDocument();
     expect(screen.getByText('0,0')).toBeInTheDocument();
     expect(screen.getByLabelText(/Échelle graphique/)).toBeInTheDocument();
     expect(screen.getByLabelText('Zoom avant')).toBeInTheDocument();
@@ -70,10 +70,16 @@ describe('Canvas2D', () => {
   it('respecte les options masquant surfaces, icônes et grille', () => {
     const options = { ...DEFAULT_CANVAS_DISPLAY_OPTIONS, grid: false, surfaces: false, roomIcons: false };
     const { container } = renderWithMantine(<Canvas2D levels={levels} activeLevelId="niveau-rdc" visibleLevelIds={['niveau-rdc']} options={options} />);
-    expect(screen.queryByText('6.00 m²')).not.toBeInTheDocument();
+    expect(screen.queryByText('6 m²')).not.toBeInTheDocument();
     expect(container.querySelector('foreignObject')).not.toBeInTheDocument();
     expect(container.querySelector('.canvas2d-background')).toHaveAttribute('fill', '#fff');
     expect(container.querySelector('.canvas-grid')).not.toBeInTheDocument();
+  });
+
+  it('applique les unités préférées aux longueurs et aux surfaces', () => {
+    renderWithMantine(<Canvas2D levels={levels} activeLevelId="niveau-rdc" visibleLevelIds={['niveau-rdc']} lengthUnit="m" surfaceUnit="cm2" />);
+    expect(screen.getByText(/60.000 cm²/)).toBeInTheDocument();
+    expect(screen.getAllByText('3 m')).not.toHaveLength(0);
   });
 
   it('priorise les clics de création même au-dessus d’une pièce existante', () => {

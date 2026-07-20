@@ -5,6 +5,7 @@ import type { RoomType } from '../domain/types';
 import { RoomPreview } from './RoomPreview';
 import type { RoomSnapshot } from '../services/rooms';
 import { RoomTypeIcon } from './RoomTypeIcon';
+import { formatSurfaceFromSquareMeters, type SurfaceUnit } from '../domain/userPreferences';
 
 export type RoomPdfMode = 'plan' | 'détail';
 
@@ -18,13 +19,14 @@ interface RoomCardProps {
   levelName: string;
   areaM2: number;
   canEdit: boolean;
+  surfaceUnit?: SurfaceUnit;
   onOpen(): void;
   onAddNote(): void;
   onDelete(): void;
   onExport(mode: RoomPdfMode): void;
 }
 
-export function RoomCard({ snapshot, levelName, areaM2, canEdit, onOpen, onAddNote, onDelete, onExport }: RoomCardProps) {
+export function RoomCard({ snapshot, levelName, areaM2, canEdit, surfaceUnit = 'm2', onOpen, onAddNote, onDelete, onExport }: RoomCardProps) {
   const roomName = snapshot.room.name.trim() || 'Nouvelle pièce';
   const hasTypeIcon = snapshot.room.type !== 'autre';
 
@@ -32,7 +34,7 @@ export function RoomCard({ snapshot, levelName, areaM2, canEdit, onOpen, onAddNo
     <Button variant="subtle" type="button" className="room-card__open" onClick={onOpen} aria-label={`Ouvrir ${roomName}`}>
       <RoomPreview vertices={snapshot.vertices} walls={snapshot.walls} openings={snapshot.openings} accentColor={snapshot.room.floorColor} />
       <span className="room-card__body">
-        <span className="room-card__titleRow"><span><strong className="room-card__title">{roomName}</strong><span className="room-card__area">{areaM2.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} m²</span></span></span>
+        <span className="room-card__titleRow"><span><strong className="room-card__title">{roomName}</strong><span className="room-card__area">{formatSurfaceFromSquareMeters(areaM2, surfaceUnit)}</span></span></span>
         <span className="room-card__finish">{levelName}</span>
         {hasTypeIcon ? <span className="room-card__type"><RoomTypeIcon type={snapshot.room.type} /> {TYPE_LABELS[snapshot.room.type]}</span> : null}
       </span>

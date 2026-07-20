@@ -46,7 +46,7 @@ describe('PreferencesModal', () => {
       defaultWallHeightCm: 300,
       defaultWallThicknessCm: 10,
     })));
-    expect(await screen.findByRole('status')).toHaveTextContent('Préférences enregistrées.');
+    expect(gateway.save).toHaveBeenCalledOnce();
   });
 
   it('applique le thème enregistré dès le chargement', async () => {

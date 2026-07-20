@@ -26,11 +26,16 @@ import {
 } from '../services/rooms';
 import { DEFAULT_ROOM_FLOOR_COLOR, DEFAULT_ROOM_TYPE } from '../domain/room';
 import { createRectangleRoomGeometryFromPoints } from '../domain/geometry';
+import {
+  supabaseViewSettingsGateway,
+  type ViewSettingsGateway,
+} from '../data/supabase/viewSettings';
 
 interface GlobalEditor2DViewProps {
   projectId: string;
   initialLevelId?: string;
   onLevelChange?(levelId: string): void;
+  viewSettingsGateway?: ViewSettingsGateway;
 }
 
 function message(error: unknown) {
@@ -57,7 +62,12 @@ async function retryOnce<T>(operation: () => Promise<T>): Promise<T> {
   }
 }
 
-export function GlobalEditor2DView({ projectId, initialLevelId = '', onLevelChange }: GlobalEditor2DViewProps) {
+export function GlobalEditor2DView({
+  projectId,
+  initialLevelId = '',
+  onLevelChange,
+  viewSettingsGateway = supabaseViewSettingsGateway,
+}: GlobalEditor2DViewProps) {
   const [project, setProject] = useState<Project | null>(null);
   const [levels, setLevels] = useState<Level[]>([]);
   const [levelData, setLevelData] = useState<CanvasLevelData[]>([]);
@@ -66,10 +76,12 @@ export function GlobalEditor2DView({ projectId, initialLevelId = '', onLevelChan
   const [options, setOptions] = useState<CanvasDisplayOptions>(DEFAULT_CANVAS_DISPLAY_OPTIONS);
   const [loading, setLoading] = useState(Boolean(projectId));
   const [error, setError] = useState('');
+  const [viewSettingsError, setViewSettingsError] = useState('');
   const [canWrite, setCanWrite] = useState(false);
   const [editorSession, setEditorSession] = useState(0);
   const loadSequenceRef = useRef(0);
   const loadedProjectIdRef = useRef('');
+  const viewSettingsSaveRef = useRef<Promise<void>>(Promise.resolve());
 
   const load = async () => {
     const sequence = loadSequenceRef.current + 1;
@@ -82,10 +94,14 @@ export function GlobalEditor2DView({ projectId, initialLevelId = '', onLevelChan
     const preserveCurrentPlan = loadedProjectIdRef.current === projectId;
     setLoading(true);
     setError('');
+    setViewSettingsError('');
     if (!preserveCurrentPlan) {
-      setProject(null); setLevels([]); setLevelData([]); setCanWrite(false); setActiveLevelId(''); setVisibleLevelIds([]);
+      setProject(null); setLevels([]); setLevelData([]); setCanWrite(false); setActiveLevelId(''); setVisibleLevelIds([]); setOptions(DEFAULT_CANVAS_DISPLAY_OPTIONS);
     }
     try {
+      const settingsResult = viewSettingsGateway.load(projectId)
+        .then((value) => ({ value, failed: false as const }))
+        .catch(() => ({ value: null, failed: true as const }));
       const [nextProject, nextLevels, writeAllowed] = await Promise.all([getProject(projectId), listLevelsByProject(projectId), canWriteProject(projectId)]);
       const nextData = await Promise.all(nextLevels.map(async (level): Promise<CanvasLevelData> => {
         const geometry = await retryOnce(() => loadLevelGeometrySnapshot(level.id));
@@ -95,8 +111,11 @@ export function GlobalEditor2DView({ projectId, initialLevelId = '', onLevelChan
       const initiallyVisible = nextLevels.filter(({ isVisible }) => isVisible).map(({ id }) => id);
       const fallbackVisible = initiallyVisible.length ? initiallyVisible : nextLevels[0] ? [nextLevels[0].id] : [];
       const nextActive = nextLevels.some(({ id }) => id === initialLevelId) ? initialLevelId : fallbackVisible[0] ?? '';
+      const loadedSettings = await settingsResult;
       loadedProjectIdRef.current = projectId;
       setProject(nextProject); setLevels(nextLevels); setLevelData(nextData); setVisibleLevelIds(fallbackVisible); setActiveLevelId(nextActive); setCanWrite(writeAllowed);
+      if (loadedSettings.failed) setViewSettingsError('Les options d’affichage n’ont pas pu être relues. Les valeurs par défaut sont utilisées.');
+      else setOptions(loadedSettings.value.display);
       if (nextActive && nextActive !== initialLevelId) onLevelChange?.(nextActive);
     } catch (caught) {
       if (sequence !== loadSequenceRef.current) return;
@@ -112,6 +131,17 @@ export function GlobalEditor2DView({ projectId, initialLevelId = '', onLevelChan
     if (hasSupabaseConfig()) void load();
     return () => { loadSequenceRef.current += 1; };
   }, [projectId]);
+
+  const changeOptions = (nextOptions: CanvasDisplayOptions) => {
+    setOptions(nextOptions);
+    setViewSettingsError('');
+    viewSettingsSaveRef.current = viewSettingsSaveRef.current
+      .catch(() => undefined)
+      .then(() => viewSettingsGateway.saveDisplayOptions(projectId, nextOptions))
+      .catch(() => {
+        setViewSettingsError('Les options d’affichage n’ont pas pu être enregistrées.');
+      });
+  };
 
   const activeLevel = useMemo(() => levels.find(({ id }) => id === activeLevelId) ?? null, [activeLevelId, levels]);
   const validObjects = useMemo(() => new Set(levelData.flatMap(({ level, rooms, notes = [], dimensions = [] }) => [
@@ -136,10 +166,10 @@ export function GlobalEditor2DView({ projectId, initialLevelId = '', onLevelChan
   if (!hasSupabaseConfig()) return <DashboardLayout><div className="dashboard-emptyState" role="alert">Configure Supabase pour afficher le plan.</div></DashboardLayout>;
   if (!projectId) return <DashboardLayout><div className="dashboard-emptyState"><h2>Aucun projet courant</h2><p>Choisis ou crée un projet depuis la barre latérale pour afficher son plan.</p></div></DashboardLayout>;
 
-  return <ActionHistoryProvider key={`${projectId}:${editorSession}`}><SelectionSyncBridge key={projectId} validObjects={validObjects} allowDraftObjects onLevelChange={(id) => { setActiveLevelId(id); setVisibleLevelIds((current) => current.includes(id) ? current : [...current, id]); onLevelChange?.(id); }}><GlobalEditorContent project={project} levels={levels} levelData={levelData} activeLevelId={activeLevelId} visibleLevelIds={visibleLevelIds} options={options} loading={loading} error={error} access={getGlobalEditorAccess(canWrite)} onRetry={async () => { setEditorSession((current) => current + 1); await load(); }} onOptionsChange={setOptions} onToggleLevel={toggleLevel} onActiveLevelChange={(id) => { setActiveLevelId(id); setVisibleLevelIds((current) => current.includes(id) ? current : [...current, id]); onLevelChange?.(id); }} /></SelectionSyncBridge></ActionHistoryProvider>;
+  return <ActionHistoryProvider key={`${projectId}:${editorSession}`}><SelectionSyncBridge key={projectId} validObjects={validObjects} allowDraftObjects onLevelChange={(id) => { setActiveLevelId(id); setVisibleLevelIds((current) => current.includes(id) ? current : [...current, id]); onLevelChange?.(id); }}><GlobalEditorContent project={project} levels={levels} levelData={levelData} activeLevelId={activeLevelId} visibleLevelIds={visibleLevelIds} options={options} loading={loading} error={error} viewSettingsError={viewSettingsError} access={getGlobalEditorAccess(canWrite)} onRetry={async () => { setEditorSession((current) => current + 1); await load(); }} onOptionsChange={changeOptions} onToggleLevel={toggleLevel} onActiveLevelChange={(id) => { setActiveLevelId(id); setVisibleLevelIds((current) => current.includes(id) ? current : [...current, id]); onLevelChange?.(id); }} /></SelectionSyncBridge></ActionHistoryProvider>;
 }
 
-interface GlobalEditorContentProps { project: Project | null; levels: Level[]; levelData: CanvasLevelData[]; activeLevelId: string; visibleLevelIds: string[]; options: CanvasDisplayOptions; loading: boolean; error: string; access: GlobalEditorAccess; onRetry(): Promise<void>; onOptionsChange(value: CanvasDisplayOptions): void; onToggleLevel(id: string, checked: boolean): void; onActiveLevelChange(id: string): void }
+interface GlobalEditorContentProps { project: Project | null; levels: Level[]; levelData: CanvasLevelData[]; activeLevelId: string; visibleLevelIds: string[]; options: CanvasDisplayOptions; loading: boolean; error: string; viewSettingsError?: string; access: GlobalEditorAccess; onRetry(): Promise<void>; onOptionsChange(value: CanvasDisplayOptions): void; onToggleLevel(id: string, checked: boolean): void; onActiveLevelChange(id: string): void }
 
 interface PendingTopology {
   levelId: string;
@@ -147,7 +177,7 @@ interface PendingTopology {
   resultRoomIds: string[];
 }
 
-export function GlobalEditorContent({ project, levels, levelData, activeLevelId, visibleLevelIds, options, loading, error, access, onRetry, onOptionsChange, onToggleLevel, onActiveLevelChange }: GlobalEditorContentProps) {
+export function GlobalEditorContent({ project, levels, levelData, activeLevelId, visibleLevelIds, options, loading, error, viewSettingsError = '', access, onRetry, onOptionsChange, onToggleLevel, onActiveLevelChange }: GlobalEditorContentProps) {
   const { setSourceDirty } = useUnsavedChanges();
   const { preferences } = usePreferences(); const { selection, select, clear: clearSelection } = useEditorSelection(); const { canUndo, canRedo, record, undo, redo } = useActionHistory(); const activeLevel = levels.find(({ id }) => id === activeLevelId) ?? null;
   const [workingLevelData, setWorkingLevelData] = useState(levelData);
@@ -505,6 +535,7 @@ export function GlobalEditorContent({ project, levels, levelData, activeLevelId,
     {!loading && hasUnsavedChanges && saveStatus === 'error' ? <Alert color="red" role="status">Échec de l’enregistrement automatique{saveError ? ` : ${saveError}` : '.'} <Button type="button" variant="subtle" color="red" onClick={() => void discardDraftAndReload()}>Abandonner le brouillon et recharger</Button></Alert> : null}
     {selectionLocked ? <Alert color="yellow" icon={<LuLock aria-hidden />} role="status">L’élément sélectionné est verrouillé. Ses informations restent consultables, mais il ne peut pas être modifié.</Alert> : null}
     {geometryError ? <div className="dashboard-banner dashboard-banner--error" role="alert">{geometryError}</div> : null}
+    {viewSettingsError ? <div className="dashboard-banner dashboard-banner--error" role="alert">{viewSettingsError}</div> : null}
     {error ? <div className="dashboard-banner dashboard-banner--error" role="alert">{error}<Button type="button" onClick={() => void discardDraftAndReload()}>Abandonner le brouillon et recharger</Button></div> : null}
     <section className="global-editor__levelBar">
       <Menu position="bottom-start" withinPortal shadow="md">
@@ -519,8 +550,8 @@ export function GlobalEditorContent({ project, levels, levelData, activeLevelId,
     </section>
     <section className="global-editor__body">
       <EditorCreationPanel levels={levels} levelData={workingLevelData} activeLevelId={activeLevelId} readOnly={access.readOnly || saveStatus === 'saving'} selectionLocked={selectionLocked} creationMessage={creationMessage} onStartRoomCreation={() => { setCreationMode(true); setCreationFirstPoint(null); setCreationPreviewPoint(null); }} />
-      <div className="global-editor__canvasArea">{loading && !activeLevel ? <div className="dashboard-loading" aria-live="polite">Chargement du plan…</div> : !activeLevel ? <div className="dashboard-emptyState"><h2>Aucun niveau</h2><p>Le projet doit contenir au moins un niveau visible.</p></div> : <Canvas2D levels={workingLevelData} activeLevelId={activeLevel.id} visibleLevelIds={visibleLevelIds} viewportStateKey={`global:${project?.id ?? 'none'}`} options={options} selection={selection} onSelect={select} editingEnabled={!access.readOnly && !creationMode && saveStatus !== 'saving'} creationActive={creationMode} creationFirstPoint={creationFirstPoint} creationPreviewPoint={creationPreviewPoint} onCanvasPoint={(point) => void createAtPoint(point)} onCanvasHover={(point) => setCreationPreviewPoint(point ? snapGlobalPoint(point, allVertices, null) : null)} snapPoint={snapVertexPoint} onVertexMove={(roomId, vertexId, point) => void moveVertex(roomId, vertexId, point)} onVertexMoveEnd={(roomId) => normalizeMovedRoom(roomId)} onRoomMove={(roomId, delta) => void moveRoom(roomId, delta)} />}</div>
-      <EditorDetailPanel data={activeData} />
+      <div className="global-editor__canvasArea">{loading && !activeLevel ? <div className="dashboard-loading" aria-live="polite">Chargement du plan…</div> : !activeLevel ? <div className="dashboard-emptyState"><h2>Aucun niveau</h2><p>Le projet doit contenir au moins un niveau visible.</p></div> : <Canvas2D levels={workingLevelData} activeLevelId={activeLevel.id} visibleLevelIds={visibleLevelIds} viewportStateKey={`global:${project?.id ?? 'none'}`} options={options} lengthUnit={preferences.lengthUnit} surfaceUnit={preferences.surfaceUnit} selection={selection} onSelect={select} editingEnabled={!access.readOnly && !creationMode && saveStatus !== 'saving'} creationActive={creationMode} creationFirstPoint={creationFirstPoint} creationPreviewPoint={creationPreviewPoint} onCanvasPoint={(point) => void createAtPoint(point)} onCanvasHover={(point) => setCreationPreviewPoint(point ? snapGlobalPoint(point, allVertices, null) : null)} snapPoint={snapVertexPoint} onVertexMove={(roomId, vertexId, point) => void moveVertex(roomId, vertexId, point)} onVertexMoveEnd={(roomId) => normalizeMovedRoom(roomId)} onRoomMove={(roomId, delta) => void moveRoom(roomId, delta)} />}</div>
+      <EditorDetailPanel data={activeData} lengthUnit={preferences.lengthUnit} surfaceUnit={preferences.surfaceUnit} />
     </section>
   </DashboardLayout>;
 }
