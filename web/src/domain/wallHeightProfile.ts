@@ -296,13 +296,17 @@ function validateFaceProfile(
         'invalid_height', wallId, side, [point.id], 'La hauteur doit être strictement positive.',
       );
     }
-    if (index > 0 && point.positionCm <= points[index - 1].positionCm) {
+    const previousPositionCm = index > 0
+      ? normalizeProfilePosition(points[index - 1].positionCm)
+      : null;
+    const positionCm = normalizeProfilePosition(point.positionCm);
+    if (previousPositionCm !== null && positionCm <= previousPositionCm) {
       return profileIssue(
-        point.positionCm === points[index - 1].positionCm ? 'duplicate_position' : 'invalid_order',
+        positionCm === previousPositionCm ? 'duplicate_position' : 'invalid_order',
         wallId,
         side,
         [points[index - 1].id, point.id],
-        'Les positions doivent être uniques et strictement croissantes.',
+        'Les positions doivent être uniques au centième de centimètre et strictement croissantes.',
       );
     }
   }

@@ -387,7 +387,17 @@ function sliceFaceProfile(
   const internal = profile.filter(({ positionCm }) => (
     positionCm > rangeStartCm && positionCm < rangeEndCm
   ));
-  const positions = [rangeStartCm, ...internal.map(({ positionCm }) => positionCm), rangeEndCm];
+  const targetLengthCm = normalizeCoordinateCm(rangeEndCm - rangeStartCm);
+  const positions = [
+    rangeStartCm,
+    ...internal
+      .map(({ positionCm }) => positionCm)
+      .filter((positionCm) => {
+        const projectedPositionCm = normalizeCoordinateCm(positionCm - rangeStartCm);
+        return projectedPositionCm > 0 && projectedPositionCm < targetLengthCm;
+      }),
+    rangeEndCm,
+  ];
   return positions.map((positionCm, order) => {
     const existing = profile.find((point) => point.positionCm === positionCm);
     return {
@@ -395,7 +405,9 @@ function sliceFaceProfile(
       wallId,
       faceSide,
       order,
-      positionCm: positionCm - rangeStartCm,
+      positionCm: order === positions.length - 1
+        ? targetLengthCm
+        : normalizeCoordinateCm(positionCm - rangeStartCm),
       heightCm: wallHeightAtPosition(profile, positionCm) ?? existing?.heightCm ?? 250,
       isLocked: preserveIds && existing?.isLocked === true,
     };

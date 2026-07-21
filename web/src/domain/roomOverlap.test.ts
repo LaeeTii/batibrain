@@ -330,4 +330,47 @@ describe('normalisation des chevauchements de pièces', () => {
       [positionCm, heightCm]
     ))).toContainEqual([25, 300]);
   });
+
+  it('persiste les profils découpés sans collision au centième de centimètre', () => {
+    const existing = room('A', 0, 0, 400, 300);
+    existing.vertices = existing.vertices.map((vertex) => ({
+      ...vertex,
+      x: vertex.x + vertex.y / 3,
+    }));
+    existing.walls = syncWallsWithVertices(existing.vertices, existing.walls);
+    const support = existing.walls[1];
+    const supportStart = existing.vertices.find(({ id }) => id === support.startVertexId)!;
+    const supportEnd = existing.vertices.find(({ id }) => id === support.endVertexId)!;
+    const supportLengthCm = Math.hypot(
+      supportEnd.x - supportStart.x,
+      supportEnd.y - supportStart.y,
+    );
+    const profiles = createUniformWallHeightProfiles(support.id, supportLengthCm, 250);
+    for (const side of ['gauche', 'droite'] as const) {
+      profiles[side].splice(1, 0, {
+        id: `${side}-proche-découpe`,
+        wallId: support.id,
+        faceSide: side,
+        order: 1,
+        positionCm: 264.22,
+        heightCm: 275,
+        isLocked: false,
+      });
+      profiles[side][2].order = 2;
+    }
+    existing.walls[1] = { ...support, heightProfiles: profiles, heightProfilesLinked: true };
+
+    const result = normalizeCreatedRoomOverlaps(
+      room('B', 450, 0, 50, 250.66),
+      [existing],
+    );
+
+    result.snapshots.flatMap(({ walls }) => walls).forEach((wall) => {
+      for (const side of ['gauche', 'droite'] as const) {
+        const positions = wall.heightProfiles?.[side].map(({ positionCm }) => positionCm) ?? [];
+        expect(new Set(positions.map((positionCm) => positionCm.toFixed(2))).size)
+          .toBe(positions.length);
+      }
+    });
+  });
 });

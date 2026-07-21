@@ -102,6 +102,18 @@ describe('validation des profils', () => {
     profiles.droite[1].heightCm = 300;
     expect(validateWallHeightProfiles(wall(), profiles, 200)[0]?.code).toBe('linked_profiles_mismatch');
   });
+
+  it('refuse deux positions qui se confondent à la précision de PostgreSQL', () => {
+    const profiles = createUniformWallHeightProfiles('mur-1', 300, 250, idSequence());
+    profiles.gauche.splice(1, 0,
+      { ...profiles.gauche[0], id: 'point-1', order: 1, positionCm: 264.22 },
+      { ...profiles.gauche[0], id: 'point-2', order: 2, positionCm: 264.224 },
+    );
+    profiles.gauche[3].order = 3;
+
+    expect(validateWallHeightProfiles(wall({ heightProfilesLinked: false }), profiles, 300)[0])
+      .toMatchObject({ code: 'duplicate_position', pointIds: ['point-1', 'point-2'] });
+  });
 });
 
 describe('redimensionnement des profils', () => {
