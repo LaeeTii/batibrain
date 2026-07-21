@@ -328,7 +328,8 @@ Champs minimaux:
 - `widthCm`
 - `heightCm`
 - `bottomCm` (allège)
-- `orientation` (si applicable)
+- `orientation` (`normal` ou `inverse`)
+- `hingeSide` (`left` ou `right`)
 
 Règles:
 - Une ouverture doit rester entièrement comprise dans son mur support.
@@ -339,15 +340,17 @@ Règles:
 - Une ouverture extérieure est compatible uniquement avec un mur lié à une pièce.
 - Après une modification topologique, une ouverture devenue incompatible avec la qualification calculée du mur est supprimée.
 - Une ouverture ne possède aucun verrou géométrique propre.
+- Le sens et le côté ouvrant sont persistés pour tous les types d'ouverture et modifiables indépendamment.
 - Sa position, ses dimensions, ses propriétés et sa suppression restent modifiables lorsque son mur support est verrouillé, sous réserve des droits projet et des autres validations.
 - Aucune colonne de verrou n’est persistée sur une ouverture.
 
 ## Frontière transactionnelle géométrique
 
-- `load_level_geometry(levelId)` renvoie les pièces actives, sommets partagés, murs, relations, profils complets, ouvertures, templates et la révision courante du niveau.
+- `load_level_geometry(levelId)` renvoie les pièces actives ainsi que tous les sommets et murs du niveau, y compris les murs autonomes sans pièce, avec leurs relations, profils complets, ouvertures, templates et la révision courante.
 - `save_level_geometry(levelId, expectedRevision, snapshot)` est l’unique écriture géométrique V1.
 - Le domaine valide l’instantané avant l’appel: contours, arêtes, cardinalité, profils, ouvertures et verrous.
 - PostgreSQL verrouille la ligne du niveau, contrôle la révision attendue et revérifie les sommets et points de profils verrouillés avant la première mutation.
+- Avant de réécrire l'instantané, la transaction retire aussi les murs autonomes déjà persistés et leurs sommets devenus orphelins; leurs identifiants peuvent ainsi être réutilisés sans conflit lors des sauvegardes successives.
 - Un déverrouillage et la modification du même point peuvent être persistés ensemble.
 - Toute erreur restaure l’état complet précédent, y compris ouvertures, profils et révision.
 - Les anciennes RPC partielles et les écritures directes des tables géométriques ne sont plus exposées au rôle applicatif.
@@ -425,7 +428,12 @@ Champs minimaux:
 - `snapIntersections`
 - `snapWalls`
 - `snapMidpoints`
+- `snapGuides`
 - `snapDistanceCm`
+
+Règles:
+- `snapGuides` vaut `true` par défaut et active l'accrochage séparé sur les axes horizontaux et verticaux des sommets de référence.
+- Les lignes de guide sont un état visuel temporaire calculé pendant le geste; seules les préférences de magnétisme sont persistées.
 
 ### SelectionState
 État de sélection transverse.

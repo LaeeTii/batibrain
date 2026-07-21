@@ -1,14 +1,18 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActionIcon, Checkbox } from '@mantine/core';
+import { ActionIcon, Checkbox, Menu, NumberInput } from '@mantine/core';
 import {
   LuBetweenHorizontalStart,
   LuDraftingCompass,
   LuEyeOff,
   LuGrid3X3,
+  LuLock,
+  LuLockOpen,
+  LuMagnet,
   LuRuler,
   LuScan,
   LuShapes,
   LuStickyNote,
+  LuTrash2,
   LuZoomIn,
   LuZoomOut,
 } from 'react-icons/lu';
@@ -19,12 +23,14 @@ import {
   MAX_CANVAS_ZOOM,
   MIN_CANVAS_ZOOM,
   expandViewportToCanvas,
+  fitViewportToPoints,
   panViewport,
   zoomViewport,
   type CanvasViewport,
 } from '../domain/canvasViewport';
-import type { Level, Point } from '../domain/types';
+import type { Level, Point, Wall } from '../domain/types';
 import type { EditorSelection } from '../domain/editorSelection';
+import type { LevelGeometrySnapshot } from '../domain/levelGeometry';
 import { roomLockState, wallLockState } from '../domain/manualLock';
 import {
   formatLength,
@@ -35,9 +41,12 @@ import {
 import {
   DEFAULT_CANVAS_DISPLAY_OPTIONS,
   type CanvasDisplayOptions,
+  type CanvasSnappingOptions,
 } from '../domain/viewSettings';
 import { uniqueLevelOpenings, uniqueLevelWalls } from '../domain/roomOverlap';
+import type { SnapGuide, SnapPointResult } from '../domain/globalGeometry';
 import type { RoomSnapshot } from '../services/rooms';
+import { RoomTypeIcon } from './RoomTypeIcon';
 
 type DragState = { x: number; y: number; viewport: CanvasViewport };
 
@@ -67,6 +76,8 @@ export interface CanvasLevelData {
   level: Level;
   rooms: RoomSnapshot[];
   geometryRevision?: number;
+  canonical?: LevelGeometrySnapshot;
+  detachedWalls?: { id: string; start: Point & { id: string; isLocked?: boolean }; end: Point & { id: string; isLocked?: boolean }; wall: Wall }[];
   notes?: CanvasNote[];
   dimensions?: CanvasDimension[];
 }
@@ -87,12 +98,21 @@ interface Canvas2DProps {
   creationPreviewPoint?: Point | null;
   creationActive?: boolean;
   onCanvasPoint?(point: Point): void;
+  onInteractionSelect?(selection: EditorSelection): void;
   onCanvasHover?(point: Point | null): void;
-  snapPoint?(point: Point, roomId: string, vertexId: string): Point;
+  onCanvasBlankClick?(): void;
+  snapCanvasPoint?(point: Point): Point | SnapPointResult;
+  snapPoint?(point: Point, roomId: string, vertexId: string): Point | SnapPointResult;
+  snapDetachedPoint?(point: Point, vertexId: string): Point | SnapPointResult;
+  onVertexMoveStart?(roomId: string, vertexId: string): void;
   onVertexMove?(roomId: string, vertexId: string, point: Point): void;
   onVertexMoveEnd?(roomId: string, vertexId: string, point: Point): void;
-  onVertexContextMenu?(roomId: string, vertexId: string): void;
+  onVertexLockToggle?(roomId: string, vertexId: string): void;
+  onVertexDelete?(roomId: string, vertexId: string): void;
   onRoomMove?(roomId: string, delta: Point): void;
+  onDetachedVertexMoveStart?(vertexId: string): void;
+  onDetachedVertexMove?(vertexId: string, point: Point): void;
+  onDetachedVertexMoveEnd?(vertexId: string, point: Point): void;
 }
 
 const PADDING_CM = 120;
@@ -119,6 +139,10 @@ function gridLines(viewport: CanvasViewport, stepCm = GRID_STEP_CM) {
   return { vertical, horizontal };
 }
 
+function normalizeSnapResult(value: Point | SnapPointResult): SnapPointResult {
+  return 'point' in value ? value : { point: value, guides: [] };
+}
+
 function segmentMeasurementPosition(start: Point, end: Point, roomCenter: Point): Point {
   const length = Math.hypot(end.x - start.x, end.y - start.y);
   const midpoint = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
@@ -137,25 +161,13 @@ function segmentMeasurementPosition(start: Point, end: Point, roomCenter: Point)
 function initialViewport(levels: CanvasLevelData[], visibleIds: Set<string>): CanvasViewport {
   const vertices = levels
     .filter(({ level }) => visibleIds.has(level.id))
-    .flatMap(({ rooms }) => rooms.flatMap(({ vertices: roomVertices }) => roomVertices));
+    .flatMap(({ rooms, detachedWalls = [] }) => [
+      ...rooms.flatMap(({ vertices: roomVertices }) => roomVertices),
+      ...detachedWalls.flatMap(({ start, end }) => [start, end]),
+    ]);
 
-  if (vertices.length === 0) {
-    return { x: -500, y: -350, width: 1000, height: 700 };
-  }
-
-  const xs = vertices.map(({ x }) => x);
-  const ys = vertices.map(({ y }) => y);
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
-
-  return {
-    x: minX - PADDING_CM,
-    y: minY - PADDING_CM,
-    width: Math.max(MIN_VIEW_SIZE_CM, maxX - minX + PADDING_CM * 2),
-    height: Math.max(MIN_VIEW_SIZE_CM, maxY - minY + PADDING_CM * 2),
-  };
+  return fitViewportToPoints(vertices, PADDING_CM, MIN_VIEW_SIZE_CM)
+    ?? { x: -500, y: -350, width: 1000, height: 700 };
 }
 
 function levelAppearance(levelNumber: number, activeNumber: number) {
@@ -203,33 +215,6 @@ function openingSegment(snapshot: RoomSnapshot, openingId: string) {
     x2: start.x + (end.x - start.x) * to,
     y2: start.y + (end.y - start.y) * to,
   };
-}
-
-function roomIcon(roomType: string): string {
-  switch (roomType) {
-    case 'cuisine':
-      return 'C';
-    case 'chambre':
-      return 'Ch';
-    case 'salon':
-      return 'S';
-    case 'salle_de_bain':
-      return 'SdB';
-    case 'toilettes':
-      return 'WC';
-    case 'bureau':
-      return 'B';
-    case 'garage':
-      return 'G';
-    case 'hall':
-      return 'H';
-    case 'salle_de_jeu':
-      return 'J';
-    case 'bibliotheque':
-      return 'Bib';
-    default:
-      return '';
-  }
 }
 
 export function CanvasOverlayMeasurements({ snapshot, options, lengthUnit = 'cm' }: { snapshot: RoomSnapshot; options: CanvasDisplayOptions; lengthUnit?: LengthUnit }) {
@@ -338,6 +323,43 @@ export function CanvasDisplayOptionsMenu({ value, onChange }: { value: CanvasDis
   );
 }
 
+export function CanvasSnappingOptionsMenu({ value, onChange }: { value: CanvasSnappingOptions; onChange(value: CanvasSnappingOptions): void }) {
+  const items = [
+    ['grid', 'Grille'],
+    ['vertices', 'Sommets'],
+    ['intersections', 'Intersections'],
+    ['walls', 'Murs'],
+    ['midpoints', 'Milieux'],
+    ['guides', 'Guides orthogonaux'],
+  ] as const;
+
+  return (
+    <div className="canvas2d-options" aria-label="Options de magnétisme">
+      {items.map(([key, label]) => (
+        <div className="canvas2d-options__item" key={key}>
+          <Checkbox
+            checked={value[key]}
+            onChange={(event) => onChange({ ...value, [key]: event.currentTarget.checked })}
+            aria-label={label}
+          />
+          <LuMagnet aria-hidden />
+          <span>{label}</span>
+        </div>
+      ))}
+      <NumberInput
+        label="Distance de capture (cm)"
+        min={0.01}
+        decimalScale={2}
+        value={value.distanceCm}
+        onChange={(distanceCm) => {
+          const nextDistance = Number(distanceCm);
+          if (Number.isFinite(nextDistance) && nextDistance > 0) onChange({ ...value, distanceCm: nextDistance });
+        }}
+      />
+    </div>
+  );
+}
+
 export function Canvas2D({
   levels,
   activeLevelId,
@@ -354,12 +376,21 @@ export function Canvas2D({
   creationPreviewPoint = null,
   creationActive = false,
   onCanvasPoint,
+  onInteractionSelect,
   onCanvasHover,
+  onCanvasBlankClick,
+  snapCanvasPoint,
   snapPoint,
+  snapDetachedPoint,
+  onVertexMoveStart,
   onVertexMove,
   onVertexMoveEnd,
-  onVertexContextMenu,
+  onVertexLockToggle,
+  onVertexDelete,
   onRoomMove,
+  onDetachedVertexMoveStart,
+  onDetachedVertexMove,
+  onDetachedVertexMoveEnd,
 }: Canvas2DProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [canvasWidth, setCanvasWidth] = useState(900);
@@ -367,12 +398,27 @@ export function Canvas2D({
   const roomDragRef = useRef<{ roomId: string; start: Point } | null>(null);
   const pointerMovedRef = useRef(false);
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+  const [snapGuides, setSnapGuides] = useState<SnapGuide[]>([]);
+  const [vertexMenu, setVertexMenu] = useState<{
+    roomId: string;
+    vertexId: string;
+    x: number;
+    y: number;
+    isLocked: boolean;
+    canDelete: boolean;
+  } | null>(null);
 
   const visibleIds = useMemo(() => new Set(visibleLevelIds), [visibleLevelIds]);
+  const hasVisibleGeometry = useMemo(() => levels.some(({ level, rooms, detachedWalls = [] }) => (
+    visibleIds.has(level.id) && (rooms.some(({ vertices }) => vertices.length > 0) || detachedWalls.length > 0)
+  )), [levels, visibleIds]);
   const resetViewport = useMemo(() => initialViewport(levels, visibleIds), [levels, visibleIds]);
+  const initialCachedViewport = viewportStateKey ? viewportStateCache.get(viewportStateKey) : undefined;
   const [viewport, setViewport] = useState(() => (
-    viewportStateKey ? (viewportStateCache.get(viewportStateKey) ?? resetViewport) : resetViewport
+    initialCachedViewport ?? resetViewport
   ));
+  const viewportStateKeyRef = useRef(viewportStateKey);
+  const geometryViewportInitializedRef = useRef(Boolean(initialCachedViewport || hasVisibleGeometry));
 
   useEffect(() => {
     if (!containerRef.current) {
@@ -389,23 +435,33 @@ export function Canvas2D({
   }, []);
 
   useEffect(() => {
-    if (!viewportStateKey) {
-      return;
-    }
-
-    const cached = viewportStateCache.get(viewportStateKey);
-    if (cached) {
-      setViewport(cached);
-    }
-  }, [viewportStateKey]);
-
-  useEffect(() => {
-    if (!viewportStateKey) {
+    if (!viewportStateKey || viewportStateKeyRef.current !== viewportStateKey || !geometryViewportInitializedRef.current) {
       return;
     }
 
     viewportStateCache.set(viewportStateKey, viewport);
   }, [viewport, viewportStateKey]);
+
+  useEffect(() => {
+    if (viewportStateKeyRef.current !== viewportStateKey) {
+      viewportStateKeyRef.current = viewportStateKey;
+      const cached = viewportStateKey ? viewportStateCache.get(viewportStateKey) : undefined;
+      geometryViewportInitializedRef.current = Boolean(cached || hasVisibleGeometry);
+      setViewport(cached ?? resetViewport);
+      return;
+    }
+
+    if (!geometryViewportInitializedRef.current && hasVisibleGeometry) {
+      geometryViewportInitializedRef.current = true;
+      setViewport(resetViewport);
+    }
+  }, [hasVisibleGeometry, resetViewport, viewportStateKey]);
+
+  useEffect(() => {
+    if (!creationActive) {
+      setSnapGuides([]);
+    }
+  }, [creationActive]);
 
   const scale = Math.min(canvasWidth / viewport.width, height / viewport.height);
   const offsetX = (canvasWidth - viewport.width * scale) / 2;
@@ -467,6 +523,7 @@ export function Canvas2D({
         width={canvasWidth}
         height={height}
         onMouseDown={(event) => {
+          setVertexMenu(null);
           if (!creationActive) {
             return;
           }
@@ -481,7 +538,12 @@ export function Canvas2D({
           }
 
           if (creationActive) {
-            onCanvasHover?.(getPointerWorldPoint(event.target.getStage()));
+            const pointer = getPointerWorldPoint(event.target.getStage());
+            if (pointer) {
+              const snapped = normalizeSnapResult(snapCanvasPoint?.(pointer) ?? pointer);
+              setSnapGuides(snapped.guides);
+              onCanvasHover?.(snapped.point);
+            }
           }
 
           updatePan(event.evt.clientX, event.evt.clientY);
@@ -493,7 +555,9 @@ export function Canvas2D({
 
           const point = getPointerWorldPoint(event.target.getStage());
           if (point) {
-            onCanvasPoint(point);
+            const snapped = normalizeSnapResult(snapCanvasPoint?.(point) ?? point);
+            setSnapGuides(snapped.guides);
+            onCanvasPoint(snapped.point);
           }
         }}
         onMouseUp={(event) => {
@@ -515,6 +579,7 @@ export function Canvas2D({
         onMouseLeave={() => {
           setDrag(null);
           pointerStartRef.current = null;
+          setSnapGuides([]);
           if (creationActive) {
             onCanvasHover?.(null);
           }
@@ -534,6 +599,11 @@ export function Canvas2D({
 
               if (!creationActive) {
                 startPan(event.evt.clientX, event.evt.clientY);
+              }
+            }}
+            onClick={() => {
+              if (!creationActive && !pointerMovedRef.current) {
+                onCanvasBlankClick?.();
               }
             }}
           />
@@ -582,7 +652,7 @@ export function Canvas2D({
           {levels
             .filter(({ level }) => visibleIds.has(level.id))
             .sort((a, b) => a.level.number - b.level.number)
-            .map(({ level, rooms, notes = [], dimensions = [] }) => {
+            .map(({ level, rooms, detachedWalls = [], notes = [], dimensions = [] }) => {
               const appearance = levelAppearance(level.number, activeNumber);
               const walls = uniqueLevelWalls(rooms);
               const openings = uniqueLevelOpenings(rooms);
@@ -600,13 +670,13 @@ export function Canvas2D({
                         <Line
                           points={points}
                           closed
-                          fill={appearance.fill}
+                          fill={snapshot.room.floorColor || appearance.fill}
                           stroke={isRoomSelected ? '#6757ff' : snapshot.walls.length === 0 ? appearance.stroke : 'rgba(0,0,0,0)'}
                           strokeWidth={isRoomSelected ? 8 : snapshot.walls.length === 0 ? 4 : 0}
-                          onClick={() => {
-                            if (!creationActive && isActiveLevel) {
-                              onSelect?.({ source: 'canvas', type: 'room', id: snapshot.room.id, levelId: level.id });
-                            }
+                          onClick={(event) => {
+                            if (!isActiveLevel) return;
+                            const next = { source: 'canvas', type: 'room', id: snapshot.room.id, levelId: level.id } as const;
+                            if (creationActive && onInteractionSelect) onInteractionSelect(next); else if (!creationActive) onSelect?.(next);
                           }}
                           onMouseDown={(event) => {
                             if (!isActiveLevel || !editingEnabled || !isRoomSelected) {
@@ -630,10 +700,6 @@ export function Canvas2D({
                             fill="#334155"
                           />
                         ) : null}
-                        {options.roomIcons && snapshot.room.type !== 'autre' ? (
-                          <Text x={center.x - 12} y={center.y + 24} text={roomIcon(snapshot.room.type)} fontSize={12} fill="#475569" />
-                        ) : null}
-
                         <CanvasOverlayMeasurements snapshot={snapshot} options={options} lengthUnit={lengthUnit} />
 
                       </Group>
@@ -654,11 +720,52 @@ export function Canvas2D({
                         points={[start.x, start.y, end.x, end.y]}
                         stroke={isWallSelected ? '#6757ff' : wallLockState(wall, owner?.vertices ?? []) ? '#dc2626' : appearance.stroke}
                         strokeWidth={isWallSelected ? 10 : 4}
-                        onClick={() => {
-                          if (!creationActive && isActiveLevel) onSelect?.({ source: 'canvas', type: 'wall', id: wall.id, levelId: level.id });
+                        onClick={(event) => {
+                          if (!isActiveLevel) return;
+                          const next = { source: 'canvas', type: 'wall', id: wall.id, levelId: level.id } as const;
+                          if (creationActive && onInteractionSelect) onInteractionSelect(next); else if (!creationActive) onSelect?.(next);
                         }}
                       />
                     );
+                  })}
+
+                  {detachedWalls.map(({ id, start, end }) => {
+                    const selected = selection?.type === 'wall' && selection.id === id;
+                    return <Group key={id}>
+                      <Line name="canvas-detached-wall" points={[start.x, start.y, end.x, end.y]} stroke={selected ? '#6757ff' : appearance.stroke} strokeWidth={selected ? 10 : 4} dash={[10, 5]} onClick={() => {
+                        if (!isActiveLevel) return;
+                        const next = { source: 'canvas', type: 'wall', id, levelId: level.id } as const;
+                        if (creationActive && onInteractionSelect) onInteractionSelect(next); else if (!creationActive) onSelect?.(next);
+                      }} />
+                      {selected && isActiveLevel ? [start, end].map((vertex) => <Circle
+                        key={`${id}:${vertex.id}`}
+                        name="canvas-detached-vertex"
+                        x={vertex.x}
+                        y={vertex.y}
+                        radius={8}
+                        fill={vertex.isLocked ? '#dc2626' : '#ffffff'}
+                        stroke="#6757ff"
+                        strokeWidth={3}
+                        draggable={editingEnabled && !vertex.isLocked}
+                        onDragStart={() => {
+                          setSnapGuides([]);
+                          onDetachedVertexMoveStart?.(vertex.id);
+                        }}
+                        onDragMove={(event) => {
+                          const snapped = normalizeSnapResult(snapDetachedPoint?.({ x: event.target.x(), y: event.target.y() }, vertex.id) ?? { x: event.target.x(), y: event.target.y() });
+                          event.target.position(snapped.point);
+                          setSnapGuides(snapped.guides);
+                          onDetachedVertexMove?.(vertex.id, snapped.point);
+                        }}
+                        onDragEnd={(event) => {
+                          const snapped = normalizeSnapResult(snapDetachedPoint?.({ x: event.target.x(), y: event.target.y() }, vertex.id) ?? { x: event.target.x(), y: event.target.y() });
+                          event.target.position(snapped.point);
+                          onDetachedVertexMove?.(vertex.id, snapped.point);
+                          onDetachedVertexMoveEnd?.(vertex.id, snapped.point);
+                          setSnapGuides([]);
+                        }}
+                      />) : null}
+                    </Group>;
                   })}
 
                   {openings.map((opening) => {
@@ -673,8 +780,10 @@ export function Canvas2D({
                         points={[segment.x1, segment.y1, segment.x2, segment.y2]}
                         stroke={isOpeningSelected ? '#6757ff' : '#ffffff'}
                         strokeWidth={isOpeningSelected ? 12 : 8}
-                        onClick={() => {
-                          if (!creationActive && isActiveLevel) onSelect?.({ source: 'canvas', type: 'opening', id: opening.id, levelId: level.id });
+                        onClick={(event) => {
+                          if (!isActiveLevel) return;
+                          const next = { source: 'canvas', type: 'opening', id: opening.id, levelId: level.id } as const;
+                          if (creationActive && onInteractionSelect) onInteractionSelect(next); else if (!creationActive) onSelect?.(next);
                         }}
                       />
                     );
@@ -682,8 +791,10 @@ export function Canvas2D({
 
                   {options.dimensions
                     ? dimensions.map((dimension) => (
-                        <Group key={dimension.id} onClick={() => {
-                          if (!creationActive && isActiveLevel) onSelect?.({ source: 'canvas', type: 'dimension', id: dimension.id, levelId: level.id });
+                        <Group key={dimension.id} onClick={(event) => {
+                          if (!isActiveLevel) return;
+                          const next = { source: 'canvas', type: 'dimension', id: dimension.id, levelId: level.id } as const;
+                          if (creationActive && onInteractionSelect) onInteractionSelect(next); else if (!creationActive) onSelect?.(next);
                         }}>
                           <Line points={[dimension.start.x, dimension.start.y, dimension.end.x, dimension.end.y]} stroke="#334155" strokeWidth={1.5} />
                           <Text
@@ -699,8 +810,10 @@ export function Canvas2D({
 
                   {options.notes
                     ? notes.map((note) => (
-                        <Group key={note.id} onClick={() => {
-                          if (!creationActive && isActiveLevel) onSelect?.({ source: 'canvas', type: 'note', id: note.id, levelId: level.id });
+                        <Group key={note.id} onClick={(event) => {
+                          if (!isActiveLevel) return;
+                          const next = { source: 'canvas', type: 'note', id: note.id, levelId: level.id } as const;
+                          if (creationActive && onInteractionSelect) onInteractionSelect(next); else if (!creationActive) onSelect?.(next);
                         }}>
                           <Circle x={note.position.x} y={note.position.y} radius={10} fill="#fde68a" stroke="#f59e0b" strokeWidth={1} />
                           <Text x={note.position.x + 14} y={note.position.y - 5} text={note.text} fontSize={11} fill="#7c2d12" />
@@ -726,33 +839,68 @@ export function Canvas2D({
                   draggable={!vertex.isLocked}
                   onContextMenu={(event) => {
                     event.evt.preventDefault();
-                    onVertexContextMenu?.(selectedEditableRoom.room.id, vertex.id);
+                    event.evt.stopPropagation();
+                    setVertexMenu({
+                      roomId: selectedEditableRoom.room.id,
+                      vertexId: vertex.id,
+                      x: event.evt.clientX,
+                      y: event.evt.clientY,
+                      isLocked: vertex.isLocked === true,
+                      canDelete: vertex.isLocked !== true && selectedEditableRoom.vertices.length > 3,
+                    });
+                  }}
+                  onDragStart={() => {
+                    if (!vertex.isLocked) {
+                      setSnapGuides([]);
+                      onVertexMoveStart?.(selectedEditableRoom.room.id, vertex.id);
+                    }
                   }}
                   onDragMove={(event) => {
                     if (vertex.isLocked) return;
-                    const position = snapPoint?.({
+                    const snapped = normalizeSnapResult(snapPoint?.({
                       x: event.target.x(),
                       y: event.target.y(),
                     }, selectedEditableRoom.room.id, vertex.id) ?? {
                       x: event.target.x(),
                       y: event.target.y(),
-                    };
+                    });
+                    const position = snapped.point;
+                    setSnapGuides(snapped.guides);
                     event.target.position(position);
                     onVertexMove?.(selectedEditableRoom.room.id, vertex.id, position);
                   }}
                   onDragEnd={(event) => {
                     if (vertex.isLocked) return;
-                    const position = snapPoint?.({
+                    const snapped = normalizeSnapResult(snapPoint?.({
                       x: event.target.x(),
                       y: event.target.y(),
                     }, selectedEditableRoom.room.id, vertex.id) ?? {
                       x: event.target.x(),
                       y: event.target.y(),
-                    };
+                    });
+                    const position = snapped.point;
                     event.target.position(position);
                     onVertexMove?.(selectedEditableRoom.room.id, vertex.id, position);
                     onVertexMoveEnd?.(selectedEditableRoom.room.id, vertex.id, position);
+                    setSnapGuides([]);
                   }}
+                />
+              ))}
+            </Group>
+          ) : null}
+
+          {snapGuides.length > 0 ? (
+            <Group name="canvas-snap-guides" listening={false}>
+              {snapGuides.map((guide) => (
+                <Line
+                  key={`${guide.axis}-${guide.value}`}
+                  name={`canvas-snap-guide canvas-snap-guide--${guide.axis}`}
+                  points={guide.axis === 'vertical'
+                    ? [guide.value, visibleViewport.y, guide.value, visibleViewport.y + visibleViewport.height]
+                    : [visibleViewport.x, guide.value, visibleViewport.x + visibleViewport.width, guide.value]}
+                  stroke="#0e54e9"
+                  strokeWidth={1.5}
+                  dash={[7, 5]}
                 />
               ))}
             </Group>
@@ -786,6 +934,77 @@ export function Canvas2D({
           ) : null}
         </Layer>
       </Stage>
+
+      {options.roomIcons ? levels
+        .filter(({ level }) => visibleIds.has(level.id))
+        .flatMap(({ level, rooms }) => rooms.map((snapshot) => {
+          if (snapshot.room.type === 'autre' || snapshot.vertices.length === 0) return null;
+          const center = centroid(snapshot.vertices);
+          const appearance = levelAppearance(level.number, activeNumber);
+          return (
+            // Une icône React/SVG ne peut pas être rendue comme nœud Konva : cette couche suit la même projection visuelle.
+            <span
+              className="canvas2d-roomIcon"
+              key={`${level.id}-${snapshot.room.id}`}
+              style={{
+                left: offsetX + (center.x - viewport.x) * scale,
+                top: offsetY + (center.y + 34 - viewport.y) * scale,
+                fontSize: 16 * scale,
+                opacity: appearance.opacity,
+              }}
+              aria-hidden
+            >
+              <RoomTypeIcon type={snapshot.room.type} />
+            </span>
+          );
+        })) : null}
+
+      <Menu
+        opened={vertexMenu !== null}
+        onChange={(opened) => { if (!opened) setVertexMenu(null); }}
+        hideDetached={false}
+        position="bottom-start"
+        withinPortal
+        shadow="md"
+      >
+        <Menu.Target>
+          <span
+            aria-hidden
+            style={{
+              position: 'fixed',
+              left: vertexMenu?.x ?? 0,
+              top: vertexMenu?.y ?? 0,
+              width: 1,
+              height: 1,
+              pointerEvents: 'none',
+            }}
+          />
+        </Menu.Target>
+        <Menu.Dropdown>
+          <Menu.Item
+            leftSection={vertexMenu?.isLocked ? <LuLockOpen aria-hidden /> : <LuLock aria-hidden />}
+            onClick={() => {
+              if (!vertexMenu) return;
+              onVertexLockToggle?.(vertexMenu.roomId, vertexMenu.vertexId);
+              setVertexMenu(null);
+            }}
+          >
+            {vertexMenu?.isLocked ? 'Déverrouiller' : 'Verrouiller'}
+          </Menu.Item>
+          <Menu.Item
+            color="red"
+            leftSection={<LuTrash2 aria-hidden />}
+            disabled={!vertexMenu?.canDelete}
+            onClick={() => {
+              if (!vertexMenu?.canDelete) return;
+              onVertexDelete?.(vertexMenu.roomId, vertexMenu.vertexId);
+              setVertexMenu(null);
+            }}
+          >
+            Supprimer
+          </Menu.Item>
+        </Menu.Dropdown>
+      </Menu>
 
       <CanvasZoomControls
         onZoomIn={() => changeZoom(1.25)}

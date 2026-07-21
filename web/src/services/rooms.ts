@@ -14,6 +14,8 @@ import { normalizeCoordinateCm } from '../domain/roomOverlap';
 import type {
   Opening,
   OpeningKind,
+  OpeningHingeSide,
+  OpeningOrientation,
   OpeningPlacementType,
   OpeningTemplate,
   Room,
@@ -97,6 +99,7 @@ type RawOpening = {
   bottom_cm: number | string;
   height_cm: number | string;
   orientation: string | null;
+  hinge_side?: OpeningHingeSide | null;
   notes: string | null;
 };
 
@@ -132,6 +135,7 @@ export interface LevelRoomSnapshot {
   levelId: string;
   revision: number;
   rooms: RoomSnapshot[];
+  canonical?: LevelGeometrySnapshot;
 }
 
 export interface CreateRoomInput {
@@ -213,13 +217,14 @@ export async function saveLevelRoomSnapshots(
   levelId: string,
   snapshots: readonly RoomSnapshot[],
   expectedRevision?: number,
+  preservedCanonical?: LevelGeometrySnapshot,
 ): Promise<LevelRoomSnapshot> {
-  const canonical = roomSnapshotsToCanonical(
+  const canonical = buildLevelGeometrySnapshot(
     levelId,
     expectedRevision ?? snapshots[0]?.geometryRevision ?? 0,
     snapshots,
+    preservedCanonical,
   );
-  assertLevelGeometrySnapshot(canonical);
   const saved = await saveLevelGeometry<RawLevelGeometry>(
     getSupabaseClient(),
     levelId,
@@ -229,12 +234,37 @@ export async function saveLevelRoomSnapshots(
   return projectRawLevelGeometry(saved);
 }
 
+export function buildLevelGeometrySnapshot(
+  levelId: string,
+  revision: number,
+  snapshots: readonly RoomSnapshot[],
+  preservedCanonical?: LevelGeometrySnapshot,
+): LevelGeometrySnapshot {
+  let canonical = roomSnapshotsToCanonical(levelId, revision, snapshots);
+  if (preservedCanonical) {
+    const detachedWalls = preservedCanonical.walls.filter(({ pieceIds }) => pieceIds.length === 0);
+    const detachedVertexIds = new Set(detachedWalls.flatMap(({ startVertexId, endVertexId }) => [startVertexId, endVertexId]));
+    canonical = {
+      ...canonical,
+      vertices: [...canonical.vertices, ...preservedCanonical.vertices.filter(({ id }) => detachedVertexIds.has(id) && !canonical.vertices.some((candidate) => candidate.id === id))],
+      walls: [...canonical.walls, ...detachedWalls.filter(({ id }) => !canonical.walls.some((candidate) => candidate.id === id))],
+      profilesByWallId: {
+        ...canonical.profilesByWallId,
+        ...Object.fromEntries(detachedWalls.filter(({ id }) => !canonical.profilesByWallId[id]).map(({ id }) => [id, preservedCanonical.profilesByWallId[id]])),
+      },
+    };
+  }
+  assertLevelGeometrySnapshot(canonical);
+  return canonical;
+}
+
 export async function createRoomComplete(snapshot: RoomSnapshot): Promise<RoomSnapshot> {
   const current = await loadLevelGeometrySnapshot(snapshot.room.levelId);
   const saved = await saveLevelRoomSnapshots(
     snapshot.room.levelId,
     [...current.rooms, snapshot],
     current.revision,
+    current.canonical,
   );
   return saved.rooms.find(({ room }) => room.id === snapshot.room.id) ?? snapshot;
 }
@@ -244,7 +274,7 @@ export async function updateRoomGeometry(snapshot: RoomSnapshot): Promise<RoomSn
   const nextRooms = current.rooms.map((candidate) => (
     candidate.room.id === snapshot.room.id ? snapshot : candidate
   ));
-  const saved = await saveLevelRoomSnapshots(snapshot.room.levelId, nextRooms, current.revision);
+  const saved = await saveLevelRoomSnapshots(snapshot.room.levelId, nextRooms, current.revision, current.canonical);
   const persisted = saved.rooms.find(({ room }) => room.id === snapshot.room.id);
   if (!persisted) throw new Error('La pièce sauvegardée n’a pas été relue.');
   return persisted;
@@ -261,6 +291,7 @@ export async function replaceRoomGeometriesAtomically(
     levelId,
     [...current.rooms.filter(({ room }) => !replaced.has(room.id)), ...snapshots],
     current.revision,
+    current.canonical,
   );
   const resultIds = new Set(snapshots.map(({ room }) => room.id));
   return saved.rooms.filter(({ room }) => resultIds.has(room.id));
@@ -273,6 +304,7 @@ export async function softDeleteRoom(roomId: string): Promise<void> {
     room.levelId,
     current.rooms.filter(({ room: candidate }) => candidate.id !== roomId),
     current.revision,
+    current.canonical,
   );
 }
 
@@ -352,7 +384,8 @@ function projectRawLevelGeometry(raw: RawLevelGeometry): LevelRoomSnapshot {
       widthCm: Number(opening.width_cm),
       bottomCm: Number(opening.bottom_cm),
       heightCm: Number(opening.height_cm),
-      orientation: opening.orientation,
+      orientation: opening.orientation?.split(':')[0] === 'inverse' ? 'inverse' : 'normal',
+      hingeSide: opening.hinge_side === 'right' || opening.orientation?.split(':')[1] === 'right' ? 'right' : 'left',
       notes: opening.notes,
     });
     openingsByWallId.set(opening.wall_id, current);
@@ -422,7 +455,94 @@ function projectRawLevelGeometry(raw: RawLevelGeometry): LevelRoomSnapshot {
     };
   });
 
-  return { levelId: raw.level_id, revision, rooms };
+  const canonical: LevelGeometrySnapshot = {
+    levelId: raw.level_id,
+    revision,
+    vertices: raw.vertices.map((vertex) => ({ id: vertex.id, levelId: raw.level_id, x: Number(vertex.x_cm), y: Number(vertex.y_cm), isLocked: vertex.is_locked })),
+    pieces: raw.pieces.map((piece) => ({ room: rooms.find(({ room }) => room.id === piece.id)!.room, vertexIds: [...piece.vertex_ids] })),
+    walls: [...wallsById.values()].map(({ wall }) => wall),
+    profilesByWallId: Object.fromEntries([...wallsById.entries()].map(([id, { profiles }]) => [id, profiles])),
+    openings: raw.openings.map((opening) => ({
+      id: opening.id,
+      wallId: opening.wall_id,
+      templateId: opening.template_id,
+      type: opening.opening_type,
+      placementType: opening.placement_type,
+      positionCm: Number(opening.position_cm),
+      widthCm: Number(opening.width_cm),
+      bottomCm: Number(opening.bottom_cm),
+      heightCm: Number(opening.height_cm),
+      orientation: opening.orientation?.split(':')[0] === 'inverse' ? 'inverse' : 'normal',
+      hingeSide: opening.hinge_side === 'right' || opening.orientation?.split(':')[1] === 'right' ? 'right' : 'left',
+    })),
+    templatesById,
+  };
+  return { levelId: raw.level_id, revision, rooms, canonical };
+}
+
+export function projectCanonicalRoomSnapshots(canonical: LevelGeometrySnapshot): RoomSnapshot[] {
+  const verticesById = new Map(canonical.vertices.map((vertex) => [vertex.id, vertex]));
+  return canonical.pieces.map((piece): RoomSnapshot => {
+    const vertices = piece.vertexIds.map((vertexId, order): Vertex => {
+      const vertex = verticesById.get(vertexId);
+      if (!vertex) throw new Error('Le contour canonique référence un sommet absent.');
+      return { id: vertex.id, pieceId: piece.room.id, order, x: vertex.x, y: vertex.y, isLocked: vertex.isLocked };
+    });
+    const walls = piece.vertexIds.map((startVertexId, index): Wall => {
+      const endVertexId = piece.vertexIds[(index + 1) % piece.vertexIds.length];
+      const wall = canonical.walls.find((candidate) => candidate.pieceIds.includes(piece.room.id) && sameSegment(candidate.startVertexId, candidate.endVertexId, startVertexId, endVertexId));
+      if (!wall) throw new Error('Une arête canonique ne possède pas de mur.');
+      const canonicalStart = verticesById.get(wall.startVertexId)!;
+      const canonicalEnd = verticesById.get(wall.endVertexId)!;
+      const lengthCm = Math.hypot(canonicalEnd.x - canonicalStart.x, canonicalEnd.y - canonicalStart.y);
+      const profiles = canonical.profilesByWallId[wall.id];
+      if (!profiles) throw new Error('Les profils du mur canonique sont absents.');
+      const state = wall.startVertexId === startVertexId
+        ? { wall, profiles }
+        : invertWallSegmentAndProfiles({ wall, profiles }, lengthCm);
+      return {
+        id: wall.id,
+        pieceId: piece.room.id,
+        startVertexId,
+        endVertexId,
+        thicknessCm: wall.thicknessCm,
+        heightLeftCm: state.profiles.gauche[0]?.heightCm ?? null,
+        heightRightCm: state.profiles.droite[0]?.heightCm ?? null,
+        material: wall.material,
+        insulation: wall.insulation,
+        notes: wall.notes,
+        pieceIds: [...wall.pieceIds],
+        heightProfilesLinked: wall.heightProfilesLinked,
+        heightProfiles: state.profiles,
+        isLocked: canonicalStart.isLocked && canonicalEnd.isLocked,
+      };
+    });
+    const wallIds = new Set(walls.map(({ id }) => id));
+    const openings = canonical.openings.filter(({ wallId }) => wallIds.has(wallId)).map((opening): Opening => ({
+      id: opening.id,
+      wallId: opening.wallId,
+      type: legacyOpeningType(opening.type),
+      offsetCm: opening.positionCm,
+      widthCm: opening.widthCm,
+      bottomCm: opening.bottomCm,
+      heightCm: opening.heightCm,
+      templateId: opening.templateId,
+      openingKind: opening.type,
+      placementType: opening.placementType,
+      orientation: opening.orientation,
+      hingeSide: opening.hingeSide,
+    }));
+    return {
+      room: { ...piece.room, isLocked: vertices.length > 0 && vertices.every(({ isLocked }) => isLocked === true) },
+      vertices,
+      walls,
+      openings,
+      geometryRevision: canonical.revision,
+      openingTemplates: canonical.templatesById,
+      unlockedVertexIds: canonical.unlockedVertexIds,
+      unlockedProfilePointIds: canonical.unlockedProfilePointIds,
+    };
+  });
 }
 
 function roomSnapshotsToCanonical(
@@ -533,7 +653,8 @@ function roomSnapshotsToCanonical(
         widthCm: opening.widthCm,
         heightCm: opening.heightCm,
         bottomCm: opening.bottomCm,
-        orientation: opening.orientation ?? null,
+        orientation: opening.orientation,
+        hingeSide: opening.hingeSide,
       });
     }
   }
@@ -600,7 +721,8 @@ function canonicalToPersisted(snapshot: LevelGeometrySnapshot): PersistedLevelGe
       width_cm: opening.widthCm,
       bottom_cm: opening.bottomCm,
       height_cm: opening.heightCm,
-      orientation: opening.orientation,
+      orientation: `${opening.orientation}:${opening.hingeSide}`,
+      hinge_side: opening.hingeSide,
       notes: null,
     })),
     unlocked_vertex_ids: snapshot.unlockedVertexIds,

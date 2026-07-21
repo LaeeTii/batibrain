@@ -1,6 +1,6 @@
 # SPEC PRODUIT ET TECHNIQUE — BATIBRAIN (registre features consolidé)
 
-Date de mise à jour: 2026-07-16
+Date de mise à jour: 2026-07-20
 
 ## Statut du document
 - Ce document remplace l'ancien format par phases et tâches.
@@ -439,10 +439,12 @@ Date de mise à jour: 2026-07-16
 	- Protéger les transformations géométriques accidentelles avec un unique type de verrou persistant porté par les points.
 - Portée fonctionnelle cible:
 	- État persistant `isLocked` sur chaque sommet du plan et chaque point de profil de hauteur.
-	- Verrouillage d'un sommet ou d'un point de profil par clic droit.
+	- Menu au clic droit sur un sommet avec verrouillage, déverrouillage et suppression lorsque les invariants géométriques l'autorisent; clic droit de verrouillage ou déverrouillage sur un point de profil.
 	- Actions `Verrouiller` ou `Déverrouiller` disponibles dans les blocs d'édition des pièces, murs et profils.
 	- État des murs, pièces, côtes et profils calculé depuis leurs points.
 	- Application immédiate du verrouillage ou du déverrouillage dans le brouillon local.
+	- Fermeture de la sélection et des blocs de création ou d'édition par clic simple sur le fond du canvas hors objet, sans fermeture lors d'un panoramique.
+	- Un déplacement continu de sommet produit une seule action d'historique au relâchement; Annuler restaure l'état précédant l'appui et Rétablir la position finale.
 - Règles métier minimales:
 	- Un mur est verrouillé lorsque ses deux sommets sont verrouillés.
 	- Une pièce est verrouillée lorsque tous les murs de son contour sont verrouillés.
@@ -512,7 +514,7 @@ Date de mise à jour: 2026-07-16
 ## Informations legacy conservées sans changement de priorité
 - Les sujets ci-dessous restent documentés comme acquis ou largement couverts dans l'IHM actuelle:
 	- Édition polygonale des pièces avec garde-fous de validité.
-	- Magnétisme horizontal/vertical lors du déplacement de sommets.
+	- Magnétisme horizontal/vertical lors du déplacement de sommets, avec guides orthogonaux temporaires pour former des angles droits.
 	- Édition longueur de mur en plan.
 	- Calculs géométriques partagés (surface, périmètre, centroid, angles, génération des murs).
 	- Persistance Supabase des objets métier principaux.

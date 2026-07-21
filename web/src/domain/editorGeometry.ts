@@ -249,7 +249,8 @@ export function assertOpeningValidInLevel(
     widthCm: opening.widthCm,
     heightCm: opening.heightCm,
     bottomCm: opening.bottomCm,
-    orientation: opening.orientation ?? null,
+    orientation: opening.orientation,
+    hingeSide: opening.hingeSide,
   };
   const siblings = owner?.openings
     .filter((candidate) => candidate.id !== opening.id && candidate.templateId && candidate.openingKind && candidate.placementType)
@@ -263,7 +264,8 @@ export function assertOpeningValidInLevel(
       widthCm: candidate.widthCm,
       heightCm: candidate.heightCm,
       bottomCm: candidate.bottomCm,
-      orientation: candidate.orientation ?? null,
+      orientation: candidate.orientation,
+      hingeSide: candidate.hingeSide,
     })) ?? [];
   const [issue] = validateOpening(topologyOpening, {
     wall: topologyWallFromProjection(context.projection),

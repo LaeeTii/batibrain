@@ -15,7 +15,9 @@ interface WallElevationCanvasProps {
   selectedPointId?: string | null;
   onSelectOpening?(openingId: string): void;
   onSelectPoint?(pointId: string): void;
+  onMovePointStart?(pointId: string): void;
   onMovePoint?(pointId: string, positionCm: number, heightCm: number): void;
+  onMovePointEnd?(pointId: string, positionCm: number, heightCm: number): void;
   onTogglePointLock?(pointId: string): void;
 }
 
@@ -34,7 +36,9 @@ export function WallElevationCanvas({
   selectedPointId = null,
   onSelectOpening,
   onSelectPoint,
+  onMovePointStart,
   onMovePoint,
+  onMovePointEnd,
   onTogglePointLock,
 }: WallElevationCanvasProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -159,6 +163,9 @@ export function WallElevationCanvas({
                 event.evt.preventDefault();
                 if (editingEnabled) onTogglePointLock?.(point.id);
               }}
+              onDragStart={() => {
+                if (editingEnabled && !point.isLocked) onMovePointStart?.(point.id);
+              }}
               onDragMove={(event) => {
                 if (!editingEnabled || point.isLocked) return;
                 const previous = sortedPoints[index - 1];
@@ -172,6 +179,21 @@ export function WallElevationCanvas({
                 const heightCm = Math.max(0.01, (originY - event.target.y()) / scale);
                 event.target.position({ x: toCanvasX(positionCm), y: toCanvasY(heightCm) });
                 onMovePoint?.(point.id, positionCm, heightCm);
+              }}
+              onDragEnd={(event) => {
+                if (!editingEnabled || point.isLocked) return;
+                const previous = sortedPoints[index - 1];
+                const next = sortedPoints[index + 1];
+                const positionCm = endpoint
+                  ? point.positionCm
+                  : Math.max(
+                    (previous?.positionCm ?? 0) + 0.01,
+                    Math.min((next?.positionCm ?? wallLengthCm) - 0.01, (event.target.x() - originX) / scale),
+                  );
+                const heightCm = Math.max(0.01, (originY - event.target.y()) / scale);
+                event.target.position({ x: toCanvasX(positionCm), y: toCanvasY(heightCm) });
+                onMovePoint?.(point.id, positionCm, heightCm);
+                onMovePointEnd?.(point.id, positionCm, heightCm);
               }}
             />
             <Text

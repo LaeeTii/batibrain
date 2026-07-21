@@ -1155,7 +1155,7 @@ body {
 .canvas2d-roomName,
 .canvas2d-roomSurface { text-anchor: middle; fill: #182133; font-weight: 700; font-size: 14px; }
 .canvas2d-roomSurface { font-size: 12px; font-weight: 500; }
-.canvas2d-roomIcon { display: grid; place-items: center; width: 20px; height: 20px; color: #182133; }
+.canvas2d-roomIcon { position: absolute; display: grid; place-items: center; color: #182133; pointer-events: none; transform: translate(-50%, -50%); }
 .canvas2d-manualDimension line { stroke: #56657c; stroke-width: 1; marker-start: initial; vector-effect: non-scaling-stroke; }
 .canvas2d-note circle { fill: #ffe08a; stroke: #9a7628; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
 .canvas2d-zoomControls { position: absolute; top: 14px; right: 14px; display: grid; gap: 6px; }

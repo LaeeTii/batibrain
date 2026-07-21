@@ -41,6 +41,8 @@
 - Dans chaque section, le bloc de création ou d'édition précède la liste des objets existants.
 - La liste des objets utilise un espacement vertical compact entre ses éléments.
 - Le bouton retour ferme tous les accordeons et quitte le mode d'édition actif.
+- Un clic simple sur le fond du canvas produit le même effet de fermeture des accordéons et de sortie des contextes de création ou d'édition, sans replier physiquement le panneau.
+- Un panoramique du canvas ne ferme aucun accordéon et ne modifie pas la sélection.
 - La sélection d'un objet dans un panneau se propage au canvas et a l'autre panneau selon les règles de synchronisation.
 - Le panneau détail est ferme par defaut et peut etre ouvert/ferme sans perdre la sélection globale active.
 - Repli/ouverture des panneaux:
@@ -95,6 +97,7 @@
 - Given une section du panneau de création contient des objets, When elle est ouverte, Then le bloc de création ou d'édition est affiché avant la liste compacte des objets.
 - Given une pièce est selectionnee dans EditorDetailPanel, When la sélection est appliquee, Then la pièce correspondante est surlignee dans le canvas.
 - Given le bouton retour est clique, When l'action est terminee, Then tous les accordeons sont fermes et aucun mode creation actif ne subsiste.
+- Given un accordéon de création ou d'édition est ouvert, When l'utilisateur clique simplement sur le fond du canvas hors objet, Then tous les accordéons sont fermés et la sélection est vidée.
 - Given l'arbre détail est ouvert, When les données sont chargees, Then les noeuds sont ordonnes selon la hierarchie niveau > pièces > murs > ouvertures > notes associees > notes projet.
 - Given un noeud mur est clique dans DetailTree, When la sélection est propagee, Then le mur est surligne dans le canvas et le bloc édition mur est affiche.
 - Given un noeud d'un autre niveau est clique, When la sélection est appliquee, Then le niveau editable bascule sur le niveau du noeud cible et la sélection est conservee.

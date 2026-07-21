@@ -10,6 +10,33 @@ export interface CanvasViewport {
 export const MIN_CANVAS_ZOOM = 0.25;
 export const MAX_CANVAS_ZOOM = 8;
 
+export function fitViewportToPoints(
+  points: Point[],
+  padding: number,
+  minimumWidth: number,
+  minimumHeight = minimumWidth,
+): CanvasViewport | null {
+  if (points.length === 0) return null;
+
+  const xs = points.map(({ x }) => x);
+  const ys = points.map(({ y }) => y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const width = Math.max(minimumWidth, maxX - minX + padding * 2);
+  const height = Math.max(minimumHeight, maxY - minY + padding * 2);
+  const centerX = (minX + maxX) / 2;
+  const centerY = (minY + maxY) / 2;
+
+  return {
+    x: centerX - width / 2,
+    y: centerY - height / 2,
+    width,
+    height,
+  };
+}
+
 export function zoomViewport(
   viewport: CanvasViewport,
   factor: number,

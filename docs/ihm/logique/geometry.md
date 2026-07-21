@@ -1,6 +1,6 @@
 # Contrat géométrique
 
-Date de mise à jour: 2026-07-16
+Date de mise à jour: 2026-07-20
 
 ## Périmètre du document
 - Ce document decrit les objets geometriques, leurs invariants, leurs calculs, leurs transformations et leurs cas limites.
@@ -20,6 +20,7 @@ Date de mise à jour: 2026-07-16
 
 ## Source de verite
 - Les pièces et les murs sont deux entites geometriques de premier rang.
+- Le brouillon canonique complet est recalculé dès chaque création ou transformation locale; une sauvegarde préalable n'est jamais nécessaire pour utiliser une action topologique sur un objet nouvellement créé.
 - Une pièce est modelisee comme un polygone ordonne de sommets.
 - Un sommet possède une identité topologique unique dans le niveau et peut être partagé par plusieurs murs ou contours de pièces.
 - Le rectangle dessine en 2 clics dans l'IHM est une modalite de creation initiale d'une pièce polygonale a 4 sommets.
@@ -35,8 +36,11 @@ Date de mise à jour: 2026-07-16
 - Le contour d'une pièce ne peut pas s'auto-intersecter.
 - Le déplacement d'un sommet sur un sommet consécutif du même contour fusionne les deux sommets, retire le mur devenu nul et réordonne le contour sans doublon.
 - Le déplacement d'un sommet sur un sommet d'une autre pièce crée un sommet partagé unique dans les deux projections.
+- La suppression directe d'un sommet déverrouillé retire ce sommet du contour et remplace ses deux murs adjacents par un unique mur reliant le sommet précédent au sommet suivant.
+- Le mur entrant conserve son identité et ses propriétés lorsqu'il n'est pas partagé; s'il est partagé avec une autre pièce, la nouvelle frontière reçoit une identité propre afin de laisser la géométrie voisine inchangée.
 - Deux sommets non consécutifs d'une même pièce ne sont pas fusionnés automatiquement, car cette opération scinderait le contour; l'interaction est refusée avant mutation.
 - Une fusion est refusée si elle supprimerait un mur portant une ouverture ou si elle réduirait la pièce à moins de trois sommets.
+- Une suppression directe de sommet est refusée si la pièce serait réduite à moins de trois sommets, si le sommet est verrouillé, si un profil verrouillé devrait être modifié ou si l'un des murs adjacents porte une ouverture.
 - Une nouvelle pièce rectangulaire utilise les deux points saisis pour déterminer sa largeur et sa profondeur; aucune dimension n'est appliquée par défaut. Elle utilise le nom `Nouvelle pièce` si aucun nom n'est fourni, le type `autre` et la couleur de sol `#E5FFFC`.
 - Un mur peut exister seul ou etre lie a une ou deux pièces.
 - Un mur ne peut jamais être lié à trois pièces.
@@ -107,6 +111,7 @@ Date de mise à jour: 2026-07-16
 	- son épaisseur et les hauteurs d'extrémité de ses deux profils sont initialisées depuis les préférences de mur par défaut de l'utilisateur courant;
 	- en l'absence de préférences enregistrées, les valeurs initiales sont `10 cm` et `250 cm`.
 - Deplacement d'un point, d'un mur, d'une pièce, d'une ouverture ou d'une cote sans rupture des invariants.
+- Suppression d'un sommet du contour avec raccordement du mur entre ses voisins immédiats.
 - Creation d'un mur intérieur coupant une pièce en deux avec generation automatique d'une nouvelle pièce.
 	- cette capacite géométrique peut etre restreinte par la vue consommatrice; RoomEditor2DView interdit explicitement ce cas.
 - Repositionnement du decalage d'une cote.
@@ -123,6 +128,12 @@ Date de mise à jour: 2026-07-16
 - Une telle jonction est toujours représentée par trois murs distincts; elle ne doit jamais produire un mur unique lié à trois pièces.
 - Lors de cette scission, la première moitié conserve l'identité du mur support, la seconde reçoit une nouvelle identité et les deux recopient ses propriétés et relations; le mur aboutissant conserve les siennes.
 - L'operation "Couper en deux" créé deux segments colineaires partageant le point de coupe. Le mur de gauche garde le focus fonctionnel, le mur de droite reprend les memes proprietes.
+- L'opération `Détacher` remplace l'extrémité choisie du mur par un nouveau sommet à la position indiquée, sans déplacer le sommet d'ancrage ni les murs voisins.
+- Chaque pièce liée au mur détaché perd son contour fermé et est supprimée; tous ses murs sont conservés au niveau, perdent uniquement cette liaison et deviennent autonomes s'ils ne sont liés à aucune autre pièce.
+- Les sommets des murs autonomes restent des objets géométriques sélectionnables et déplaçables; le déplacement d'un sommet partagé propage sa position à tous les murs autonomes qui le référencent.
+- Lorsqu'un sommet autonome est capturé sur un autre sommet autonome par le magnétisme des sommets, leurs identités sont fusionnées et tous les murs incidents sont raccordés à l'unique sommet conservé.
+- Si ce raccordement ferme un composant simple d'au moins trois murs, sans branche ni auto-intersection, ce cycle devient le contour ordonné d'une nouvelle pièce et chacun de ses murs reçoit la liaison vers cette pièce.
+- Les ouvertures devenues incompatibles avec la nouvelle qualification de leur mur sont supprimées dans la même transaction.
 - Si des murs se croisent sur un meme niveau, ils doivent etre scindes au point d'intersection pour produire des segments elementaires.
 - Si des pièces se chevauchent sur un meme niveau, les murs concernes sont scindes aux intersections necessaires et la zone de chevauchement devient une nouvelle pièce.
 - Avant toute scission, intersection ou création de pièce issue d'un chevauchement, tous les sommets affectés sont contrôlés; la présence d'un sommet verrouillé annule l'opération avant toute mutation du brouillon.

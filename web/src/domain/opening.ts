@@ -1,5 +1,7 @@
 import type {
   OpeningTemplate,
+  OpeningHingeSide,
+  OpeningOrientation,
   TopologyOpening,
   TopologyWall,
   WallFaceSide,
@@ -48,7 +50,8 @@ export interface CreateOpeningInput {
   widthCm: number;
   heightCm: number;
   bottomCm?: number;
-  orientation?: string | null;
+  orientation?: OpeningOrientation;
+  hingeSide?: OpeningHingeSide;
 }
 
 export interface OpeningValidationContext {
@@ -78,7 +81,8 @@ export function createOpeningFromTemplate(
     widthCm: input.widthCm,
     heightCm: input.heightCm,
     bottomCm: input.bottomCm ?? 0,
-    orientation: input.orientation ?? null,
+    orientation: input.orientation ?? 'normal',
+    hingeSide: input.hingeSide ?? 'left',
   };
 }
 

@@ -165,6 +165,8 @@ export interface TopologyWall {
 }
 
 export type OpeningType = 'door' | 'window' | 'other';
+export type OpeningOrientation = 'normal' | 'inverse';
+export type OpeningHingeSide = 'left' | 'right';
 
 export interface Opening {
   id: Id;
@@ -178,7 +180,8 @@ export interface Opening {
   templateId?: Id;
   openingKind?: OpeningKind;
   placementType?: OpeningPlacementType;
-  orientation?: string | null;
+  orientation: OpeningOrientation;
+  hingeSide: OpeningHingeSide;
 }
 
 export type OpeningKind = 'porte' | 'fenêtre' | 'baie_vitree' | 'autre';
@@ -202,7 +205,8 @@ export interface TopologyOpening {
   widthCm: number;
   heightCm: number;
   bottomCm: number;
-  orientation: string | null;
+  orientation: OpeningOrientation;
+  hingeSide: OpeningHingeSide;
 }
 
 export interface DerivedWall {

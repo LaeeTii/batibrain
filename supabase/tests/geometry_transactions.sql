@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(15);
+select plan(24);
 
 insert into auth.users(id, email, aud, role, created_at, updated_at) values
 ('a1000000-0000-0000-0000-000000000001', 'owner-geometry@example.test', 'authenticated', 'authenticated', now(), now());
@@ -149,6 +149,23 @@ select results_eq(
   array[1::bigint],
   'une ouverture compatible est conservée'
 );
+select results_eq(
+  $$select orientation || ':' || hinge_side from openings where id = 'a8000000-0000-0000-0000-000000000001'$$,
+  array['normal:left:left'::text],
+  'une orientation absente est normalisée avec un ouvrant gauche'
+);
+reset role;
+select lives_ok(
+  $$update openings set orientation = 'inverse:right' where id = 'a8000000-0000-0000-0000-000000000001'$$,
+  'le stockage accepte le sens et le côté ouvrant normalisés'
+);
+select results_eq(
+  $$select orientation || '/' || hinge_side from openings where id = 'a8000000-0000-0000-0000-000000000001'$$,
+  array['inverse:right/right'::text],
+  'le côté ouvrant droit est dérivé et persisté séparément'
+);
+set local role authenticated;
+select set_config('request.jwt.claim.sub', 'a1000000-0000-0000-0000-000000000001', true);
 
 insert into geometry_payloads(name, payload)
 select 'locked', jsonb_set(payload, '{vertices,0,is_locked}', 'true'::jsonb)
@@ -272,6 +289,58 @@ select results_eq(
   $$select count(*) from pieces where id = 'a4000000-0000-0000-0000-000000000001' and is_soft_deleted$$,
   array[1::bigint],
   'la pièce supprimée conserve sa ligne métier supprimée logiquement'
+);
+
+insert into geometry_payloads(name, payload)
+select 'detached', jsonb_set(
+  jsonb_set(
+    jsonb_set(payload, '{pieces}', '[]'::jsonb),
+    '{openings}',
+    '[]'::jsonb
+  ),
+  '{walls}',
+  (
+    select jsonb_agg(jsonb_set(wall.value, '{piece_ids}', '[]'::jsonb) order by wall.ordinality)
+    from jsonb_array_elements(payload -> 'walls') with ordinality wall(value, ordinality)
+  )
+)
+from geometry_payloads where name = 'initial';
+
+select lives_ok(
+  $$select save_level_geometry(
+    'a3000000-0000-0000-0000-000000000001',
+    4,
+    (select payload from geometry_payloads where name = 'detached')
+  )$$,
+  'un niveau composé uniquement de murs autonomes est sauvegardé'
+);
+select lives_ok(
+  $$select save_level_geometry(
+    'a3000000-0000-0000-0000-000000000001',
+    5,
+    (select payload from geometry_payloads where name = 'detached')
+  )$$,
+  'une seconde sauvegarde réutilise les identifiants des sommets autonomes'
+);
+select results_eq(
+  $$select count(*) from vertices where level_id = 'a3000000-0000-0000-0000-000000000001'$$,
+  array[4::bigint],
+  'la seconde sauvegarde ne duplique aucun sommet autonome'
+);
+select results_eq(
+  $$select geometry_revision from levels where id = 'a3000000-0000-0000-0000-000000000001'$$,
+  array[6::bigint],
+  'les deux sauvegardes autonomes incrémentent normalement la révision'
+);
+select results_eq(
+  $$select jsonb_array_length(load_level_geometry('a3000000-0000-0000-0000-000000000001') -> 'vertices')$$,
+  array[4],
+  'la relecture conserve les sommets autonomes après sauvegarde'
+);
+select results_eq(
+  $$select jsonb_array_length(load_level_geometry('a3000000-0000-0000-0000-000000000001') -> 'walls')$$,
+  array[4],
+  'la relecture conserve les murs autonomes après sauvegarde'
 );
 
 select * from finish();

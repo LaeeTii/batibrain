@@ -1,6 +1,6 @@
 # Verrouillage géométrique
 
-Date de mise à jour: 2026-07-16
+Date de mise à jour: 2026-07-20
 
 ## Objectif
 
@@ -28,7 +28,7 @@ Date de mise à jour: 2026-07-16
 
 ## Actions de verrouillage
 
-- Le clic droit sur un sommet du plan propose l'action `Verrouiller` ou `Déverrouiller`.
+- Le clic droit sur un sommet du plan ouvre un menu proposant `Verrouiller` ou `Déverrouiller`, ainsi que `Supprimer` lorsque la suppression est autorisée.
 - Le clic droit sur un point de profil propose la même action.
 - Le bouton de verrouillage du bloc d'édition d'un mur verrouille ou déverrouille ses deux sommets.
 - Le bouton de verrouillage du bloc d'édition d'une pièce verrouille ou déverrouille tous les sommets des murs de son contour.

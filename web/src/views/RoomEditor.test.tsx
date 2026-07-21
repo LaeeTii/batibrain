@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PreferencesProvider } from '../components/PreferencesContext';
 import { UnsavedChangesProvider } from '../components/UnsavedChangesContext';
 import { DEFAULT_CANVAS_DISPLAY_OPTIONS } from '../components/Canvas2D';
+import { DEFAULT_PROJECT_VIEW_SETTINGS } from '../domain/viewSettings';
 import { DEFAULT_USER_PREFERENCES } from '../domain/userPreferences';
 import { canWriteProject } from '../services/projects';
 import { loadLevelGeometrySnapshot, saveLevelRoomSnapshots, type RoomSnapshot } from '../services/rooms';
@@ -13,8 +14,9 @@ import { RoomEditor } from './RoomEditor';
 vi.mock('../lib/supabase', () => ({ hasSupabaseConfig: () => true }));
 vi.mock('../data/supabase/viewSettings', () => ({
   supabaseViewSettingsGateway: {
-    load: vi.fn().mockResolvedValue({ display: DEFAULT_CANVAS_DISPLAY_OPTIONS }),
+    load: vi.fn().mockResolvedValue({ display: DEFAULT_CANVAS_DISPLAY_OPTIONS, snapping: DEFAULT_PROJECT_VIEW_SETTINGS.snapping }),
     saveDisplayOptions: vi.fn().mockResolvedValue(undefined),
+    saveSnappingOptions: vi.fn().mockResolvedValue(undefined),
   },
 }));
 vi.mock('../services/levels', () => ({
@@ -59,6 +61,7 @@ describe('RoomEditor2DView', () => {
     expect(await screen.findByRole('heading', { name: 'Cuisine' })).toBeInTheDocument();
     expect(screen.getByText('Maison · RDC')).toBeInTheDocument();
     expect(screen.getByLabelText('Zoom avant')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Magnétisme' })).toBeInTheDocument();
     expect(screen.getByLabelText('Couleur du sol')).toHaveValue('#E5FFFC');
   });
 
@@ -69,7 +72,31 @@ describe('RoomEditor2DView', () => {
     const save = screen.getByRole('button', { name: 'Sauvegarder' });
     await waitFor(() => expect(save).toBeEnabled());
     fireEvent.click(save);
-    await waitFor(() => expect(saveLevelRoomSnapshots).toHaveBeenCalledWith('level', expect.any(Array), 4));
+    await waitFor(() => expect(saveLevelRoomSnapshots).toHaveBeenCalledWith('level', expect.any(Array), 4, undefined));
+  });
+
+  it('annule tout un déplacement de sommet en une seule action', async () => {
+    const { container } = renderView();
+    await screen.findByRole('heading', { name: 'Cuisine' });
+    fireEvent.click(container.querySelector('polygon')!);
+    const handle = container.querySelector('.canvas-vertex-handle')!;
+    const undoButton = screen.getByRole('button', { name: 'Annuler' });
+
+    fireEvent.dragStart(handle);
+    handle.setAttribute('data-konva-drag-x', '25');
+    handle.setAttribute('data-konva-drag-y', '25');
+    fireEvent.drag(handle);
+    expect(undoButton).toBeDisabled();
+    handle.setAttribute('data-konva-drag-x', '50');
+    handle.setAttribute('data-konva-drag-y', '50');
+    fireEvent.dragEnd(handle);
+
+    await waitFor(() => expect(undoButton).toBeEnabled());
+    expect(container.querySelector('.canvas-vertex-handle')).toHaveAttribute('cx', '50');
+    fireEvent.click(undoButton);
+    await waitFor(() => expect(container.querySelector('.canvas-vertex-handle')).toHaveAttribute('cx', '0'));
+    fireEvent.click(screen.getByRole('button', { name: 'Rétablir' }));
+    await waitFor(() => expect(container.querySelector('.canvas-vertex-handle')).toHaveAttribute('cx', '50'));
   });
 
   it('désactive les écritures mais conserve le canvas en lecture seule', async () => {

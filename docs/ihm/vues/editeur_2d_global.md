@@ -38,7 +38,7 @@
   - Header principal:
     - titre projet,
     - controles d'affichage (affichage/masquage: côtes, angles, grille, règles, notes, surfaces, icônes de pièces),
-    - controles de magnetisme (snapping: sources + distance de capture),
+    - controles de magnetisme (snapping: sources + distance de capture) dans un sélecteur `Magnétisme` placé immédiatement à côté du sélecteur `Affichage`,
     - boutons icones `Annuler` et `Retablir` places en haut a droite du header principal,
     - si l'historique correspondant est vide, le bouton associe est grise et non cliquable,
     - action export PDF.
@@ -73,7 +73,8 @@
   - La face initiale est la face intérieure pour un mur extérieur, sinon la face gauche.
 - Controles d'affichage:
   - L'utilisateur peut activer ou desactiver les options d'affichage (affichage/masquage) de la grille, des règles, des côtes, des angles, des notes, des surfaces et des icônes de pièces.
-  - L'utilisateur peut configurer le magnetisme (snapping) en choisissant ses sources actives et une distance de capture.
+  - L'utilisateur peut configurer le magnetisme (snapping) en choisissant ses sources actives, dont les guides orthogonaux, et une distance de capture.
+  - Les guides orthogonaux alignent temporairement les créations et déplacements sur les verticales et horizontales des sommets de référence afin de faciliter les angles droits.
   - L'utilisateur peut utiliser les boutons `Annuler` et `Retablir` du header principal quand l'historique correspondant est disponible.
 - Panneau creation:
   - L'utilisateur ouvre un accordeon metier pour acceder aux blocs de creation et aux listes du domaine concerne.
@@ -115,7 +116,7 @@
   - Un changement de contexte interne à la vue (niveau éditable, sélection, panneau, mode) ne déclenche pas de confirmation de sortie.
 - Verrouillage géométrique:
   - Les sommets du plan portent les seuls verrous géométriques persistés de cette vue.
-  - Un clic droit sur un sommet permet au propriétaire ou au collaborateur en écriture de le verrouiller ou le déverrouiller.
+  - Un clic droit sur un sommet ouvre un menu permettant au propriétaire ou au collaborateur en écriture de le verrouiller, le déverrouiller ou le supprimer lorsque les invariants géométriques l'autorisent.
   - Les boutons des blocs d'édition Pièce et Mur appliquent l'état à tous leurs sommets concernés.
   - L'état verrouillé des murs, pièces et côtes est calculé et propagé immédiatement dans le canvas et les panneaux.
   - Une interaction interdite est refusée avant toute modification du brouillon ou de l'historique.
@@ -133,9 +134,11 @@
   - Un seul mode de creation actif peut exister a la fois.
   - L'ouverture d'un accordeon metier expose les outils du domaine mais n'ouvre pas le mode édition.
   - Le mode édition d'un objet s'ouvre uniquement par sélection de cet objet.
+  - Les actions de coupe de mur, déplacement d'extrémité, repositionnement de cote et changement d'origine d'une note utilisent un mode canvas temporaire exclusif, annulable avec Echap et validé comme une seule action d'historique.
 - Sélection:
   - La sélection active est unique a un instant donne.
   - La sélection est synchronisee entre canvas, panneau creation, panneau détail et bulle des notes projet selon les cas applicables.
+  - Hors geste de création actif, un clic simple sur le fond du canvas vide la sélection et ferme tous les blocs de création ou d'édition; un panoramique conserve le contexte courant.
   - L'ouverture de WallEditorView conserve le mur sélectionné; elle ne transmet pas de pièce d'origine depuis l'éditeur global.
 - Panneaux:
   - Les accordeons de premier niveau du panneau creation sont mutuellement exclusifs.
@@ -328,6 +331,36 @@
   - Then les deux sommets sont fusionnés sous un identifiant unique
   - And le mur devenu nul est supprimé
   - And le contour et ses murs restants sont réordonnés puis sauvegardés sans doublon
+- Scenario 14 - Suppression d'un sommet:
+  - Given un sommet déverrouillé appartient à une pièce de plus de trois sommets
+  - When l'utilisateur choisit `Supprimer` dans son menu contextuel
+  - Then le sommet est retiré du contour
+  - And le mur résultant relie le sommet précédent au sommet suivant
+  - And les murs et profils voisins qui ne sont pas affectés restent inchangés
+- Scenario 14b - Raccordement de murs autonomes:
+  - Given un détachement a ouvert une pièce et laissé ses murs autonomes
+  - When l'utilisateur déplace une extrémité autonome sur l'autre extrémité ouverte avec le magnétisme des sommets
+  - Then les deux sommets sont fusionnés sous un identifiant unique
+  - And les murs forment de nouveau un contour fermé ordonné
+  - And une nouvelle pièce est créée et liée à chacun des murs de ce contour
+  - And le geste complet constitue une seule action Annuler/Rétablir
+- Scenario 14c - Détachement avant sauvegarde:
+  - Given une pièce vient d'être dessinée dans le brouillon et n'a pas encore été sauvegardée
+  - When l'utilisateur sélectionne l'un de ses murs puis choisit `Détacher`
+  - Then le mur est reconnu comme appartenant à la pièce du brouillon
+  - And le détachement est exécuté sans imposer de sauvegarde intermédiaire
+- Scenario 15 - Fermeture par clic sur le fond:
+  - Given une sélection ou un bloc de création ou d'édition est ouvert
+  - When l'utilisateur clique simplement sur le fond du canvas hors objet
+  - Then la sélection est vidée et tous les blocs de création ou d'édition sont fermés
+  - But When l'utilisateur maintient le clic et déplace le fond
+  - Then seul le panoramique est appliqué et le contexte reste ouvert
+- Scenario 16 - Historique d'un déplacement:
+  - Given un sommet est à sa position initiale et l'historique courant est connu
+  - When l'utilisateur maintient le clic, déplace plusieurs fois le sommet puis relâche le clic
+  - Then une seule action est ajoutée à l'historique au relâchement
+  - And Annuler restaure la géométrie précédant l'appui
+  - And Rétablir restaure la géométrie finale au relâchement
 
 ## Recap decisions et hypotheses explicites
 - Decisions validees:

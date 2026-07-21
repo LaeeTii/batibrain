@@ -22,7 +22,7 @@ describe('WallElevationCanvas', () => {
     const { container } = render(<MantineProvider><WallElevationCanvas
       wallLengthCm={400}
       points={points}
-      openings={[{ id: 'opening', wallId: 'wall', type: 'door', offsetCm: 20, widthCm: 90, bottomCm: 0, heightCm: 210 }]}
+      openings={[{ id: 'opening', wallId: 'wall', type: 'door', offsetCm: 20, widthCm: 90, bottomCm: 0, heightCm: 210, orientation: 'normal', hingeSide: 'left' }]}
       onSelectOpening={onSelectOpening}
     /></MantineProvider>);
     const rectangles = container.querySelectorAll('rect');
@@ -64,5 +64,39 @@ describe('WallElevationCanvas', () => {
     expect(watermark).toBeInTheDocument();
     expect(watermark?.tagName).toBe('polygon');
     expect(watermark).toHaveAttribute('stroke-dasharray', '10 7');
+  });
+
+  it('valide un déplacement de point seulement au relâchement', () => {
+    const onMovePointStart = vi.fn();
+    const onMovePoint = vi.fn();
+    const onMovePointEnd = vi.fn();
+    const { container } = render(<MantineProvider><WallElevationCanvas
+      wallLengthCm={400}
+      points={[
+        points[0],
+        { id: 'middle', wallId: 'wall', faceSide: 'gauche', order: 1, positionCm: 200, heightCm: 275 },
+        { ...points[1], order: 2 },
+      ]}
+      openings={[]}
+      editingEnabled
+      onMovePointStart={onMovePointStart}
+      onMovePoint={onMovePoint}
+      onMovePointEnd={onMovePointEnd}
+    /></MantineProvider>);
+    const point = container.querySelectorAll('circle')[1];
+
+    fireEvent.dragStart(point);
+    point.setAttribute('data-konva-drag-x', '180');
+    point.setAttribute('data-konva-drag-y', '340');
+    fireEvent.drag(point);
+    point.setAttribute('data-konva-drag-y', '332.5');
+    fireEvent.dragEnd(point);
+
+    expect(onMovePointStart).toHaveBeenCalledWith('middle');
+    expect(onMovePoint).toHaveBeenCalledTimes(2);
+    expect(onMovePointEnd).toHaveBeenCalledOnce();
+    expect(onMovePointEnd.mock.calls[0][0]).toBe('middle');
+    expect(onMovePointEnd.mock.calls[0][1]).toEqual(expect.any(Number));
+    expect(onMovePointEnd.mock.calls[0][2]).toEqual(expect.any(Number));
   });
 });

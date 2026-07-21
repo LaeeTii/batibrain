@@ -18,16 +18,19 @@ export const DEFAULT_CANVAS_DISPLAY_OPTIONS: CanvasDisplayOptions = {
   roomIcons: true,
 };
 
+export interface CanvasSnappingOptions {
+  grid: boolean;
+  vertices: boolean;
+  intersections: boolean;
+  walls: boolean;
+  midpoints: boolean;
+  guides: boolean;
+  distanceCm: number;
+}
+
 export interface ProjectViewSettings {
   display: CanvasDisplayOptions;
-  snapping: {
-    grid: boolean;
-    vertices: boolean;
-    intersections: boolean;
-    walls: boolean;
-    midpoints: boolean;
-    distanceCm: number;
-  };
+  snapping: CanvasSnappingOptions;
 }
 
 export const DEFAULT_PROJECT_VIEW_SETTINGS: ProjectViewSettings = {
@@ -38,6 +41,7 @@ export const DEFAULT_PROJECT_VIEW_SETTINGS: ProjectViewSettings = {
     intersections: true,
     walls: true,
     midpoints: true,
+    guides: true,
     distanceCm: 10,
   },
 };

@@ -111,6 +111,7 @@
 	- Retablir: `Ctrl+Shift+Z` (PC) / `Cmd+Shift+Z` (Mac).
 	- Capacite d'historique: 20 actions maximum conservees pour l'annulation.
 	- Regle de pile: une nouvelle action utilisateur apres annulation vide la pile de retablissement.
+	- Un geste continu de déplacement constitue une seule action: l'état avant l'appui est mémorisé, les positions intermédiaires ne sont pas ajoutées à l'historique et la nouvelle position est validée au relâchement.
 - Navigation au clavier dans les champs:
 	- Touche `Tab`: focus sur le champ suivant interactif.
 	- `Shift+Tab`: focus sur le champ precedent interactif.

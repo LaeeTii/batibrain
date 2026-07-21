@@ -132,6 +132,7 @@
   - après confirmation, copie le profil de la face affichée vers l'autre face et active le lien;
   - constitue une seule action annulable dans l'historique.
 - Toute modification valide est d'abord appliquée au brouillon local et alimente le même historique de 20 actions que les boutons et raccourcis transverses.
+- Un déplacement continu d'un point de profil prévisualise les positions intermédiaires sans les historiser; le relâchement crée une seule action dont l'annulation restaure l'état précédant l'appui.
 - Une auto-sauvegarde est lancée toutes les 5 minutes tant que le brouillon contient des changements non sauvegardés.
 - Le bouton `Sauvegarder` force la persistance immédiate.
 - Une nouvelle action après annulation vide la pile de rétablissement.
@@ -222,6 +223,7 @@
 - Given une modification ferait dépasser une ouverture du profil disponible, When l'utilisateur la valide, Then elle est refusée et un message explicite est affiché.
 - Given le rôle projet est lecture, When la vue est affichée, Then les deux faces restent consultables et aucune modification n'est possible.
 - Given un point de profil est verrouillé, When l'utilisateur tente de le déplacer, Then le geste est refusé avant toute mutation du brouillon.
+- Given un point de profil déverrouillé est déplacé par un geste continu, When l'utilisateur relâche le clic, Then une seule action est ajoutée à l'historique, Annuler restaure l'état précédant l'appui et Rétablir restaure la position finale.
 - Given les deux sommets du mur en plan sont verrouillés, When l'utilisateur tente de modifier son épaisseur, Then l'action est refusée, mais le matériau, l'isolation et les notes restent modifiables.
 - Given tous les points du profil sont verrouillés, When le profil est affiché, Then son état verrouillé est explicite et aucune modification géométrique n'est possible.
 - Given les profils sont liés, When un point est verrouillé sur une face, Then le point correspondant de l'autre face reçoit le même état.

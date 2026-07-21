@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(8);
+select plan(9);
 
 insert into auth.users (id, email, aud, role, created_at, updated_at)
 values
@@ -51,6 +51,11 @@ select results_eq(
   $$select show_grid from editor_view_settings where project_id = '92000000-0000-0000-0000-000000000001'$$,
   array[true],
   'un lecteur enregistre ses options de vue'
+);
+select results_eq(
+  $$select snap_guides from editor_view_settings where project_id = '92000000-0000-0000-0000-000000000001'$$,
+  array[true],
+  'les guides orthogonaux sont actifs par défaut'
 );
 select results_eq(
   $$update editor_view_settings set show_grid = false where project_id = '92000000-0000-0000-0000-000000000001' returning show_grid$$,

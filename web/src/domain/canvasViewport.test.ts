@@ -1,7 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { expandViewportToCanvas, panViewport, zoomViewport } from './canvasViewport';
+import { expandViewportToCanvas, fitViewportToPoints, panViewport, zoomViewport } from './canvasViewport';
 
 describe('navigation visuelle du canvas', () => {
+  it('centre le cadrage sur le milieu de la géométrie malgré la taille minimale', () => {
+    expect(fitViewportToPoints([
+      { x: 1_010, y: 2_020 },
+      { x: 1_310, y: 2_220 },
+    ], 120, 500)).toEqual({
+      x: 890,
+      y: 1_870,
+      width: 540,
+      height: 500,
+    });
+  });
+
+  it('ne produit aucun cadrage sans géométrie', () => {
+    expect(fitViewportToPoints([], 120, 500)).toBeNull();
+  });
+
   it('zoome autour du point d’ancrage sans modifier ce point métier', () => {
     const anchor = { x: 120, y: -40 };
     const result = zoomViewport({ x: 0, y: -100, width: 400, height: 200 }, 2, anchor);

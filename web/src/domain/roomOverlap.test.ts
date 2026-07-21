@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { createRectangleRoomGeometry } from './geometry';
+import { createRectangleRoomGeometry, insertVertexBetween, syncWallsWithVertices } from './geometry';
 import { validateRoomPolygon } from './globalGeometry';
-import { assertLockedGeometryPreserved, linkCoincidentWalls, linkedVertexIds, moveLinkedVertex, moveRoomWithLinkedVertices, normalizeCreatedRoomOverlaps, reconcilePersistedRoomIds, uniqueLevelWalls } from './roomOverlap';
+import { assertLockedGeometryPreserved, deleteRoomVertex, linkCoincidentWalls, linkedVertexIds, moveLinkedVertex, moveRoomWithLinkedVertices, normalizeCreatedRoomOverlaps, reconcilePersistedRoomIds, uniqueLevelWalls } from './roomOverlap';
 import type { RoomSnapshot } from '../services/rooms';
 import { createUniformWallHeightProfiles, validateWallHeightProfiles } from './wallHeightProfile';
 
@@ -11,6 +11,63 @@ function room(id: string, x: number, y: number, width: number, height: number): 
 }
 
 describe('normalisation des chevauchements de pièces', () => {
+  it('supprime un sommet et relie le mur entrant à ses deux voisins', () => {
+    const source = room('A', 0, 0, 100, 100);
+    const left = source.vertices[0];
+    const right = source.vertices[1];
+    const inserted = insertVertexBetween(source.vertices, left.id, right.id, {
+      id: 'sommet-à-supprimer',
+      pieceId: source.room.id,
+      x: 50,
+      y: 0,
+    })!;
+    source.vertices = inserted;
+    source.walls = syncWallsWithVertices(inserted, source.walls);
+    const incomingWall = source.walls.find(({ endVertexId }) => endVertexId === 'sommet-à-supprimer')!;
+
+    const [result] = deleteRoomVertex([source], source.room.id, 'sommet-à-supprimer');
+
+    expect(result.vertices).toHaveLength(4);
+    expect(result.vertices.map(({ order }) => order)).toEqual([0, 1, 2, 3]);
+    expect(result.walls).toHaveLength(4);
+    expect(result.walls).toContainEqual(expect.objectContaining({
+      id: incomingWall.id,
+      startVertexId: left.id,
+      endVertexId: right.id,
+      pieceIds: [source.room.id],
+    }));
+  });
+
+  it('refuse de supprimer un sommet verrouillé ou le sommet d’un triangle', () => {
+    const rectangle = room('A', 0, 0, 100, 100);
+    rectangle.vertices[0] = { ...rectangle.vertices[0], isLocked: true };
+    expect(() => deleteRoomVertex([rectangle], rectangle.room.id, rectangle.vertices[0].id))
+      .toThrow('verrouillé');
+
+    const triangle = room('B', 0, 0, 100, 100);
+    triangle.vertices = triangle.vertices.slice(0, 3).map((vertex, order) => ({ ...vertex, order }));
+    triangle.walls = syncWallsWithVertices(triangle.vertices, triangle.walls);
+    expect(() => deleteRoomVertex([triangle], triangle.room.id, triangle.vertices[0].id))
+      .toThrow('au moins trois sommets');
+  });
+
+  it('conserve le sommet et le mur mitoyen dans la pièce voisine', () => {
+    const [left, right] = linkCoincidentWalls([
+      room('A', 0, 0, 100, 100),
+      room('B', 100, 0, 100, 100),
+    ]);
+    const sharedVertex = left.vertices.find(({ x, y }) => x === 100 && y === 0)!;
+    const sharedWall = left.walls.find((wall) => right.walls.some(({ id }) => id === wall.id))!;
+
+    const result = deleteRoomVertex([left, right], left.room.id, sharedVertex.id);
+    const nextLeft = result.find(({ room: value }) => value.id === left.room.id)!;
+    const nextRight = result.find(({ room: value }) => value.id === right.room.id)!;
+
+    expect(nextLeft.vertices.some(({ id }) => id === sharedVertex.id)).toBe(false);
+    expect(nextRight.vertices.some(({ id }) => id === sharedVertex.id)).toBe(true);
+    expect(nextRight.walls.find(({ id }) => id === sharedWall.id)?.pieceIds).toEqual([right.room.id]);
+  });
+
   it('crée une pièce distincte pour la zone commune', () => {
     const result = normalizeCreatedRoomOverlaps(room('B', 50, 50, 100, 100), [room('A', 0, 0, 100, 100)]);
     expect(result.overlapCount).toBe(1);
@@ -255,6 +312,8 @@ describe('normalisation des chevauchements de pièces', () => {
       widthCm: 20,
       bottomCm: 0,
       heightCm: 200,
+      orientation: 'normal',
+      hingeSide: 'left',
     }];
 
     const result = normalizeCreatedRoomOverlaps(

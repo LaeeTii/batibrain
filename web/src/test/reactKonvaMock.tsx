@@ -20,6 +20,7 @@ type KonvaMockProps = {
   onMouseMove?: (event: KonvaMockEvent) => void;
   onMouseUp?: (event: KonvaMockEvent) => void;
   onMouseLeave?: (event: KonvaMockEvent) => void;
+  onDragStart?: (event: KonvaMockEvent) => void;
   onDragMove?: (event: KonvaMockEvent) => void;
   onDragEnd?: (event: KonvaMockEvent) => void;
   onContextMenu?: (event: KonvaMockEvent) => void;
@@ -40,7 +41,9 @@ type KonvaStageMock = {
   getPointerPosition(): { x: number; y: number };
 };
 
-function createEvent(event: MouseEvent<SVGElement>, props: KonvaMockProps): KonvaMockEvent {
+function createEvent(event: MouseEvent<SVGElement>, props: KonvaMockProps, usePointerPosition = false): KonvaMockEvent {
+  const dragX = Number(event.currentTarget.getAttribute('data-konva-drag-x') ?? event.clientX ?? props.x ?? 0);
+  const dragY = Number(event.currentTarget.getAttribute('data-konva-drag-y') ?? event.clientY ?? props.y ?? 0);
   const stage = {
     getPointerPosition: () => ({
       x: event.clientX,
@@ -52,8 +55,8 @@ function createEvent(event: MouseEvent<SVGElement>, props: KonvaMockProps): Konv
     evt: event,
     target: {
       getStage: () => stage,
-      x: () => Number(props.x ?? 0),
-      y: () => Number(props.y ?? 0),
+      x: () => usePointerPosition ? dragX : Number(props.x ?? 0),
+      y: () => usePointerPosition ? dragY : Number(props.y ?? 0),
       position: () => undefined,
     },
   };
@@ -75,6 +78,15 @@ function eventProps(props: KonvaMockProps) {
       : undefined,
     onMouseLeave: props.onMouseLeave
       ? (event: MouseEvent<SVGElement>) => props.onMouseLeave?.(createEvent(event, props))
+      : undefined,
+    onDragStart: props.onDragStart
+      ? (event: MouseEvent<SVGElement>) => props.onDragStart?.(createEvent(event, props, true))
+      : undefined,
+    onDrag: props.onDragMove
+      ? (event: MouseEvent<SVGElement>) => props.onDragMove?.(createEvent(event, props, true))
+      : undefined,
+    onDragEnd: props.onDragEnd
+      ? (event: MouseEvent<SVGElement>) => props.onDragEnd?.(createEvent(event, props, true))
       : undefined,
     onContextMenu: props.onContextMenu
       ? (event: MouseEvent<SVGElement>) => props.onContextMenu?.(createEvent(event, props))

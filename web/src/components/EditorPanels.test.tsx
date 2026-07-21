@@ -61,4 +61,40 @@ describe('EditorCreationPanel', () => {
     fireEvent.change(screen.getByLabelText('Couleur du sol'), { target: { value: '#123456' } });
     expect(onUpdateRoom).toHaveBeenCalledWith(expect.objectContaining({ floorColor: '#123456' }));
   });
+
+  it('ferme la section active à la demande du canvas', () => {
+    const view = (dismissKey: number) => <MantineProvider><SelectionSyncBridge validObjects={new Set(['level:l1'])}><EditorCreationPanel levels={[data.level]} levelData={[data]} activeLevelId="l1" dismissKey={dismissKey} /></SelectionSyncBridge></MantineProvider>;
+    const { rerender } = render(view(0));
+    fireEvent.click(screen.getByRole('button', { name: 'Pièces' }));
+    expect(screen.getByRole('button', { name: 'Retour' })).toBeInTheDocument();
+
+    rerender(view(1));
+    expect(screen.queryByRole('button', { name: 'Retour' })).not.toBeInTheDocument();
+  });
+
+  it('expose les actions métier du mur sélectionné', async () => {
+    const onSplitWall = vi.fn();
+    const onDetachWall = vi.fn();
+    const wallData: CanvasLevelData = { ...data, rooms: [{ room: { id: 'r1', levelId: 'l1', name: 'Pièce', type: 'autre', floorColor: '#fff' }, vertices: [], walls: [{ id: 'w1', pieceId: 'r1', pieceIds: ['r1'], startVertexId: 'a', endVertexId: 'b' }], openings: [] }] };
+    render(<MantineProvider><SelectionSyncBridge validObjects={new Set(['wall:w1'])}><EditorCreationPanel levels={[data.level]} levelData={[wallData]} activeLevelId="l1" onSplitWall={onSplitWall} onDetachWall={onDetachWall} /></SelectionSyncBridge></MantineProvider>);
+    fireEvent.click(screen.getByRole('button', { name: 'Murs' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Mur w1' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Couper en deux' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Détacher' }));
+    expect(onSplitWall).toHaveBeenCalledWith('w1');
+    expect(onDetachWall).toHaveBeenCalledWith('w1');
+  });
+
+  it('inverse séparément le sens et le côté ouvrant', async () => {
+    const onUpdateOpening = vi.fn();
+    const opening = { id: 'o1', wallId: 'w1', type: 'door' as const, offsetCm: 10, widthCm: 90, bottomCm: 0, heightCm: 210, orientation: 'normal' as const, hingeSide: 'left' as const };
+    const openingData: CanvasLevelData = { ...data, rooms: [{ room: { id: 'r1', levelId: 'l1', name: 'Pièce', type: 'autre', floorColor: '#fff' }, vertices: [], walls: [], openings: [opening] }] };
+    render(<MantineProvider><SelectionSyncBridge validObjects={new Set(['opening:o1'])}><EditorCreationPanel levels={[data.level]} levelData={[openingData]} activeLevelId="l1" onUpdateOpening={onUpdateOpening} /></SelectionSyncBridge></MantineProvider>);
+    fireEvent.click(screen.getByRole('button', { name: 'Ouvertures' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Porte o1' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Inverser le sens' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ouvrant gauche' }));
+    expect(onUpdateOpening).toHaveBeenCalledWith(expect.objectContaining({ orientation: 'inverse' }));
+    expect(onUpdateOpening).toHaveBeenCalledWith(expect.objectContaining({ hingeSide: 'right' }));
+  });
 });

@@ -48,7 +48,7 @@
 	- titre de la pièce editee,
 	- contexte projet et niveau de rattachement,
 	- controles d'affichage (affichage/masquage: grille, règles, côtes, angles, notes, surfaces, icônes de pièces),
-	- controles de magnetisme (snapping: grille, sommets, intersections, murs, milieux, distance de capture),
+	- controles de magnetisme (snapping: grille, sommets, intersections, murs, milieux, guides orthogonaux, distance de capture) dans un sélecteur `Magnétisme` placé immédiatement à côté du sélecteur `Affichage`,
 	- boutons icones `Annuler` et `Retablir` places en haut a droite du header principal,
 	- si l'historique correspondant est vide, le bouton associe est grise et non cliquable,
 	- actions primaires: Export PDF, Retour dashboard,
@@ -88,10 +88,11 @@
 - Édition et sélection:
 	- l'utilisateur selectionne un objet de la pièce (pièce, mur, ouverture, cote, note) depuis le canvas, une liste ou le panneau détail.
 	- la sélection active est synchronisee entre canvas, panneau creation et panneau détail.
+	- un clic simple sur le fond du canvas hors objet vide la sélection et ferme les blocs d'édition contextuels; un panoramique conserve la sélection courante.
 	- l'utilisateur peut utiliser les boutons `Annuler` et `Retablir` du header principal quand l'historique correspondant est disponible.
 	- l'édition d'un mur mitoyen de la pièce courante met a jour la géométrie de la pièce voisine liee a ce mur.
 	- l'utilisateur peut activer/desactiver les options d'affichage (affichage/masquage) grille, règles, côtes, angles, notes, surfaces et icônes de pièces comme dans l'éditeur 2D global.
-	- l'utilisateur peut configurer le magnetisme (snapping: sources + distance de capture) comme dans l'éditeur 2D global.
+	- l'utilisateur peut configurer le magnetisme (snapping: sources + distance de capture) comme dans l'éditeur 2D global; les guides orthogonaux alignent les sommets déplacés sur les verticales et horizontales de référence afin de former des angles droits.
 	- les autres pièces du niveau restent visibles en gris pour garder le contexte, sans édition directe.
 	- le panneau détail affiche l'arbre complet du niveau, y compris les objets hors pièce courante.
 	- les noeuds hors pièce courante sont affiches en gris et restent depliables/repliables.
@@ -146,12 +147,15 @@
 - Portee d'édition:
 	- les sommets du plan portent les verrous persistés; les états de la pièce, de ses murs et de ses côtes sont calculés depuis ces sommets.
 	- la pièce et ses murs restent sélectionnables et consultables lorsque leur état calculé est verrouillé.
-	- le propriétaire et les collaborateurs en écriture peuvent verrouiller ou déverrouiller un sommet par clic droit ou utiliser les boutons des blocs Pièce et Mur; le collaborateur en lecture consulte uniquement l'état.
+	- le propriétaire et les collaborateurs en écriture disposent au clic droit sur un sommet des actions de verrouillage, de déverrouillage et de suppression autorisée; le collaborateur en lecture consulte uniquement l'état.
 	- une interaction interdite est refusée avant toute modification du brouillon.
 	- les ouvertures ne portent aucun verrou propre et restent modifiables lorsque leur mur est verrouillé.
 	- la vue autorise l'édition strictement de la pièce courante.
 	- les murs, ouvertures, côtes et notes d'autres pièces visibles en contexte grise ne sont pas editables dans RoomEditor2DView.
 	- l'action d'édition `Couper en deux` d'un mur existant reste autorisee dans RoomEditor2DView.
+	- les actions `Couper en deux` et `Détacher` utilisent un mode canvas temporaire exclusif et annulable avec Echap.
+	- détacher une extrémité rompt son ancrage sans déplacer les murs voisins; la pièce dont le contour devient ouvert est supprimée et la vue revient au dashboard après sauvegarde.
+	- les actions `Inverser le sens` et `Ouvrant gauche/droite` sont disponibles pour tous les types d'ouverture de la pièce courante.
 	- toute coupe ou transformation topologique est refusée atomiquement si elle déplacerait, remplacerait ou supprimerait un sommet verrouillé.
 	- la creation d'un mur est limitee a l'intérieur de la pièce courante ou a son contour; aucun mur ne peut etre créé hors de la pièce courante dans cette vue.
 	- la création d'un mur préremplit son épaisseur et ses profils uniformes avec les préférences de mur par défaut de l'utilisateur courant; ces valeurs restent modifiables avant validation.
@@ -330,6 +334,22 @@
 	- When l'utilisateur sélectionne cet élément
 	- Then ses données restent consultables
 	- And ses interactions géométriques et sa suppression sont indisponibles jusqu'au déverrouillage de ses points
+- Scenario 7c - Suppression d'un sommet:
+	- Given un sommet déverrouillé de la pièce courante laisse au moins trois sommets dans le contour
+	- When l'utilisateur choisit `Supprimer` dans son menu contextuel
+	- Then le sommet est retiré
+	- And le mur résultant relie ses voisins immédiats
+- Scenario 7d - Fermeture par clic sur le fond:
+	- Given un mur, une ouverture ou un autre objet est sélectionné
+	- When l'utilisateur clique simplement sur le fond du canvas hors objet
+	- Then la sélection est vidée et les blocs d'édition contextuels sont fermés
+	- And un clic maintenu pour déplacer le plan ne ferme pas ces blocs
+- Scenario 7e - Historique d'un déplacement de sommet:
+	- Given un sommet de la pièce courante est déverrouillé
+	- When l'utilisateur le déplace par un geste continu puis relâche le clic
+	- Then une seule action est ajoutée à l'historique au relâchement
+	- And Annuler restaure sa position avant l'appui
+	- And Rétablir restaure sa position finale
 - Scenario 8 - Contexte d'en-tete:
 	- Given la vue est en etat normal
 	- When l'utilisateur consulte l'en-tete

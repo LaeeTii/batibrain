@@ -117,7 +117,8 @@ function toTopologyOpening(opening: Opening): TopologyOpening {
     widthCm: opening.widthCm,
     heightCm: opening.heightCm,
     bottomCm: opening.bottomCm,
-    orientation: opening.orientation ?? null,
+    orientation: opening.orientation,
+    hingeSide: opening.hingeSide,
   };
 }
 
@@ -164,6 +165,11 @@ function WallEditorContent({ projectId, levelId, wallId, roomId, onBack }: WallE
   const [face, setFace] = useState<WallFaceSide>('gauche');
   const [selectedPointId, setSelectedPointId] = useState<string | null>(null);
   const [selectedOpeningId, setSelectedOpeningId] = useState<string | null>(null);
+  const profilePointMoveRef = useRef<{
+    pointId: string;
+    face: WallFaceSide;
+    before: RoomSnapshot[];
+  } | null>(null);
 
   roomsRef.current = rooms;
   const context = useMemo(
@@ -222,8 +228,7 @@ function WallEditorContent({ projectId, levelId, wallId, roomId, onBack }: WallE
     },
   });
 
-  const applyRooms = (label: string, nextRooms: RoomSnapshot[]) => {
-    const previous = roomsRef.current;
+  const commitRooms = (label: string, previous: RoomSnapshot[], nextRooms: RoomSnapshot[]) => {
     roomsRef.current = nextRooms;
     setRooms(nextRooms);
     setDirty(true);
@@ -233,6 +238,10 @@ function WallEditorContent({ projectId, levelId, wallId, roomId, onBack }: WallE
       undo: async () => { roomsRef.current = previous; setRooms(previous); setDirty(true); },
       redo: async () => { roomsRef.current = nextRooms; setRooms(nextRooms); setDirty(true); },
     });
+  };
+
+  const applyRooms = (label: string, nextRooms: RoomSnapshot[]) => {
+    commitRooms(label, roomsRef.current, nextRooms);
   };
 
   const commitWall = (
@@ -257,21 +266,87 @@ function WallEditorContent({ projectId, levelId, wallId, roomId, onBack }: WallE
     }
   };
 
+  const roomsWithUpdatedProfile = (
+    baseRooms: RoomSnapshot[],
+    targetFace: WallFaceSide,
+    points: WallHeightProfilePoint[],
+  ) => {
+    const baseContext = findWallEditorContext(baseRooms, wallId, roomId);
+    if (!baseContext) throw new Error('Le mur demandé n’existe plus ou n’est pas accessible.');
+    const baseOwner = baseRooms.find(({ room }) => room.id === baseContext.ownerRoomId);
+    const baseWall = baseContext.projection;
+    const baseProfiles = baseWall.heightProfiles;
+    if (!baseOwner || !baseProfiles) throw new Error('Le profil de hauteur du mur est introuvable.');
+    const baseOpenings = baseOwner.openings.filter((opening) => opening.wallId === wallId);
+    const state = updateWallHeightProfile(
+      topologyWallFromProjection(baseWall),
+      baseProfiles,
+      targetFace,
+      points,
+      baseContext.lengthCm,
+    );
+    const nextWall = { ...baseWall, heightProfilesLinked: state.wall.heightProfilesLinked };
+    assertOpeningsFit(nextWall, state.profiles, baseContext.lengthCm, baseOpenings, baseOwner.openingTemplates);
+    return replaceWallAndSyncConnectedEndpoints(
+      baseRooms,
+      baseContext.ownerRoomId,
+      nextWall,
+      baseProfiles,
+      state.profiles,
+      baseOpenings,
+    );
+  };
+
   const updatePoints = (points: WallHeightProfilePoint[]) => {
-    if (!wall || !profiles || !context) return;
     try {
-      const state = updateWallHeightProfile(
-        topologyWallFromProjection(wall),
-        profiles,
-        face,
-        points,
-        context.lengthCm,
-      );
-      commitWall('Modifier le profil de hauteur', {
-        ...wall,
-        heightProfilesLinked: state.wall.heightProfilesLinked,
-      }, state.profiles);
+      applyRooms('Modifier le profil de hauteur', roomsWithUpdatedProfile(roomsRef.current, face, points));
     } catch (caught) {
+      setValidationError(message(caught));
+    }
+  };
+
+  const startProfilePointMove = (pointId: string) => {
+    if (canWrite) profilePointMoveRef.current = { pointId, face, before: roomsRef.current };
+  };
+
+  const previewProfilePointMove = (pointId: string, positionCm: number, heightCm: number) => {
+    const gesture = profilePointMoveRef.current;
+    if (!gesture || gesture.pointId !== pointId || !canWrite) return;
+    try {
+      const baseContext = findWallEditorContext(gesture.before, wallId, roomId);
+      const basePoints = baseContext?.projection.heightProfiles?.[gesture.face];
+      if (!basePoints) return;
+      const nextRooms = roomsWithUpdatedProfile(gesture.before, gesture.face, basePoints.map((point) => (
+        point.id === pointId ? { ...point, positionCm, heightCm } : point
+      )));
+      roomsRef.current = nextRooms;
+      setRooms(nextRooms);
+      setValidationError('');
+    } catch (caught) {
+      setValidationError(message(caught));
+    }
+  };
+
+  const finishProfilePointMove = (pointId: string, positionCm: number, heightCm: number) => {
+    const gesture = profilePointMoveRef.current;
+    profilePointMoveRef.current = null;
+    if (!gesture || gesture.pointId !== pointId || !canWrite) return;
+    try {
+      const baseContext = findWallEditorContext(gesture.before, wallId, roomId);
+      const basePoints = baseContext?.projection.heightProfiles?.[gesture.face];
+      if (!basePoints) return;
+      const nextRooms = roomsWithUpdatedProfile(gesture.before, gesture.face, basePoints.map((point) => (
+        point.id === pointId ? { ...point, positionCm, heightCm } : point
+      )));
+      if (JSON.stringify(gesture.before) === JSON.stringify(nextRooms)) {
+        roomsRef.current = gesture.before;
+        setRooms(gesture.before);
+        return;
+      }
+      commitRooms('Modifier le profil de hauteur', gesture.before, nextRooms);
+    } catch (caught) {
+      roomsRef.current = gesture.before;
+      setRooms(gesture.before);
       setValidationError(message(caught));
     }
   };
@@ -378,7 +453,9 @@ function WallEditorContent({ projectId, levelId, wallId, roomId, onBack }: WallE
             selectedPointId={selectedPointId}
             onSelectOpening={(id) => { setSelectedOpeningId(id); setSelectedPointId(null); }}
             onSelectPoint={(id) => { setSelectedPointId(id); setSelectedOpeningId(null); }}
-            onMovePoint={(id, positionCm, heightCm) => updatePoints(facePoints.map((point) => point.id === id ? { ...point, positionCm, heightCm } : point))}
+            onMovePointStart={startProfilePointMove}
+            onMovePoint={previewProfilePointMove}
+            onMovePointEnd={finishProfilePointMove}
             onTogglePointLock={(id) => {
               const index = facePoints.findIndex((point) => point.id === id);
               if (index < 0) return;

@@ -92,6 +92,32 @@ describe('WallEditorView', () => {
     await waitFor(() => expect(saveLevelRoomSnapshots).toHaveBeenCalledWith('level', expect.any(Array), 2));
   });
 
+  it('annule tout un déplacement de point de profil en une seule action', async () => {
+    const { container } = renderView();
+    await screen.findByText(/Mur wall/);
+    const point = container.querySelectorAll('.wall-elevation-canvas circle')[1];
+    const initialX = point.getAttribute('cx')!;
+    const initialY = point.getAttribute('cy')!;
+    const targetY = String(Number(initialY) - 20);
+    const undoButton = screen.getByRole('button', { name: 'Annuler' });
+
+    fireEvent.dragStart(point);
+    point.setAttribute('data-konva-drag-x', initialX);
+    point.setAttribute('data-konva-drag-y', String(Number(initialY) - 10));
+    fireEvent.drag(point);
+    expect(undoButton).toBeDisabled();
+    point.setAttribute('data-konva-drag-y', targetY);
+    fireEvent.dragEnd(point);
+
+    await waitFor(() => expect(undoButton).toBeEnabled());
+    const finalY = container.querySelectorAll('.wall-elevation-canvas circle')[1].getAttribute('cy')!;
+    expect(finalY).not.toBe(initialY);
+    fireEvent.click(undoButton);
+    await waitFor(() => expect(container.querySelectorAll('.wall-elevation-canvas circle')[1]).toHaveAttribute('cy', initialY));
+    fireEvent.click(screen.getByRole('button', { name: 'Rétablir' }));
+    await waitFor(() => expect(container.querySelectorAll('.wall-elevation-canvas circle')[1]).toHaveAttribute('cy', finalY));
+  });
+
   it('conserve les deux faces consultables en lecture seule', async () => {
     vi.mocked(canWriteProject).mockResolvedValue(false);
     renderView();

@@ -30,6 +30,9 @@
 - La sélection d'un objet ouvre l'accordeon de premier niveau correspondant dans le panneau menu creation.
 - Le bloc édition de l'objet selectionne est affiche avec les champs pre-remplis.
 - Le bouton "retour" ferme tous les accordeons et quitte le mode d'édition actif du canvas.
+- Un clic simple sur le fond du canvas, hors pièce, mur, point ou autre objet interactif, vide la sélection et ferme tous les blocs de création ou d'édition ouverts.
+- Un clic maintenu suivi d'un déplacement du fond réalise uniquement le panoramique et conserve la sélection ainsi que les blocs ouverts.
+- Lorsqu'un geste de création attend explicitement un point sur le canvas, ce clic de placement reste prioritaire et ne ferme pas le mode de création.
 - Si le panneau détail est ferme, la sélection reste active mais n'ouvre pas le panneau automatiquement sauf action explicite prevue par l'IHM.
 
 ## Règles par type d'objet

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Accordion, ActionIcon, Badge, Button, ColorInput, NativeSelect, NumberInput, ScrollArea, Stack, Text, Textarea, TextInput } from '@mantine/core';
-import { LuArrowLeft, LuArrowUpRight, LuBrickWall, LuChevronDown, LuChevronRight, LuDoorOpen, LuLayers3, LuListTree, LuPanelLeftClose, LuPanelLeftOpen, LuPanelRightClose, LuRuler, LuSquareDashed, LuStickyNote } from 'react-icons/lu';
+import { LuArrowLeft, LuArrowUpRight, LuBrickWall, LuChevronDown, LuChevronRight, LuCrosshair, LuDoorOpen, LuFlipHorizontal2, LuLayers3, LuListTree, LuMove, LuPanelLeftClose, LuPanelLeftOpen, LuPanelRightClose, LuPanelRightOpen, LuRuler, LuSplit, LuSquareDashed, LuStickyNote, LuTrash2, LuUnlink } from 'react-icons/lu';
 import { polygonAreaCm2, sortVertices } from '../domain/geometry';
 import { uniqueLevelOpenings, uniqueLevelWalls } from '../domain/roomOverlap';
 import type { Level } from '../domain/types';
@@ -26,6 +26,8 @@ interface EditorCreationPanelProps {
   projectId?: string;
   readOnly?: boolean;
   selectionLocked?: boolean;
+  selectionLockAvailable?: boolean;
+  dismissKey?: number;
   creationMessage?: string;
   lengthUnit?: LengthUnit;
   onStartRoomCreation?(): void;
@@ -37,6 +39,11 @@ interface EditorCreationPanelProps {
   onSaveNote?(note: EditorNote): Promise<void> | void;
   onDeleteNote?(id: string): Promise<void> | void;
   onOpenWall?(wallId: string, levelId: string): void;
+  onSplitWall?(wallId: string): void;
+  onDetachWall?(wallId: string): void;
+  onDeleteWall?(wallId: string): void;
+  onRepositionDimension?(dimensionId: string): void;
+  onChangeNoteOrigin?(noteId: string): void;
   onUpdateRoom?(room: Room): void;
   onUpdateWall?(wall: Wall): void;
   onUpdateOpening?(opening: Opening): void;
@@ -51,12 +58,15 @@ const ROOM_TYPE_OPTIONS: { value: RoomType; label: string }[] = [
   ['salle_de_jeu', 'Salle de jeu'], ['bibliotheque', 'Bibliothèque'], ['autre', 'Autre'],
 ].map(([value, label]) => ({ value: value as RoomType, label }));
 
-export function EditorCreationPanel({ levels, levelData, activeLevelId, projectId = '', readOnly = false, selectionLocked = false, creationMessage = '', lengthUnit = 'cm', onStartRoomCreation, onCreateLevel, onUpdateLevel, onDeleteLevel, onSaveDimension, onDeleteDimension, onSaveNote, onDeleteNote, onOpenWall, onUpdateRoom, onUpdateWall, onUpdateOpening, onCreateOpening, onToggleSelectionLock, onDeleteSelection }: EditorCreationPanelProps) {
+export function EditorCreationPanel({ levels, levelData, activeLevelId, projectId = '', readOnly = false, selectionLocked = false, selectionLockAvailable = true, dismissKey = 0, creationMessage = '', lengthUnit = 'cm', onStartRoomCreation, onCreateLevel, onUpdateLevel, onDeleteLevel, onSaveDimension, onDeleteDimension, onSaveNote, onDeleteNote, onOpenWall, onSplitWall, onDetachWall, onDeleteWall, onRepositionDimension, onChangeNoteOrigin, onUpdateRoom, onUpdateWall, onUpdateOpening, onCreateOpening, onToggleSelectionLock, onDeleteSelection }: EditorCreationPanelProps) {
   const { selection, select } = useEditorSelection(); const [collapsed, setCollapsed] = useState(false); const [section, setSection] = useState<string | null>(null);
   useEffect(() => { if (selection && selection.type !== 'point') setSection(selection.type); }, [selection]);
+  useEffect(() => { setSection(null); }, [dismissKey]);
   const data = levelData.find(({ level }) => level.id === activeLevelId);
   const selectedRoom = selection?.type === 'room' ? data?.rooms.find(({ room }) => room.id === selection.id)?.room : undefined;
-  const selectedWall = selection?.type === 'wall' ? uniqueLevelWalls(data?.rooms ?? []).find(({ id }) => id === selection.id) : undefined;
+  const detachedWalls = data?.detachedWalls?.map(({ wall }) => wall) ?? [];
+  const allWalls = [...uniqueLevelWalls(data?.rooms ?? []), ...detachedWalls];
+  const selectedWall = selection?.type === 'wall' ? allWalls.find(({ id }) => id === selection.id) : undefined;
   const selectedOpening = selection?.type === 'opening' ? uniqueLevelOpenings(data?.rooms ?? []).find(({ id }) => id === selection.id) : undefined;
   const templates = [...new Map<string, OpeningTemplate>(
     (data?.rooms.flatMap(({ openingTemplates }) => Object.values(openingTemplates ?? {})) ?? [])
@@ -79,7 +89,7 @@ export function EditorCreationPanel({ levels, levelData, activeLevelId, projectI
   const items: Record<SectionType, { id: string; label: string; levelId: string }[]> = {
     level: levels.map((level) => ({ id: level.id, label: `${level.name} (niveau ${level.number})`, levelId: level.id })),
     room: (data?.rooms ?? []).map(({ room }) => ({ id: room.id, label: room.name, levelId: activeLevelId })),
-    wall: uniqueLevelWalls(data?.rooms ?? []).map((wall) => ({ id: wall.id, label: `Mur ${shortId(wall.id)}`, levelId: activeLevelId })),
+    wall: allWalls.map((wall) => ({ id: wall.id, label: `${(wall.pieceIds?.length ?? 1) === 0 ? 'Mur détaché' : 'Mur'} ${shortId(wall.id)}`, levelId: activeLevelId })),
     opening: uniqueLevelOpenings(data?.rooms ?? []).map((opening) => ({ id: opening.id, label: `${opening.type === 'door' ? 'Porte' : opening.type === 'window' ? 'Fenêtre' : 'Ouverture'} ${shortId(opening.id)}`, levelId: activeLevelId })),
     dimension: (data?.dimensions ?? []).map((item) => ({ id: item.id, label: item.label ?? `Côte ${shortId(item.id)}`, levelId: activeLevelId })),
     note: (data?.notes ?? []).map((item) => ({ id: item.id, label: item.text, levelId: activeLevelId })),
@@ -92,7 +102,7 @@ export function EditorCreationPanel({ levels, levelData, activeLevelId, projectI
     <ScrollArea h={620}><Accordion value={section} onChange={setSection}>{(Object.entries(sectionDetails) as [SectionType, typeof sectionDetails[SectionType]][]).map(([type, [label, Icon]]) => <Accordion.Item key={type} value={type}><Accordion.Control icon={<Icon aria-hidden />}>{label}</Accordion.Control><Accordion.Panel><Stack gap="xs">
       {type === 'wall' && selection?.type === 'wall' && selection.levelId === activeLevelId && onOpenWall ? <Button leftSection={<LuArrowUpRight />} onClick={() => onOpenWall(selection.id, activeLevelId)}>Ouvrir la vue Mur</Button> : null}
       {type === 'room' && selectedRoom ? <Stack gap="xs">
-        <ManualLockButton isLocked={selectionLocked} canChangeLock={!readOnly && Boolean(onToggleSelectionLock)} onChange={(locked) => onToggleSelectionLock?.(locked)} />
+        <ManualLockButton isLocked={selectionLocked} canChangeLock={!readOnly && selectionLockAvailable && Boolean(onToggleSelectionLock)} onChange={(locked) => onToggleSelectionLock?.(locked)} />
         <TextInput label="Nom" disabled={readOnly} value={selectedRoom.name} onChange={(event) => onUpdateRoom?.({ ...selectedRoom, name: event.currentTarget.value })} />
         <NativeSelect label="Type" disabled={readOnly} value={selectedRoom.type} data={ROOM_TYPE_OPTIONS} onChange={(event) => onUpdateRoom?.({ ...selectedRoom, type: event.currentTarget.value as RoomType })} />
         <ColorInput
@@ -107,15 +117,19 @@ export function EditorCreationPanel({ levels, levelData, activeLevelId, projectI
         {onDeleteSelection ? <Button color="red" variant="light" disabled={readOnly || selectionLocked} onClick={onDeleteSelection}>Supprimer la pièce</Button> : null}
       </Stack> : null}
       {type === 'wall' && selectedWall ? <Stack gap="xs">
-        <ManualLockButton isLocked={selectionLocked} canChangeLock={!readOnly && Boolean(onToggleSelectionLock)} onChange={(locked) => onToggleSelectionLock?.(locked)} />
+        <ManualLockButton isLocked={selectionLocked} canChangeLock={!readOnly && selectionLockAvailable && (selectedWall.pieceIds?.length ?? 1) > 0 && Boolean(onToggleSelectionLock)} onChange={(locked) => onToggleSelectionLock?.(locked)} />
         <NumberInput label={`Épaisseur (${lengthUnit})`} disabled={readOnly || selectionLocked} min={0.01} value={centimetersToDisplay(selectedWall.thicknessCm ?? 0, lengthUnit)} onChange={(value) => onUpdateWall?.({ ...selectedWall, thicknessCm: displayToCentimeters(Number(value), lengthUnit) })} />
         <TextInput label="Matériau" disabled={readOnly} value={selectedWall.material ?? ''} onChange={(event) => onUpdateWall?.({ ...selectedWall, material: event.currentTarget.value || null })} />
         <TextInput label="Isolation" disabled={readOnly} value={selectedWall.insulation ?? ''} onChange={(event) => onUpdateWall?.({ ...selectedWall, insulation: event.currentTarget.value || null })} />
         <Textarea label="Notes" disabled={readOnly} value={selectedWall.notes ?? ''} onChange={(event) => onUpdateWall?.({ ...selectedWall, notes: event.currentTarget.value || null })} />
+        {onSplitWall ? <Button leftSection={<LuSplit />} disabled={readOnly || selectionLocked} onClick={() => onSplitWall(selectedWall.id)}>Couper en deux</Button> : null}
+        {onDetachWall ? <Button leftSection={<LuUnlink />} disabled={readOnly || selectionLocked} onClick={() => onDetachWall(selectedWall.id)}>Détacher</Button> : null}
+        {onDeleteWall ? <Button leftSection={<LuTrash2 />} color="red" variant="light" disabled={readOnly || selectionLocked || (selectedWall.pieceIds?.length ?? 1) > 0} onClick={() => onDeleteWall(selectedWall.id)}>Supprimer le mur</Button> : null}
       </Stack> : null}
       {type === 'opening' && selectedOpening ? <Stack gap="xs">
         {(['offsetCm', 'widthCm', 'heightCm', 'bottomCm'] as const).map((key) => <NumberInput key={key} label={{ offsetCm: 'Position', widthCm: 'Largeur', heightCm: 'Hauteur', bottomCm: 'Allège' }[key]} disabled={readOnly} min={key === 'offsetCm' || key === 'bottomCm' ? 0 : 0.01} value={centimetersToDisplay(selectedOpening[key], lengthUnit)} onChange={(value) => onUpdateOpening?.({ ...selectedOpening, [key]: displayToCentimeters(Number(value), lengthUnit) })} />)}
-        <TextInput label="Orientation" disabled={readOnly} value={selectedOpening.orientation ?? ''} onChange={(event) => onUpdateOpening?.({ ...selectedOpening, orientation: event.currentTarget.value || null })} />
+        <Button leftSection={<LuFlipHorizontal2 />} disabled={readOnly} onClick={() => onUpdateOpening?.({ ...selectedOpening, orientation: selectedOpening.orientation === 'inverse' ? 'normal' : 'inverse' })}>Inverser le sens</Button>
+        <Button leftSection={selectedOpening.hingeSide === 'left' ? <LuPanelLeftOpen /> : <LuPanelRightOpen />} disabled={readOnly} onClick={() => onUpdateOpening?.({ ...selectedOpening, hingeSide: selectedOpening.hingeSide === 'left' ? 'right' : 'left' })}>Ouvrant {selectedOpening.hingeSide === 'left' ? 'gauche' : 'droit'}</Button>
         {onDeleteSelection ? <Button color="red" variant="light" disabled={readOnly} onClick={onDeleteSelection}>Supprimer l’ouverture</Button> : null}
       </Stack> : null}
       {type === 'opening' && !selectedOpening && onCreateOpening ? <Stack gap="xs">
@@ -148,6 +162,7 @@ export function EditorCreationPanel({ levels, levelData, activeLevelId, projectI
       </Stack> : null}
       {type === 'dimension' && selectedDimension && onSaveDimension ? <Stack gap="xs">
         <TextInput label="Nom de la côte" value={selectedDimension.label ?? ''} disabled={readOnly} onChange={(event) => void onSaveDimension({ id: selectedDimension.id, levelId: selectedDimension.levelId, name: event.currentTarget.value, type: selectedDimension.type ?? 'point-point', distanceCm: Math.hypot(selectedDimension.end.x - selectedDimension.start.x, selectedDimension.end.y - selectedDimension.start.y), offsetCm: selectedDimension.offsetCm ?? 0, referenceA: { type: 'point', ...selectedDimension.start }, referenceB: { type: 'point', ...selectedDimension.end } })} />
+        {onRepositionDimension ? <Button leftSection={<LuMove />} disabled={readOnly || selectionLocked} onClick={() => onRepositionDimension(selectedDimension.id)}>Repositionner le décalage</Button> : null}
         {onDeleteDimension ? <Button color="red" variant="light" disabled={readOnly} onClick={() => void onDeleteDimension(selectedDimension.id)}>Supprimer la côte</Button> : null}
       </Stack> : null}
       {type === 'note' && onSaveNote ? <Stack gap="xs">
@@ -159,6 +174,7 @@ export function EditorCreationPanel({ levels, levelData, activeLevelId, projectI
       </Stack> : null}
       {type === 'note' && selectedNote && onSaveNote ? <Stack gap="xs">
         <Textarea label="Texte de la note" value={selectedNote.text} disabled={readOnly} onChange={(event) => void onSaveNote({ id: selectedNote.id, projectId, originType: selectedNote.originType ?? 'projet', originId: selectedNote.originId ?? null, text: event.currentTarget.value })} />
+        {onChangeNoteOrigin ? <Button leftSection={<LuCrosshair />} disabled={readOnly} onClick={() => onChangeNoteOrigin(selectedNote.id)}>Changer l’origine</Button> : null}
         {onDeleteNote ? <Button color="red" variant="light" disabled={readOnly} onClick={() => void onDeleteNote(selectedNote.id)}>Supprimer la note</Button> : null}
       </Stack> : null}
       {type === 'room' ? <Button disabled={readOnly || !onStartRoomCreation} onClick={onStartRoomCreation}>Dessiner une pièce</Button> : <Button disabled>Création disponible dans une prochaine étape</Button>}

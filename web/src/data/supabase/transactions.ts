@@ -53,6 +53,7 @@ export interface PersistedOpening {
   bottom_cm: number;
   height_cm: number;
   orientation: string | null;
+  hinge_side: 'left' | 'right';
   notes: string | null;
 }
 

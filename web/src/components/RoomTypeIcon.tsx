@@ -1,15 +1,16 @@
 import React from 'react';
 import {
-  LuBath, LuBedDouble, LuBookOpen, LuBriefcaseBusiness, LuCar, LuCookingPot,
-  LuGamepad2, LuHouse, LuToilet,
+  LuBath, LuBedDouble, LuBookOpen, LuCar, LuChefHat, LuDoorOpen, LuLampDesk,
+  LuSofa, LuToilet,
 } from 'react-icons/lu';
+import { FaChessPawn } from 'react-icons/fa6';
 import type { ComponentType } from 'react';
 import type { RoomType } from '../domain/types';
 
 const ICONS: Partial<Record<RoomType, ComponentType<{ 'aria-hidden'?: boolean }>>> = {
-  cuisine: LuCookingPot, chambre: LuBedDouble, salon: LuHouse, salle_de_bain: LuBath,
-  toilettes: LuToilet, bureau: LuBriefcaseBusiness, garage: LuCar, hall: LuHouse,
-  salle_de_jeu: LuGamepad2, bibliotheque: LuBookOpen,
+  cuisine: LuChefHat, chambre: LuBedDouble, salon: LuSofa, salle_de_bain: LuBath,
+  toilettes: LuToilet, bureau: LuLampDesk, garage: LuCar, hall: LuDoorOpen,
+  salle_de_jeu: FaChessPawn, bibliotheque: LuBookOpen,
 };
 
 export function RoomTypeIcon({ type }: { type: RoomType }) {

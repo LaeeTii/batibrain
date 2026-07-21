@@ -52,6 +52,12 @@
 		- champs de creation/édition: Epaisseur, Materiau (optionnel), Isolation (optionnel),
 		- à l'ouverture du bloc de création, Epaisseur est préremplie avec la préférence de mur par défaut de l'utilisateur courant; elle reste modifiable avant validation,
 		- actions édition: Ouvrir la vue Mur, Couper en deux, Detacher, Supprimer,
+		- `Couper en deux` active un mode canvas annulable avec Echap; le clic est projeté sur l'intérieur du mur, crée le sommet partagé et conserve le premier segment sélectionné,
+		- `Détacher` demande successivement l'extrémité puis sa nouvelle position; l'extrémité reçoit un nouveau sommet et rompt son ancrage sans déplacer les murs voisins,
+		- toute pièce dont le contour utilisait le mur détaché devient ouvert, est supprimée, et ses murs restent rattachés au niveau comme murs autonomes lorsqu'ils ne sont liés à aucune autre pièce,
+		- la sélection d'un mur autonome affiche ses deux sommets; chaque sommet déverrouillé reste cliquable et déplaçable sur le canvas,
+		- poser par magnétisme un sommet autonome sur un autre les raccorde; lorsque le raccordement referme un cycle simple, une nouvelle pièce est créée depuis ce contour,
+		- `Supprimer` est disponible uniquement pour un mur autonome sans liaison à une pièce,
 		- action contextuelle `Verrouiller` ou `Déverrouiller` dans le bloc d'édition du mur sélectionné,
 		- liste des murs avec suppression.
 	- OpeningsSection:
@@ -62,6 +68,7 @@
 		- au survol d'un mur valide, une previsualisation de l'ouverture suit la souris,
 		- les mesures gauche/droite sont affichees pendant le positionnement,
 		- actions édition: Inverser le sens, Ouvrant gauche/droite si applicable, Supprimer,
+		- toutes les ouvertures portent un sens `normal` ou `inverse` et un côté ouvrant `left` ou `right`; les deux actions sont disponibles pour tous les types,
 		- liste des ouvertures selectionnable avec suppression.
 	- DimensionsSection:
 		- types de mesure supportes: point a point, mur a mur, point sur mur,
@@ -69,10 +76,12 @@
 		- la distance est calculee automatiquement apres sélection des references de mesure,
 		- le decalage de la cote est defini dans une etape distincte avant validation finale,
 		- actions édition: Renommer, Repositionner decalage, Supprimer.
+		- `Repositionner decalage` active un mode canvas annulable avec Echap et conserve les références de mesure.
 	- NotesSection:
 		- champ Texte en textarea sans limite de longueur,
 		- origine dynamique avant validation (pièce, mur, point, ouverture ou projet),
 		- actions édition: Modifier texte, Changer origine, Supprimer,
+		- `Changer origine` active un mode canvas annulable avec Echap; un objet devient la nouvelle origine et un clic sur le fond rattache la note au projet,
 		- format d'origine affiche dans la liste: nom_niveau-nom_piece-id_mur ou nom_niveau-nom_piece ou nom_projet-01.
 
 ## Iconographie

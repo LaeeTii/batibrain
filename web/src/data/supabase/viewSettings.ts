@@ -2,12 +2,14 @@ import { getSupabaseClient } from './client';
 import {
   DEFAULT_PROJECT_VIEW_SETTINGS,
   type CanvasDisplayOptions,
+  type CanvasSnappingOptions,
   type ProjectViewSettings,
 } from '../../domain/viewSettings';
 
 export type ViewSettingsGateway = {
   load(projectId: string): Promise<ProjectViewSettings>;
   saveDisplayOptions(projectId: string, options: CanvasDisplayOptions): Promise<void>;
+  saveSnappingOptions(projectId: string, options: CanvasSnappingOptions): Promise<void>;
 };
 
 export async function loadProjectViewSettings(projectId: string): Promise<ProjectViewSettings> {
@@ -16,7 +18,7 @@ export async function loadProjectViewSettings(projectId: string): Promise<Projec
   if (authError || !authData.user) throw authError ?? new Error('Session introuvable.');
 
   const { data, error } = await client.from('editor_view_settings')
-    .select('show_grid,show_rules,show_dimensions,show_angles,show_notes,show_room_surfaces,show_room_icons,snap_grid,snap_vertices,snap_intersections,snap_walls,snap_midpoints,snap_distance_cm')
+    .select('show_grid,show_rules,show_dimensions,show_angles,show_notes,show_room_surfaces,show_room_icons,snap_grid,snap_vertices,snap_intersections,snap_walls,snap_midpoints,snap_guides,snap_distance_cm')
     .eq('project_id', projectId)
     .eq('user_id', authData.user.id)
     .maybeSingle();
@@ -39,6 +41,7 @@ export async function loadProjectViewSettings(projectId: string): Promise<Projec
       intersections: data.snap_intersections,
       walls: data.snap_walls,
       midpoints: data.snap_midpoints,
+      guides: data.snap_guides,
       distanceCm: Number(data.snap_distance_cm),
     },
   };
@@ -67,7 +70,31 @@ export async function saveProjectDisplayOptions(
   if (error) throw error;
 }
 
+export async function saveProjectSnappingOptions(
+  projectId: string,
+  options: CanvasSnappingOptions,
+): Promise<void> {
+  const client = getSupabaseClient();
+  const { data: authData, error: authError } = await client.auth.getUser();
+  if (authError || !authData.user) throw authError ?? new Error('Session introuvable.');
+
+  const { error } = await client.from('editor_view_settings').upsert({
+    project_id: projectId,
+    user_id: authData.user.id,
+    snap_grid: options.grid,
+    snap_vertices: options.vertices,
+    snap_intersections: options.intersections,
+    snap_walls: options.walls,
+    snap_midpoints: options.midpoints,
+    snap_guides: options.guides,
+    snap_distance_cm: options.distanceCm,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'project_id,user_id' });
+  if (error) throw error;
+}
+
 export const supabaseViewSettingsGateway: ViewSettingsGateway = {
   load: loadProjectViewSettings,
   saveDisplayOptions: saveProjectDisplayOptions,
+  saveSnappingOptions: saveProjectSnappingOptions,
 };

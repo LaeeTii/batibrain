@@ -8,6 +8,7 @@
 - CanvasOverlayMeasurements
 - CanvasZoomControls
 - CanvasScaleIndicator
+- CanvasSnappingOptionsMenu
 - WallElevationCanvas
 
 ## Technologie de rendu
@@ -29,6 +30,8 @@
 	- Fournir zoom, dezoom et reset de zoom.
 - CanvasScaleIndicator:
 	- Afficher une echelle graphique stable et lisible.
+- CanvasSnappingOptionsMenu:
+	- Exposer les sources de magnétisme grille, sommets, intersections, murs, milieux et guides orthogonaux ainsi que la distance de capture en centimètres.
 - WallElevationCanvas:
 	- Rendre de face le contour produit par le profil de hauteur de la face sélectionnée.
 	- Afficher les ouvertures du mur et les mesures horizontales et verticales pertinentes.
@@ -54,12 +57,21 @@
 - Le niveau actif est editable; les autres niveaux visibles sont en contexte non editable.
 - La sélection utilisateur dans le canvas est synchronisee vers panneaux et détail tree.
 - Une poignée de sommet reste centrée sur le sommet métier correspondant pendant et après son déplacement, y compris avec zoom, panoramique et magnétisme actifs.
+- Le déplacement d'un sommet prévisualise la géométrie pendant le glissé, puis enregistre sa position finale au relâchement dans une seule action d'historique dont l'état d'annulation est celui précédant l'appui.
+- Le magnétisme des sommets s'applique aussi aux poignées des murs autonomes; au relâchement sur un autre sommet autonome, les deux sommets sont fusionnés et un contour simple ainsi refermé redevient une pièce.
+- Lorsque les guides orthogonaux sont actifs, un point déplacé ou créé s'accroche séparément à l'abscisse et à l'ordonnée des sommets de référence situés dans la distance de capture.
+- Chaque accrochage orthogonal affiche pendant le geste une ligne temporaire bleue et pointillée, verticale ou horizontale; deux guides simultanés permettent de former un angle droit avec les segments voisins alignés.
+- Les guides disparaissent au relâchement, à la sortie du canvas ou à la fin du mode de création et ne sont jamais persistés dans la géométrie.
 - Les mesures en focus restent visibles en édition meme si l'option globale correspondante est decochee.
 - Les controles de zoom restent disponibles en permanence dans la zone canvas.
 - Lorsqu'elle est active, la grille couvre toute la surface visible du canvas, quel que soit son ratio largeur/hauteur.
 - Le pas de la grille est fixe et représente `5 cm` dans le repère métier.
+- Au premier affichage d'une géométrie et lors de la réinitialisation du zoom, le viewport est centré sur le milieu de son emprise géométrique, indépendamment de l'origine `(0, 0)` de la grille.
 - Le viewport est un état visuel de session: aucune interaction d'édition (création, déplacement, sélection) ne doit forcer un recadrage automatique.
-- Un clic droit sur un sommet du plan ou un point de profil ouvre son action `Verrouiller` ou `Déverrouiller`.
+- Hors geste de création actif, un clic simple sur le fond du plan signale la fermeture de la sélection et des contextes de création ou d'édition à la vue consommatrice.
+- Un déplacement du fond au-delà du seuil de clic reste un panoramique et ne déclenche jamais cette fermeture.
+- Un clic droit sur un sommet du plan ouvre un menu avec `Verrouiller` ou `Déverrouiller` et `Supprimer`; sur un point de profil, il ouvre l'action `Verrouiller` ou `Déverrouiller`.
+- La suppression d'un sommet est indisponible lorsqu'il est verrouillé ou lorsque la pièce ne conserverait pas au moins trois sommets.
 - Une tentative de déplacement d'un point verrouillé est refusée avant toute mutation visuelle ou du brouillon.
 
 ## Iconographie
@@ -91,6 +103,7 @@
 - Les longueurs et annotations doivent suivre les règles du contrat géométrique.
 - Les règles de synchronisation de sélection ne sont pas redefinies ici et sont referencees depuis la logique dediee.
 - Les icônes de pièces sont affichées par défaut sur tous les canvas.
+- Chaque polygone de pièce utilise sa couleur de sol configurée comme couleur de remplissage du plan.
 - Un mur mitoyen est rendu une seule fois à partir de son identifiant unique, même lorsqu’il apparaît dans les relations de ses deux pièces.
 - Un mur calculé verrouillé est affiché en rouge sur le plan.
 - Une pièce calculée verrouillée affiche un cadenas à côté de son nom.
@@ -136,12 +149,20 @@
 ## Criteres d'acceptation testables
 - Given plusieurs niveaux sont coches, When le canvas est affiche, Then seul le niveau actif est editable et les autres restent en contexte visuel.
 - Given les icônes de pièces sont activées, When une pièce possède un type différent de `autre`, Then l'icône dérivée est affichée sous son nom et sa surface.
+- Given une pièce possède une couleur de sol configurée, When elle est rendue dans le plan, Then son polygone utilise cette couleur de remplissage.
 - Given l'option Icônes de pièces est désactivée, When le canvas est rendu, Then aucune icône de pièce n'est affichée.
 - Given l'option Surfaces est désactivée, When le canvas est rendu, Then aucune valeur de surface de pièce n'est affichée.
 - Given une ouverture est en cours d'édition, When les options de côtes sont masquees, Then les distances directement liees a l'ouverture restent visibles.
 - Given un template d'ouverture est en cours de pose, When un mur incompatible est survolé, Then aucun aperçu ni mesure de positionnement n'est affiché.
 - Given l'utilisateur clique sur un objet visible, When la sélection est appliquee, Then l'objet est surligne dans le canvas et propage vers les autres zones.
+- Given une sélection ou un bloc de création est ouvert, When l'utilisateur clique simplement sur le fond hors objet, Then la sélection et tous les blocs de création ou d'édition sont fermés.
+- Given une sélection ou un bloc de création est ouvert, When l'utilisateur maintient le clic et déplace le fond, Then le plan est déplacé sans fermer le contexte courant.
+- Given un sommet est déplacé par plusieurs mouvements successifs du pointeur, When l'utilisateur relâche le clic, Then une seule action est ajoutée à l'historique, Annuler restaure l'état précédant l'appui et Rétablir restaure la position finale.
+- Given l'éditeur 2D est affiché, When l'utilisateur ouvre `Magnétisme` à côté d'`Affichage`, Then les six sources et la distance de capture sont modifiables et appliquées aux déplacements et créations suivants.
+- Given les guides orthogonaux sont actifs, When un sommet est déplacé à proximité de l'abscisse ou de l'ordonnée d'un autre sommet, Then sa coordonnée correspondante est alignée et un guide vertical ou horizontal est affiché pendant le geste.
+- Given les guides orthogonaux sont actifs, When un sommet est simultanément proche de l'abscisse d'un sommet voisin et de l'ordonnée de l'autre sommet voisin, Then les deux coordonnées sont alignées et les deux segments adjacents forment un angle droit.
 - Given un mur est lié à deux pièces visibles, When le niveau est rendu, Then un seul segment mural interactif est affiché pour cet identifiant.
+- Given une géométrie dont l'emprise est éloignée de l'origine de la grille, When le canvas l'affiche pour la première fois, Then le milieu de l'emprise géométrique est au centre du viewport.
 - Given l'utilisateur clique sur reset zoom, When l'action est terminee, Then le niveau de zoom revient a sa valeur initiale.
 - Given WallEditorView affiche une face, When l'utilisateur choisit l'autre face, Then le canvas rend le profil propre à cette face sans changer le mur sélectionné.
 - Given WallEditorView affiche une face, When le canvas est rendu, Then le profil opposé apparaît en filigrane atténué et pointillé derrière le profil actif sans intercepter les interactions.
@@ -149,6 +170,8 @@
 - Given une ouverture dépasse la hauteur disponible sur une face, When une modification de profil est validée, Then la modification est refusée avec un message explicite.
 - Given les profils sont liés, When un point est ajouté ou déplacé sur le canvas, Then le point correspondant est ajouté ou déplacé à la même position et hauteur sur l'autre face.
 - Given un sommet du plan est verrouillé, When l'utilisateur commence un glisser-déposer, Then le sommet ne se déplace pas et le brouillon reste inchangé.
+- Given un sommet déverrouillé est éditable, When l'utilisateur ouvre son menu au clic droit, Then les actions de verrouillage et de suppression sont visibles.
+- Given un sommet éditable appartient à un contour de plus de trois sommets, When l'utilisateur choisit `Supprimer`, Then le sommet disparaît et le mur résultant relie ses voisins immédiats.
 - Given un mur a ses deux sommets verrouillés, When le plan est rendu, Then le mur apparaît en rouge.
 - Given tous les murs d'une pièce sont verrouillés, When son nom est rendu, Then un cadenas est affiché à côté de celui-ci.
 - Given les profils sont liés, When un point est verrouillé sur une face, Then le point correspondant de l'autre face reçoit le même état.
@@ -162,13 +185,14 @@
 - Verrouillage géométrique : [verrouillage_geometrique.md](../logique/verrouillage_geometrique.md)
 
 ## État d’implémentation V1-21
-- `Canvas2D`, `CanvasOverlayMeasurements`, `CanvasZoomControls`, `CanvasScaleIndicator` et le contrôle des options d’affichage sont disponibles comme composants partagés.
+- `Canvas2D`, `CanvasOverlayMeasurements`, `CanvasZoomControls`, `CanvasScaleIndicator` et les contrôles partagés `Affichage` et `Magnétisme` sont disponibles.
 - Le viewport de navigation est un état visuel indépendant : zoom, panoramique et réinitialisation ne modifient jamais les coordonnées métier reçues en entrée.
 - `GlobalEditor2DView` utilise dès V1-21 le canvas partagé pour la consultation multi-niveaux et les options d’affichage; ses panneaux, états complets et interactions de sélection restent à intégrer dans les tâches suivantes.
 
 ## État d’implémentation V1-R11
 - Les mesures du canvas partagé sont formatées dans l’unité de longueur active et les surfaces dans l’unité de surface active, sans modifier les valeurs métier en cm et cm².
 - Les sept options d’affichage du canvas global sont relues et enregistrées dans `editor_view_settings` pour le couple utilisateur-projet courant.
+- Les six sources de magnétisme, dont les guides orthogonaux, et la distance de capture sont relues, appliquées et enregistrées dans `editor_view_settings` pour le même couple utilisateur-projet.
 - Les changements d’options sont sérialisés afin qu’une réponse réseau tardive ne puisse pas rétablir une ancienne sélection.
 - Les canvas, éditeurs et exports à finaliser dans V1-R20, V1-R30 et V1-R31 consomment le même contrat d’unités et d’options au lieu de définir leurs propres conversions.
 
@@ -177,4 +201,4 @@
 - GlobalEditor2DView et RoomEditor2DView utilisent `Canvas2D`; le canvas SVG historique n’est plus présent dans le parcours d’édition par pièce.
 - WallEditorView utilise `WallElevationCanvas` React-Konva avec les mêmes contrôles de zoom et d’échelle.
 - Les trois éditeurs partagent le contrat de brouillon, l’historique limité à vingt actions, la sauvegarde manuelle, l’auto-sauvegarde toutes les cinq minutes et la conservation du brouillon en échec.
-- Les clics droits sur les sommets du plan et les points de profil pilotent leurs verrous persistés selon les droits du projet.
+- Les clics droits sur les sommets du plan ouvrent les actions de verrouillage et de suppression; ceux sur les points de profil pilotent leurs verrous persistés selon les droits du projet.

@@ -45,6 +45,125 @@ export function uniqueLevelOpenings(snapshots: readonly RoomGeometrySnapshot[]):
   return uniqueById(snapshots.flatMap(({ openings }) => openings));
 }
 
+function synchronizeWallPieceIds(snapshots: readonly RoomGeometrySnapshot[]): RoomGeometrySnapshot[] {
+  const pieceIdsByWallId = new Map<string, string[]>();
+  for (const snapshot of snapshots) {
+    for (const wall of snapshot.walls) {
+      const pieceIds = pieceIdsByWallId.get(wall.id) ?? [];
+      if (!pieceIds.includes(snapshot.room.id)) pieceIds.push(snapshot.room.id);
+      pieceIdsByWallId.set(wall.id, pieceIds);
+    }
+  }
+
+  return snapshots.map((snapshot) => ({
+    ...snapshot,
+    walls: snapshot.walls.map((wall) => ({
+      ...wall,
+      pieceIds: [...(pieceIdsByWallId.get(wall.id) ?? [snapshot.room.id])],
+    })),
+  }));
+}
+
+function cloneProfilesForWall(profiles: WallHeightProfiles, wallId: string): WallHeightProfiles {
+  const cloneFace = (points: readonly WallHeightProfilePoint[], faceSide: WallFaceSide) => (
+    points.map((point, order) => ({
+      ...point,
+      id: crypto.randomUUID(),
+      wallId,
+      faceSide,
+      order,
+    }))
+  );
+
+  return {
+    wallId,
+    gauche: cloneFace(profiles.gauche, 'gauche'),
+    droite: cloneFace(profiles.droite, 'droite'),
+  };
+}
+
+export function deleteRoomVertex(
+  snapshots: readonly RoomGeometrySnapshot[],
+  roomId: string,
+  vertexId: string,
+): RoomGeometrySnapshot[] {
+  const source = snapshots.find(({ room }) => room.id === roomId);
+  if (!source) throw new Error('La pièce contenant le sommet est introuvable.');
+
+  const vertices = sortVertices(source.vertices);
+  if (vertices.length <= 3) {
+    throw new Error('Une pièce doit conserver au moins trois sommets.');
+  }
+  const vertexIndex = vertices.findIndex(({ id }) => id === vertexId);
+  if (vertexIndex < 0) throw new Error('Le sommet à supprimer est introuvable.');
+
+  const vertex = vertices[vertexIndex];
+  if (vertex.isLocked) throw new Error('Un sommet verrouillé ne peut pas être supprimé.');
+
+  const previous = vertices[(vertexIndex - 1 + vertices.length) % vertices.length];
+  const next = vertices[(vertexIndex + 1) % vertices.length];
+  const incomingWall = source.walls.find((wall) => (
+    wall.startVertexId === previous.id && wall.endVertexId === vertex.id
+  ));
+  const outgoingWall = source.walls.find((wall) => (
+    wall.startVertexId === vertex.id && wall.endVertexId === next.id
+  ));
+  if (!incomingWall || !outgoingWall) {
+    throw new Error('Les murs adjacents au sommet sont introuvables.');
+  }
+
+  const adjacentWallIds = new Set([incomingWall.id, outgoingWall.id]);
+  if (snapshots.some(({ openings }) => openings.some(({ wallId }) => adjacentWallIds.has(wallId)))) {
+    throw new Error('Un mur adjacent au sommet contient une ouverture. Supprimez-la avant de supprimer le sommet.');
+  }
+
+  const incomingProjectionCount = snapshots.filter(({ walls }) => (
+    walls.some(({ id }) => id === incomingWall.id)
+  )).length;
+  const mergedWallId = incomingProjectionCount === 1 ? incomingWall.id : crypto.randomUUID();
+  const previousLengthCm = Math.hypot(vertex.x - previous.x, vertex.y - previous.y);
+  const mergedLengthCm = Math.hypot(next.x - previous.x, next.y - previous.y);
+  const resizedProfiles = incomingWall.heightProfiles
+    ? resizeWallHeightProfiles(
+      { id: incomingWall.id, heightProfilesLinked: incomingWall.heightProfilesLinked ?? true },
+      incomingWall.heightProfiles,
+      previousLengthCm,
+      mergedLengthCm,
+    )
+    : undefined;
+  const heightProfiles = resizedProfiles && mergedWallId !== incomingWall.id
+    ? cloneProfilesForWall(resizedProfiles, mergedWallId)
+    : resizedProfiles;
+  const mergedWall: Wall = {
+    ...incomingWall,
+    id: mergedWallId,
+    pieceId: roomId,
+    pieceIds: [roomId],
+    startVertexId: previous.id,
+    endVertexId: next.id,
+    heightLeftCm: heightProfiles?.gauche[0]?.heightCm ?? incomingWall.heightLeftCm,
+    heightRightCm: heightProfiles?.droite[0]?.heightCm ?? incomingWall.heightRightCm,
+    heightProfiles,
+  };
+
+  const updated = snapshots.map((snapshot): RoomGeometrySnapshot => {
+    if (snapshot.room.id !== roomId) return snapshot;
+    return {
+      ...snapshot,
+      vertices: vertices
+        .filter(({ id }) => id !== vertexId)
+        .map((candidate, order) => ({ ...candidate, order })),
+      walls: [
+        ...snapshot.walls.filter(({ id }) => !adjacentWallIds.has(id)),
+        mergedWall,
+      ],
+    };
+  });
+  const result = synchronizeWallPieceIds(updated);
+  assertLockedGeometryPreserved(snapshots, result);
+  return result;
+}
+
 export function assertLockedGeometryPreserved(
   before: readonly RoomGeometrySnapshot[],
   after: readonly RoomGeometrySnapshot[],
