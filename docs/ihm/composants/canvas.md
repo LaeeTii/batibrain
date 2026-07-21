@@ -89,13 +89,14 @@
 - Magnétisme (snapping): `LuMagnet`, icône + texte dans les options de l'éditeur.
 - Une option masquée utilise `LuEyeOff` en complément de son libellé et de son état accessible.
 - Rendu multi-niveaux:
-	- les niveaux inferieurs et superieurs coches sont visibles mais non editables,
-	- les niveaux inferieurs utilisent une teinte gris/rose,
-	- les niveaux superieurs utilisent une teinte gris/bleu,
-	- l'opacite varie de -20% par ecart de niveau.
+	- le niveau actif conserve son rendu complet et interactif,
+	- les niveaux inferieurs et superieurs coches sont rendus en filigrane non interactif,
+	- le filigrane reprend le rendu de contexte de RoomEditor2DView: couleur de sol atténuée, contour gris pointillé, nom de la pièce et opacité réduite,
+	- l'ordre de superposition suit l'altitude croissante: un niveau d'altitude inférieure est rendu dessous et un niveau d'altitude supérieure est rendu par-dessus le niveau actif,
+	- les objets détaillés, mesures, surfaces, icônes et notes des niveaux en filigrane ne sont pas rendus.
 - Rendu des notes:
 	- les notes liees au niveau actif sont affichees a 100% d'opacite,
-	- les notes des autres niveaux coches sont affichees avec opacite reduite,
+	- les notes des autres niveaux coches ne sont pas affichées dans leur filigrane simplifié,
 	- une note est representee par une bulle et un icone relies a son objet.
 
 ## Règles metier
@@ -199,6 +200,8 @@
 ## État d’implémentation V1-R20
 
 - GlobalEditor2DView et RoomEditor2DView utilisent `Canvas2D`; le canvas SVG historique n’est plus présent dans le parcours d’édition par pièce.
+- GlobalEditor2DView rend les autres niveaux cochés avec le même filigrane non interactif que les pièces de contexte de RoomEditor2DView; leur ordre de superposition suit leur altitude et tous les niveaux visibles participent au cadrage global.
+- RoomEditor2DView projette la pièce courante comme contenu principal de `Canvas2D`; les autres pièces restent dans le brouillon canonique du niveau et peuvent être projetées en filigrane non interactif, sans participer au cadrage.
 - WallEditorView utilise `WallElevationCanvas` React-Konva avec les mêmes contrôles de zoom et d’échelle.
 - Les trois éditeurs partagent le contrat de brouillon, l’historique limité à vingt actions, la sauvegarde manuelle, l’auto-sauvegarde toutes les cinq minutes et la conservation du brouillon en échec.
 - Les clics droits sur les sommets du plan ouvrent les actions de verrouillage et de suppression; ceux sur les points de profil pilotent leurs verrous persistés selon les droits du projet.

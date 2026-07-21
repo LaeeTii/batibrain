@@ -85,6 +85,7 @@
 - Canvas:
   - L'utilisateur interagit sur le plan pour créer, selectionner, deplacer ou ajuster un objet selon le mode actif.
   - Seuls les objets du niveau editable sont directement manipulables dans le canvas.
+  - Les autres niveaux cochés dans `Niveaux affichés` sont rendus avec le même filigrane non interactif que les pièces de contexte de RoomEditor2DView.
   - Le clic sur un objet du niveau editable active sa sélection.
   - Les controles de zoom permettent zoom, dezoom et reinitialisation du zoom.
 - Panneau détail:
@@ -125,7 +126,9 @@
 - Contexte de travail:
   - La vue travaille toujours dans le contexte du projet courant.
   - Un seul niveau est editable a un instant donne.
-  - Les autres niveaux visibles sont consultatifs uniquement.
+  - Les autres niveaux visibles sont consultatifs uniquement et apparaissent en filigrane atténué, pointillé et non interactif.
+  - Les niveaux sont superposés par altitude croissante: les niveaux plus bas apparaissent sous le niveau actif et les niveaux plus hauts par-dessus.
+  - Tous les niveaux visibles participent au cadrage global du canvas.
 - Niveaux:
   - Le niveau editable est choisi explicitement par l'utilisateur.
   - Au moins un niveau doit toujours rester visible, y compris lors de l'utilisation du multi-select des niveaux.
@@ -222,7 +225,7 @@
   - Notes projet.
 - Données du canvas:
   - Rendu du niveau editable.
-  - Rendu contextuel des autres niveaux visibles.
+  - Rendu simplifié des autres niveaux visibles en filigrane: couleurs de sol atténuées, contours gris pointillés et noms des pièces, sans objets détaillés ni mesures.
   - Mesures, annotations et surbrillances selon le mode courant.
   - Etat de zoom et echelle graphique.
 - Données d'etat:
@@ -262,6 +265,8 @@
   - Given plusieurs niveaux visibles
   - When la vue est chargee
   - Then un seul niveau est editable a un instant donne
+  - And les autres niveaux visibles sont affichés avec le filigrane non interactif utilisé dans RoomEditor2DView
+  - And chaque filigrane est placé dessous ou par-dessus le niveau actif selon son altitude
 - Scenario 2 - Masquage du niveau editable:
   - Given le niveau editable courant est visible
   - When l'utilisateur le masque

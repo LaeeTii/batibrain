@@ -259,6 +259,41 @@ describe('Canvas2D', () => {
     const { container } = renderWithMantine(<Canvas2D levels={levelsWithSharedWall} activeLevelId="niveau-rdc" visibleLevelIds={['niveau-rdc']} />);
     expect(container.querySelectorAll('.canvas-level-wall')).toHaveLength(7);
   });
+
+  it('rend un niveau plus haut en filigrane au-dessus du niveau actif', () => {
+    const upperLevel: CanvasLevelData = {
+      level: { ...levels[0].level, id: 'niveau-étage', name: 'Étage', number: 1, altitudeCm: 300 },
+      rooms: levels[0].rooms.map((snapshot) => ({
+        ...snapshot,
+        room: { ...snapshot.room, id: 'pièce-étage', levelId: 'niveau-étage', name: 'Chambre' },
+        vertices: snapshot.vertices.map((vertex) => ({
+          ...vertex,
+          id: `${vertex.id}-étage`,
+          pieceId: 'pièce-étage',
+          x: vertex.x + 500,
+        })),
+      })),
+    };
+    const onSelect = vi.fn();
+    const { container } = renderWithMantine(<Canvas2D
+      levels={[upperLevel, ...levels]}
+      activeLevelId="niveau-rdc"
+      visibleLevelIds={['niveau-rdc', 'niveau-étage']}
+      onSelect={onSelect}
+    />);
+
+    expect(container.querySelectorAll('.canvas2d-context-level')).toHaveLength(1);
+    expect(container.querySelectorAll('.canvas2d-context-level .canvas2d-context-room')).toHaveLength(1);
+    expect(container.querySelectorAll('.canvas-level-wall')).toHaveLength(0);
+    const contextLevel = container.querySelector('.canvas2d-context-level')!;
+    const activeLevel = container.querySelector('.canvas2d-active-level')!;
+    expect(activeLevel.compareDocumentPosition(contextLevel) & Node.DOCUMENT_POSITION_FOLLOWING)
+      .toBeTruthy();
+    fireEvent.click(contextLevel.querySelector('polygon')!);
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(screen.getByText('Chambre')).toBeInTheDocument();
+    expect(screen.queryByText('6 m²')).toBeInTheDocument();
+  });
 });
 
 describe('CanvasDisplayOptionsMenu', () => {

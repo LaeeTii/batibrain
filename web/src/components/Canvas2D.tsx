@@ -84,6 +84,7 @@ export interface CanvasLevelData {
 
 interface Canvas2DProps {
   levels: CanvasLevelData[];
+  contextRooms?: RoomSnapshot[];
   activeLevelId: string;
   visibleLevelIds: string[];
   viewportStateKey?: string;
@@ -181,6 +182,13 @@ function levelAppearance(levelNumber: number, activeNumber: number) {
     fill: difference < 0 ? 'rgba(155,100,114,.1)' : 'rgba(99,125,159,.1)',
     opacity: Math.max(0.2, 1 - Math.abs(difference) * 0.2),
   };
+}
+
+function compareLevelAltitude(left: CanvasLevelData, right: CanvasLevelData): number {
+  const altitudeDifference = (left.level.altitudeCm ?? 0) - (right.level.altitudeCm ?? 0);
+  if (altitudeDifference !== 0) return altitudeDifference;
+  const numberDifference = left.level.number - right.level.number;
+  return numberDifference !== 0 ? numberDifference : left.level.id.localeCompare(right.level.id);
 }
 
 function openingSegment(snapshot: RoomSnapshot, openingId: string) {
@@ -360,8 +368,48 @@ export function CanvasSnappingOptionsMenu({ value, onChange }: { value: CanvasSn
   );
 }
 
+function CanvasContextRooms({
+  rooms,
+  keyPrefix,
+}: {
+  rooms: readonly RoomSnapshot[];
+  keyPrefix: string;
+}) {
+  return rooms.map((snapshot) => {
+    const vertices = sortVertices(snapshot.vertices);
+    if (vertices.length < 3) return null;
+    const points = vertices.flatMap((vertex) => [vertex.x, vertex.y]);
+    const center = centroid(vertices);
+    return (
+      <Group
+        key={`${keyPrefix}:${snapshot.room.id}`}
+        name="canvas2d-context-room"
+        opacity={0.22}
+        listening={false}
+      >
+        <Line
+          points={points}
+          closed
+          fill={snapshot.room.floorColor || '#94a3b8'}
+          stroke="#64748b"
+          strokeWidth={3}
+          dash={[10, 7]}
+        />
+        <Text
+          x={center.x - 26}
+          y={center.y - 7}
+          text={snapshot.room.name}
+          fontSize={14}
+          fill="#334155"
+        />
+      </Group>
+    );
+  });
+}
+
 export function Canvas2D({
   levels,
+  contextRooms = [],
   activeLevelId,
   visibleLevelIds,
   viewportStateKey,
@@ -649,16 +697,37 @@ export function Canvas2D({
             </Group>
           ) : null}
 
+          <CanvasContextRooms rooms={contextRooms} keyPrefix="context-room" />
+
           {levels
             .filter(({ level }) => visibleIds.has(level.id))
-            .sort((a, b) => a.level.number - b.level.number)
+            .sort(compareLevelAltitude)
             .map(({ level, rooms, detachedWalls = [], notes = [], dimensions = [] }) => {
+              const isActiveLevel = level.id === activeLevelId;
+              if (!isActiveLevel) {
+                return (
+                  <Group key={level.id} name="canvas2d-context-level" listening={false}>
+                    <CanvasContextRooms rooms={rooms} keyPrefix={`context-level:${level.id}`} />
+                    <Group opacity={0.22}>
+                      {detachedWalls.map(({ id, start, end }) => (
+                        <Line
+                          key={id}
+                          name="canvas2d-context-detached-wall"
+                          points={[start.x, start.y, end.x, end.y]}
+                          stroke="#64748b"
+                          strokeWidth={3}
+                          dash={[10, 7]}
+                        />
+                      ))}
+                    </Group>
+                  </Group>
+                );
+              }
               const appearance = levelAppearance(level.number, activeNumber);
               const walls = uniqueLevelWalls(rooms);
               const openings = uniqueLevelOpenings(rooms);
-              const isActiveLevel = level.id === activeLevelId;
               return (
-                <Group key={level.id} opacity={appearance.opacity}>
+                <Group key={level.id} name="canvas2d-active-level" opacity={appearance.opacity}>
                   {rooms.map((snapshot) => {
                     const vertices = sortVertices(snapshot.vertices);
                     const points = vertices.flatMap((vertex) => [vertex.x, vertex.y]);
@@ -668,6 +737,7 @@ export function Canvas2D({
                     return (
                       <Group key={snapshot.room.id}>
                         <Line
+                          name="canvas2d-room"
                           points={points}
                           closed
                           fill={snapshot.room.floorColor || appearance.fill}

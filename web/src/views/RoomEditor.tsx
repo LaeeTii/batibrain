@@ -3,6 +3,7 @@ import {
   ActionIcon,
   Alert,
   Button,
+  Checkbox,
   ColorInput,
   Group,
   Menu,
@@ -249,6 +250,7 @@ function RoomEditorContent({
   const [dirty, setDirty] = useState(false);
   const [validationError, setValidationError] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [showContextRooms, setShowContextRooms] = useState(true);
   const [interaction, setInteraction] = useState<{ type: 'split-wall'; wallId: string } | { type: 'detach-wall'; wallId: string; vertexId?: string } | null>(null);
   const vertexMoveRef = useRef<{
     roomId: string;
@@ -264,6 +266,15 @@ function RoomEditorContent({
   }, [dirty, initialData]);
 
   const current = data?.rooms.find(({ room }) => room.id === roomId) ?? null;
+  const contextRooms = useMemo(
+    () => data?.rooms.filter(({ room }) => room.id !== roomId) ?? [],
+    [data, roomId],
+  );
+  const canvasData = useMemo<CanvasLevelData | null>(() => (
+    data && current
+      ? { ...data, rooms: [current], detachedWalls: [] }
+      : null
+  ), [current, data]);
   const snapRoomResult = (point: Point, targetRoomId: string, vertexId: string) => {
     const rooms = data?.rooms ?? [];
     const excludedIds = linkedVertexIds(rooms, targetRoomId, vertexId);
@@ -495,7 +506,17 @@ function RoomEditorContent({
         {!canWrite && !loading ? <Text><LuEye aria-hidden /> Lecture seule</Text> : null}
         <Menu withinPortal>
           <Menu.Target><Button variant="default">Affichage</Button></Menu.Target>
-          <Menu.Dropdown><CanvasDisplayOptionsMenu value={options} onChange={onOptionsChange} /></Menu.Dropdown>
+          <Menu.Dropdown>
+            <CanvasDisplayOptionsMenu value={options} onChange={onOptionsChange} />
+            <Menu.Divider />
+            <Checkbox
+              px="sm"
+              py={6}
+              label="Autres pièces en filigrane"
+              checked={showContextRooms}
+              onChange={(event) => setShowContextRooms(event.currentTarget.checked)}
+            />
+          </Menu.Dropdown>
         </Menu>
         <Menu withinPortal>
           <Menu.Target><Button variant="default" leftSection={<LuMagnet aria-hidden />}>Magnétisme</Button></Menu.Target>
@@ -615,10 +636,11 @@ function RoomEditorContent({
       </aside>
       <div className="global-editor__canvasArea">
         <Canvas2D
-          levels={[data]}
+          levels={canvasData ? [canvasData] : []}
+          contextRooms={showContextRooms ? contextRooms : []}
           activeLevelId={levelId}
           visibleLevelIds={[levelId]}
-          viewportStateKey={`room:${roomId}`}
+          viewportStateKey={`room-solo:${roomId}`}
           options={options}
           lengthUnit={preferences.lengthUnit}
           surfaceUnit={preferences.surfaceUnit}

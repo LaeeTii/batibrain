@@ -30,19 +30,49 @@ const data: CanvasLevelData = {
 function renderContent(
   access: GlobalEditorAccess = { readOnly: false, reason: null, message: null },
   currentData = data,
+  allData: CanvasLevelData[] = [currentData],
+  visibleLevelIds: string[] = allData.map(({ level }) => level.id),
 ) {
   const gateway = { load: vi.fn().mockResolvedValue(DEFAULT_USER_PREFERENCES), save: vi.fn() };
   const validObjects = new Set([
-    `level:${currentData.level.id}`,
-    ...currentData.rooms.flatMap(({ room, walls }) => [
-      `room:${room.id}`,
-      ...walls.map(({ id }) => `wall:${id}`),
+    ...allData.flatMap(({ level, rooms }) => [
+      `level:${level.id}`,
+      ...rooms.flatMap(({ room, walls }) => [
+        `room:${room.id}`,
+        ...walls.map(({ id }) => `wall:${id}`),
+      ]),
     ]),
   ]);
-  return render(<MantineProvider><UnsavedChangesProvider><PreferencesProvider gateway={gateway}><ActionHistoryProvider><SelectionSyncBridge validObjects={validObjects} allowDraftObjects><GlobalEditorContent project={project} levels={[currentData.level]} levelData={[currentData]} activeLevelId="l1" visibleLevelIds={['l1']} options={DEFAULT_CANVAS_DISPLAY_OPTIONS} loading={false} error="" access={access} onRetry={vi.fn()} onOptionsChange={vi.fn()} onToggleLevel={vi.fn()} onActiveLevelChange={vi.fn()} /></SelectionSyncBridge></ActionHistoryProvider></PreferencesProvider></UnsavedChangesProvider></MantineProvider>);
+  return render(<MantineProvider><UnsavedChangesProvider><PreferencesProvider gateway={gateway}><ActionHistoryProvider><SelectionSyncBridge validObjects={validObjects} allowDraftObjects><GlobalEditorContent project={project} levels={allData.map(({ level }) => level)} levelData={allData} activeLevelId={currentData.level.id} visibleLevelIds={visibleLevelIds} options={DEFAULT_CANVAS_DISPLAY_OPTIONS} loading={false} error="" access={access} onRetry={vi.fn()} onOptionsChange={vi.fn()} onToggleLevel={vi.fn()} onActiveLevelChange={vi.fn()} /></SelectionSyncBridge></ActionHistoryProvider></PreferencesProvider></UnsavedChangesProvider></MantineProvider>);
 }
 
 describe('GlobalEditorContent', () => {
+  it('affiche un niveau plus haut en filigrane au-dessus du niveau actif', () => {
+    const upperData: CanvasLevelData = {
+      level: { ...data.level, id: 'l2', name: 'Étage', number: 1, altitudeCm: 300 },
+      rooms: [{
+        ...data.rooms[0],
+        room: { ...data.rooms[0].room, id: 'r2', levelId: 'l2', name: 'Chambre' },
+        vertices: data.rooms[0].vertices.map((vertex) => ({
+          ...vertex,
+          id: `${vertex.id}-étage`,
+          pieceId: 'r2',
+          x: vertex.x + 500,
+        })),
+      }],
+    };
+
+    const { container } = renderContent(undefined, data, [upperData, data]);
+
+    expect(container.querySelectorAll('.canvas2d-context-level')).toHaveLength(1);
+    expect(container.querySelectorAll('.canvas2d-context-level .canvas2d-context-room')).toHaveLength(1);
+    expect(screen.getByText('Chambre')).toBeInTheDocument();
+    const activeLevel = container.querySelector('.canvas2d-active-level')!;
+    const contextLevel = container.querySelector('.canvas2d-context-level')!;
+    expect(activeLevel.compareDocumentPosition(contextLevel) & Node.DOCUMENT_POSITION_FOLLOWING)
+      .toBeTruthy();
+  });
+
   it('signale la lecture seule tout en conservant le canvas et les panneaux', () => {
     renderContent({ readOnly: true, reason: 'droits', message: 'Lecture seule : consultation autorisée.' });
     expect(screen.getByText('Lecture seule : consultation autorisée.')).toBeInTheDocument();

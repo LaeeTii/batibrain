@@ -1,6 +1,6 @@
 import React from 'react';
 import { MantineProvider } from '@mantine/core';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PreferencesProvider } from '../components/PreferencesContext';
 import { UnsavedChangesProvider } from '../components/UnsavedChangesContext';
@@ -42,6 +42,17 @@ const snapshot: RoomSnapshot = {
   openings: [],
 };
 
+const siblingSnapshot: RoomSnapshot = {
+  room: { id: 'sibling', levelId: 'level', name: 'Salon', type: 'salon', floorColor: '#FFF4E6' },
+  vertices: [
+    { id: 's1', pieceId: 'sibling', order: 0, x: 2_000, y: 2_000 },
+    { id: 's2', pieceId: 'sibling', order: 1, x: 2_400, y: 2_000 },
+    { id: 's3', pieceId: 'sibling', order: 2, x: 2_400, y: 2_300 },
+  ],
+  walls: [],
+  openings: [],
+};
+
 function renderView() {
   const gateway = { load: vi.fn().mockResolvedValue(DEFAULT_USER_PREFERENCES), save: vi.fn() };
   return render(<MantineProvider><UnsavedChangesProvider><PreferencesProvider gateway={gateway}>
@@ -52,8 +63,8 @@ function renderView() {
 describe('RoomEditor2DView', () => {
   beforeEach(() => {
     vi.mocked(canWriteProject).mockResolvedValue(true);
-    vi.mocked(loadLevelGeometrySnapshot).mockResolvedValue({ levelId: 'level', revision: 4, rooms: [snapshot] });
-    vi.mocked(saveLevelRoomSnapshots).mockResolvedValue({ levelId: 'level', revision: 5, rooms: [snapshot] });
+    vi.mocked(loadLevelGeometrySnapshot).mockResolvedValue({ levelId: 'level', revision: 4, rooms: [snapshot, siblingSnapshot] });
+    vi.mocked(saveLevelRoomSnapshots).mockResolvedValue({ levelId: 'level', revision: 5, rooms: [snapshot, siblingSnapshot] });
   });
 
   it('utilise le canvas React-Konva partagé et le contexte explicite', async () => {
@@ -63,6 +74,30 @@ describe('RoomEditor2DView', () => {
     expect(screen.getByLabelText('Zoom avant')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Magnétisme' })).toBeInTheDocument();
     expect(screen.getByLabelText('Couleur du sol')).toHaveValue('#E5FFFC');
+  });
+
+  it('affiche les autres pièces en filigrane sans les inclure dans le cadrage', async () => {
+    const { container } = renderView();
+    await screen.findByRole('heading', { name: 'Cuisine' });
+
+    const canvas = container.querySelector<HTMLElement>('.canvas2d')!;
+    expect(within(canvas).getByText('Cuisine')).toBeInTheDocument();
+    expect(within(canvas).getByText('Salon')).toBeInTheDocument();
+    expect(canvas.querySelectorAll('.canvas2d-context-room')).toHaveLength(1);
+    expect(within(canvas).getByText('X : -120 cm → 520 cm')).toBeInTheDocument();
+    expect(within(canvas).getByText('Y : -120 cm → 420 cm')).toBeInTheDocument();
+  });
+
+  it('permet de masquer les autres pièces depuis les options d’affichage', async () => {
+    const { container } = renderView();
+    await screen.findByRole('heading', { name: 'Cuisine' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Affichage' }));
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Autres pièces en filigrane' }));
+
+    const canvas = container.querySelector<HTMLElement>('.canvas2d')!;
+    expect(within(canvas).queryByText('Salon')).not.toBeInTheDocument();
+    expect(canvas.querySelector('.canvas2d-context-room')).not.toBeInTheDocument();
   });
 
   it('sauvegarde le brouillon de pièce avec la transaction canonique du niveau', async () => {
@@ -78,7 +113,7 @@ describe('RoomEditor2DView', () => {
   it('annule tout un déplacement de sommet en une seule action', async () => {
     const { container } = renderView();
     await screen.findByRole('heading', { name: 'Cuisine' });
-    fireEvent.click(container.querySelector('polygon')!);
+    fireEvent.click(container.querySelector('.canvas2d-room')!);
     const handle = container.querySelector('.canvas-vertex-handle')!;
     const undoButton = screen.getByRole('button', { name: 'Annuler' });
 

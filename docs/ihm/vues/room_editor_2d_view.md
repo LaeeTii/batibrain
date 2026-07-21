@@ -47,7 +47,7 @@
 - En-tete de la zone principale:
 	- titre de la pièce editee,
 	- contexte projet et niveau de rattachement,
-	- controles d'affichage (affichage/masquage: grille, règles, côtes, angles, notes, surfaces, icônes de pièces),
+	- controles d'affichage (affichage/masquage: grille, règles, côtes, angles, notes, surfaces, icônes de pièces, autres pièces en filigrane),
 	- controles de magnetisme (snapping: grille, sommets, intersections, murs, milieux, guides orthogonaux, distance de capture) dans un sélecteur `Magnétisme` placé immédiatement à côté du sélecteur `Affichage`,
 	- boutons icones `Annuler` et `Retablir` places en haut a droite du header principal,
 	- si l'historique correspondant est vide, le bouton associe est grise et non cliquable,
@@ -57,8 +57,9 @@
 	- aucun horodatage de derniere synchronisation n'est affiche.
 - Zone centrale:
 	- canvas React-Konva centre sur la pièce courante,
-	- rendu de la pièce active en priorite,
-	- rendu des autres pièces du niveau en contexte grise non editable.
+	- rendu principal de la pièce courante et de ses objets,
+	- rendu optionnel des autres pièces du niveau en filigrane non interactif, actif par défaut,
+	- les autres pièces ne participent pas au calcul du cadrage du canvas.
 - Panneaux lateraux de travail:
 	- panneau creation/édition avec sections metier (Pièces, Murs, Ouvertures, Côtes, Notes),
 	- dans RoomEditor2DView, la section Niveaux est absente,
@@ -93,11 +94,12 @@
 	- l'édition d'un mur mitoyen de la pièce courante met a jour la géométrie de la pièce voisine liee a ce mur.
 	- l'utilisateur peut activer/desactiver les options d'affichage (affichage/masquage) grille, règles, côtes, angles, notes, surfaces et icônes de pièces comme dans l'éditeur 2D global.
 	- l'utilisateur peut configurer le magnetisme (snapping: sources + distance de capture) comme dans l'éditeur 2D global; les guides orthogonaux alignent les sommets déplacés sur les verticales et horizontales de référence afin de former des angles droits.
-	- les autres pièces du niveau restent visibles en gris pour garder le contexte, sans édition directe.
+	- le canvas se cadre uniquement sur la géométrie de la pièce courante.
+	- l'utilisateur peut afficher ou masquer les autres pièces du niveau en filigrane depuis le sélecteur `Affichage`.
+	- les pièces en filigrane ne sont ni sélectionnables ni editables depuis le canvas.
 	- le panneau détail affiche l'arbre complet du niveau, y compris les objets hors pièce courante.
 	- les noeuds hors pièce courante sont affiches en gris et restent depliables/repliables.
 	- les noeuds hors pièce courante ne sont pas selectionnables dans RoomEditor2DView.
-	- toute tentative de sélection d'un objet appartenant a une autre pièce visible est ignoree pour l'édition, ne peut pas ouvrir de mode d'édition et ne declenche aucun feedback.
 - Sauvegarde:
 	- les modifications sont d'abord conservées en brouillon local pendant l'édition.
 	- une auto-sauvegarde est tentée toutes les 5 minutes tant qu'il reste des changements non sauvegardés.
@@ -151,7 +153,7 @@
 	- une interaction interdite est refusée avant toute modification du brouillon.
 	- les ouvertures ne portent aucun verrou propre et restent modifiables lorsque leur mur est verrouillé.
 	- la vue autorise l'édition strictement de la pièce courante.
-	- les murs, ouvertures, côtes et notes d'autres pièces visibles en contexte grise ne sont pas editables dans RoomEditor2DView.
+	- les autres pièces peuvent être rendues en filigrane non interactif; leurs objets ne sont pas editables dans RoomEditor2DView.
 	- l'action d'édition `Couper en deux` d'un mur existant reste autorisee dans RoomEditor2DView.
 	- les actions `Couper en deux` et `Détacher` utilisent un mode canvas temporaire exclusif et annulable avec Echap.
 	- détacher une extrémité rompt son ancrage sans déplacer les murs voisins; la pièce dont le contour devient ouvert est supprimée et la vue revient au dashboard après sauvegarde.
@@ -193,7 +195,8 @@
 	- la vue affiche un spinner global pendant le chargement de la pièce cible.
 	- les zones d'édition restent inactives jusqu'a resolution du chargement.
 - Etat normal:
-	- la vue affiche la pièce courante editable et le contexte grise des autres pièces du niveau.
+	- le canvas affiche la pièce courante editable et la centre dans l'espace disponible.
+	- les autres pièces sont affichées par défaut en filigrane et peuvent être masquées.
 	- l'en-tete affiche en continu nom projet, nom niveau et nom pièce.
 	- les boutons `Annuler` et `Retablir` restent visibles en haut a droite du header principal.
 	- chaque bouton est grise et non cliquable si son historique est vide.
@@ -223,12 +226,12 @@
 	- nom niveau,
 	- nom pièce.
 - Données de controle:
-	- etat des options d'affichage (affichage/masquage: grille, règles, côtes, angles, notes, surfaces, icônes de pièces),
+	- etat des options d'affichage (affichage/masquage: grille, règles, côtes, angles, notes, surfaces, icônes de pièces, autres pièces en filigrane),
 	- etat des options de magnetisme (snapping: grille, sommets, intersections, murs, milieux, distance de capture).
 - Données du plan:
 	- géométrie et objets de la pièce courante (pièce, murs, ouvertures, côtes, notes),
 	- type de la pièce et icône dérivée affichée sous son nom et sa surface lorsque l'option est active et que le type n'est pas `autre`,
-	- autres pièces du niveau en contexte grise non editable.
+	- géométrie simplifiée des autres pièces du niveau lorsque l'option de filigrane est active.
 - Données de sélection:
 	- objet selectionne de la pièce courante,
 	- etat synchronise entre canvas, panneau creation et panneau détail.
@@ -251,9 +254,6 @@
 	- l'utilisateur dispose d'une action visible Retour dashboard.
 - Pièce supprimee ou rendue inaccessible pendant l'édition:
 	- la vue passe en erreur locale bloquante sans redirection forcee.
-- Clic sur un objet d'une autre pièce visible en gris:
-	- le clic est ignore pour l'édition,
-	- aucun feedback n'est affiche.
 - Tentative de suppression d'un mur mitoyen depuis la pièce courante:
 	- l'action est refusee,
 	- la vue conserve la sélection courante,
@@ -288,11 +288,17 @@
 	- When la pièce est en cours de chargement
 	- Then un spinner global est affiche
 	- And les actions d'édition restent inactives jusqu'a la fin du chargement
-- Scenario 2 - Portee d'édition:
-	- Given d'autres pièces du niveau sont visibles en gris
-	- When l'utilisateur tente de selectionner un mur d'une autre pièce
-	- Then la sélection est ignoree pour l'édition
-	- And aucun feedback n'est affiche
+- Scenario 2 - Rendu et cadrage de la pièce:
+	- Given la pièce courante appartient a un niveau contenant plusieurs pièces
+	- When RoomEditor2DView affiche le canvas
+	- Then la pièce courante est rendue comme contenu principal
+	- And les autres pièces sont rendues en filigrane non interactif
+	- And le cadrage est calculé uniquement depuis la géométrie de la pièce courante
+- Scenario 2a - Masquage des pièces en filigrane:
+	- Given les autres pièces sont visibles en filigrane
+	- When l'utilisateur désactive `Autres pièces en filigrane` dans le sélecteur `Affichage`
+	- Then les autres pièces disparaissent du canvas
+	- And le cadrage de la pièce courante reste inchangé
 - Scenario 2b - Panneau détail hors pièce:
 	- Given le panneau détail est ouvert avec l'arbre complet du niveau
 	- When l'utilisateur deplie un noeud d'une autre pièce
@@ -410,8 +416,9 @@
 ## Recap decisions et hypotheses explicites
 - Decisions validees:
 	- Édition strictement limitee a la pièce courante.
-	- Les autres pièces du niveau restent visibles en contexte grise non editable.
-	- Les clics sur objets hors pièce courante sont ignores sans feedback.
+	- Le canvas se centre uniquement sur la pièce courante.
+	- Les autres pièces sont affichées par défaut en filigrane non interactif et peuvent être masquées depuis `Affichage`.
+	- Le panneau détail conserve les noeuds hors pièce courante en lecture de contexte, sans autoriser leur sélection.
 	- Brouillon local explicite, auto-sauvegarde toutes les 5 minutes et bouton `Enregistrer` pour forcer la persistance.
 	- En cas d'échec auto-save lors d'une sortie, confirmation explicite obligatoire.
 	- Retour principal de la vue vers DashboardView.
